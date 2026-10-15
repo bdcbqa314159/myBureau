@@ -1,9 +1,9 @@
 {% extends "base.html" %}
 {% block title %}{{ page.title }} — {{ config.title }}{% endblock %}
 {% block bodyclass %}project{% endblock %}
+{% block bar_mid %}<span class="bar-mid is-page">{{ page.title }}</span>{% endblock %}
 {% block content %}
 <main class="proj" style="view-transition-name:vt-{{ page.slug }}">
-  <h1 class="proj-title">{{ page.title }}</h1>
   <div class="proj-intro">{{ page.content | safe }}</div>
 
   {# every image in the folder, in filename order; icon.png is the desktop icon, not content #}
