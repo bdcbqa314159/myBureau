@@ -83,6 +83,16 @@ const hits = (r: DOMRect, x: number, y: number): boolean =>
  *                folder. Icons are. Windows are furniture — they move over
  *                anything, including folders, and are never refused. */
 function draggable(el: HTMLElement, nests: boolean): void {
+  // An <a> and the <img> inside it are natively draggable. Left alone, the
+  // browser starts its own link-drag on pointermove, which cancels our
+  // pointer capture and fires pointercancel — the icon never moves. This is
+  // the whole reason icons felt dead while windows (a <dialog>) worked.
+  el.draggable = false;
+  el.querySelectorAll("img, a").forEach((child) => {
+    (child as HTMLElement).draggable = false;
+  });
+  el.addEventListener("dragstart", (e: Event) => e.preventDefault());
+
   el.addEventListener("pointerdown", (e: PointerEvent): void => {
     if (e.button !== 0) return;
 
