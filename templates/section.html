@@ -10,7 +10,7 @@
   {% for p in section.pages %}
   <a class="icon" href="{{ p.permalink }}"
      style="--x:{{ p.extra.x | default(value=50) }}%; --y:{{ p.extra.y | default(value=50) }}%; view-transition-name:vt-{{ p.slug }}"
-     data-vt="{{ p.slug }}">
+     data-vt="{{ p.slug }}"{% if p.extra.folder %} data-folder{% endif %}>
     <img src="{{ p.permalink }}{{ p.extra.icon | default(value='icon.png') }}" alt="">
     <span>{{ p.title }}</span>
   </a>
@@ -21,7 +21,7 @@
   <a class="icon" href="{{ item.url | default(value='#') }}"
      style="--x:{{ item.x }}%; --y:{{ item.y }}%; view-transition-name:vt-{{ item.name | slugify }}"
      {% if item.window %}data-window="{{ item.window }}"{% endif %}
-     data-vt="{{ item.name | slugify }}">
+     data-vt="{{ item.name | slugify }}"{% if item.folder %} data-folder{% endif %}>
     <img src="{{ get_url(path=item.icon) }}" alt="">
     <span>{{ item.name }}</span>
   </a>

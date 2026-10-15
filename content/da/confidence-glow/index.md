@@ -2,6 +2,7 @@
 title = "confidence glow project"
 
 [extra]
+folder = true
 x = 62
 y = 16
 +++

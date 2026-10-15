@@ -2,6 +2,7 @@
 title = "Logofolio"
 
 [extra]
+folder = true
 x = 82
 y = 72
 +++
