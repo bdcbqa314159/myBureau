@@ -1,12 +1,86 @@
-// Draggable desktop icons + window opening.
-// ponytail: pointer events only, no drag library.
+// Desktop behaviour: pick icons up, drop them on folders, open windows.
+// ponytail: pointer events and the Web Animations API. No drag library.
 
 const clamp = (v: number, lo: number, hi: number): number =>
   Math.min(Math.max(v, lo), hi);
 
+const calm = (): boolean =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
 let topZ = 10;
 
+/** Where an icon rests when nothing is dragging it. Captured once, before
+ *  the first drag overwrites the inline style. */
+interface Home { left: string; top: string; x: string; y: string }
+
+function rememberHome(el: HTMLElement): void {
+  if (el.dataset["home"] !== undefined) return;
+  const home: Home = {
+    left: el.style.left,
+    top: el.style.top,
+    x: el.style.getPropertyValue("--x"),
+    y: el.style.getPropertyValue("--y"),
+  };
+  el.dataset["home"] = JSON.stringify(home);
+}
+
+function goHome(el: HTMLElement): void {
+  const raw = el.dataset["home"];
+  if (raw === undefined) return;
+  const home = JSON.parse(raw) as Home;
+  el.style.left = home.left;
+  el.style.top = home.top;
+  el.style.setProperty("--x", home.x);
+  el.style.setProperty("--y", home.y);
+}
+
+/** Swallow the icon into the folder, then put it back where it lives.
+ *  Nothing actually moves — this is a static site, and a project does not
+ *  change which desktop it belongs to because someone dragged it. The
+ *  gesture is real, the filing is theatre. */
+async function swallow(el: HTMLElement, folder: HTMLElement): Promise<void> {
+  const from = el.getBoundingClientRect();
+  const to = folder.getBoundingClientRect();
+  const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+  const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+
+  el.classList.remove("dragging");
+  folder.classList.remove("receiving");
+
+  if (calm()) {
+    goHome(el);
+    return;
+  }
+
+  folder.animate(
+    [{ transform: "scale(1)" }, { transform: "scale(1.14)" }, { transform: "scale(1)" }],
+    { duration: 300, easing: "cubic-bezier(.22,.61,.36,1)" },
+  );
+
+  await el.animate(
+    [
+      { transform: "translate(0,0) scale(1)", opacity: 1 },
+      { transform: `translate(${dx}px, ${dy}px) scale(.12)`, opacity: 0 },
+    ],
+    { duration: 240, easing: "cubic-bezier(.4,0,.7,.4)", fill: "forwards" },
+  ).finished;
+
+  goHome(el);
+
+  await el.animate(
+    [{ opacity: 0, transform: "scale(.88)" }, { opacity: 1, transform: "scale(1)" }],
+    { duration: 240, easing: "cubic-bezier(.22,.61,.36,1)" },
+  ).finished;
+}
+
+interface Target { el: HTMLElement; rect: DOMRect }
+
+const hits = (r: DOMRect, x: number, y: number): boolean =>
+  x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+
 function draggable(el: HTMLElement): void {
+  rememberHome(el);
+
   el.addEventListener("pointerdown", (e: PointerEvent): void => {
     if (e.button !== 0) return;
 
@@ -17,6 +91,12 @@ function draggable(el: HTMLElement): void {
     const grabX = e.clientX - start.left;
     const grabY = e.clientY - start.top;
     let moved = false;
+    let over: Target | null = null;
+
+    // folders do not move mid-drag, so measure them once
+    const targets: Target[] = [...document.querySelectorAll<HTMLElement>(".icon[data-folder]")]
+      .filter((f) => f !== el)
+      .map((f) => ({ el: f, rect: f.getBoundingClientRect() }));
 
     el.style.zIndex = String(++topZ);
     el.setPointerCapture(e.pointerId);
@@ -24,6 +104,7 @@ function draggable(el: HTMLElement): void {
     const onMove = (ev: PointerEvent): void => {
       moved = true;
       el.classList.add("dragging");
+
       const bounds = surface.getBoundingClientRect();
       el.style.left =
         clamp(ev.clientX - grabX - bounds.left, 0, bounds.width - start.width) + "px";
@@ -31,12 +112,20 @@ function draggable(el: HTMLElement): void {
         clamp(ev.clientY - grabY - bounds.top, 0, bounds.height - start.height) + "px";
       el.style.setProperty("--x", "auto");
       el.style.setProperty("--y", "auto");
+
+      const next = targets.find((t) => hits(t.rect, ev.clientX, ev.clientY)) ?? null;
+      if (next !== over) {
+        over?.el.classList.remove("receiving");
+        next?.el.classList.add("receiving");
+        over = next;
+      }
     };
 
     const onUp = (ev: PointerEvent): void => {
       el.removeEventListener("pointermove", onMove);
       el.releasePointerCapture(ev.pointerId);
       el.classList.remove("dragging");
+
       // a drag must not also fire the click that follows it
       if (moved) {
         el.addEventListener("click", (c: Event) => c.preventDefault(), {
@@ -44,10 +133,17 @@ function draggable(el: HTMLElement): void {
           capture: true,
         });
       }
+
+      if (moved && over !== null) {
+        void swallow(el, over.el);
+      }
+      over?.el.classList.remove("receiving");
+      over = null;
     };
 
     el.addEventListener("pointermove", onMove);
     el.addEventListener("pointerup", onUp, { once: true });
+    el.addEventListener("pointercancel", onUp, { once: true });
   });
 }
 

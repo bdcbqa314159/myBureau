@@ -45,6 +45,26 @@ The description paragraph that opens the project page.
 That is the whole contract. The desktop icon, the project page, the
 image list and the navigation are all derived from it. Nothing else to edit.
 
+### Make something a folder
+
+A folder is anything other icons can be dropped onto. Declare it:
+
+```toml
+[extra]
+folder = true
+```
+
+in a project's `index.md`, or on an item in a desktop's `items` list.
+
+Dragging an icon over a folder makes the folder lean in and brighten.
+Release, and the icon is swallowed into it — then reappears where it
+started.
+
+Nothing actually moves. The site is static, and a project does not change
+which desktop it belongs to because a visitor dragged it. The gesture is
+real; the filing is theatre. To genuinely move a project, move its folder
+on disk.
+
 ### Add photos to `pellicules`
 
 Drop image files straight into `content/pellicules/`. The gallery picks

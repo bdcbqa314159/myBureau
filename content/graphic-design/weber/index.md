@@ -2,6 +2,7 @@
 title = "Weber (Saint Gobain)"
 
 [extra]
+folder = true
 x = 16
 y = 58
 +++
