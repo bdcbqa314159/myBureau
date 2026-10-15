@@ -113,10 +113,23 @@ Four 16×16 pixel-art cursors live in `static/img/cursors/`, each at 1x
 | `open` | icons and window title bars — things you can pick up | centre `8 8` |
 | `grab` | whatever you are currently holding | centre `8 8` |
 
-To redraw one: replace both the `.png` and the `@2x.png`, keeping the
-dimensions (16×16 and 32×32) and the transparent background. Keep the
-pixels hard — export with nearest-neighbour, never bicubic, or the
-retro read is lost.
+The art is **ASCII in `tools/cursors.py`**, not only PNG — a binary diff
+in a pull request tells you nothing, an ASCII diff shows exactly which
+pixels moved.
+
+```bash
+python3 tools/cursors.py --show    # preview in the terminal
+python3 tools/cursors.py           # regenerate the PNGs
+python3 tools/cursors.py --check   # verify the art, write nothing
+```
+
+Edit the grid (`#` outline, `*` fill, `.` transparent), preview, regenerate,
+commit both the source and the PNGs. `--check` enforces 16×16 and that every
+hand still has four fingers and a thumb.
+
+Prefer a pixel editor? Replace the `.png` and `@2x.png` directly, keeping
+16×16 / 32×32 and the transparency, and export nearest-neighbour — never
+bicubic, or the retro read is lost. Update the ASCII to match if you do.
 
 If a new cursor's visual anchor moves, update its hotspot in the
 `CURSORS` block of `site.css`. The hotspot is where the click actually
