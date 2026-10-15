@@ -194,11 +194,20 @@ body.desktop { overflow: hidden; }
 }
 .icon.dragging img { filter: drop-shadow(0 14px 28px rgb(0 0 0 / .55)); }
 
-/* a folder about to receive something — it opens up and leans in */
-.icon[data-folder] { transition: scale .18s var(--ease), filter .18s var(--ease); }
-.icon.receiving { scale: 1.16; }
-.icon.receiving img { filter: drop-shadow(0 10px 22px rgb(0 0 0 / .5)) brightness(1.18); }
-.icon.receiving span { text-decoration: underline; text-underline-offset: .2em; }
+/* A folder refusing a drop. Icons move freely around a desktop — that is
+   not a state change. Putting one inside another is, and there is no such
+   state to change: a project lives on the desktop whose folder holds it on
+   disk. So the folder says no, visibly, before the drop is even released. */
+.icon[data-folder] { transition: filter .15s var(--ease); }
+.icon.rejecting img { filter: grayscale(1) brightness(.7) contrast(1.1); }
+.icon.rejecting span { opacity: .45; }
+
+/* the cursor says no while you are over a folder you cannot drop into */
+.icon.barred { cursor: url("../img/cursors/no.png") 8 8, not-allowed; }
+.icon.barred {
+  cursor: image-set(url("../img/cursors/no.png") 1x,
+                    url("../img/cursors/no@2x.png") 2x) 8 8, not-allowed;
+}
 
 /* ====================================================================
    win95 window

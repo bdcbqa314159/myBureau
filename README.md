@@ -56,14 +56,18 @@ folder = true
 
 in a project's `index.md`, or on an item in a desktop's `items` list.
 
-Dragging an icon over a folder makes the folder lean in and brighten.
-Release, and the icon is swallowed into it — then reappears where it
-started.
+Icons move freely around a desktop — drag them anywhere, they stay put.
+Dropping one **into** a folder is refused: the folder greys out, the
+cursor turns to a no-entry sign, and on release the icon falls in, the
+folder shakes it off, and the icon returns to where it lives.
 
-Nothing actually moves. The site is static, and a project does not change
-which desktop it belongs to because a visitor dragged it. The gesture is
-real; the filing is theatre. To genuinely move a project, move its folder
-on disk.
+That is deliberate. Repositioning an icon is not a state change.
+Re-filing a project is — and there is no such state to change, because a
+project belongs to the desktop whose folder holds it **on disk**. The
+guardrail makes the rule visible instead of letting a visitor believe
+they moved something.
+
+To genuinely move a project, move its folder in `content/`.
 
 ### Add photos to `pellicules`
 
