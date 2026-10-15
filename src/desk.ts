@@ -34,42 +34,52 @@ function goHome(el: HTMLElement): void {
   el.style.setProperty("--y", home.y);
 }
 
-/** Swallow the icon into the folder, then put it back where it lives.
- *  Nothing actually moves — this is a static site, and a project does not
- *  change which desktop it belongs to because someone dragged it. The
- *  gesture is real, the filing is theatre. */
-async function swallow(el: HTMLElement, folder: HTMLElement): Promise<void> {
+/** Refuse the drop. Moving an icon around a desktop is free — that is not
+ *  a state change. Putting one thing INSIDE another is, and the site does
+ *  not have that state to change: a project belongs to the desktop whose
+ *  folder it sits in on disk. So the attempt is shown, and undone.
+ *
+ *  The icon falls into the folder, the folder shakes it off, the icon
+ *  returns to where it lives. */
+async function refuse(el: HTMLElement, folder: HTMLElement): Promise<void> {
   const from = el.getBoundingClientRect();
   const to = folder.getBoundingClientRect();
   const dx = to.left + to.width / 2 - (from.left + from.width / 2);
   const dy = to.top + to.height / 2 - (from.top + from.height / 2);
 
   el.classList.remove("dragging");
-  folder.classList.remove("receiving");
+  folder.classList.remove("rejecting");
 
   if (calm()) {
     goHome(el);
     return;
   }
 
+  // the folder shrugs it off — a refusal, not a gulp
   folder.animate(
-    [{ transform: "scale(1)" }, { transform: "scale(1.14)" }, { transform: "scale(1)" }],
-    { duration: 300, easing: "cubic-bezier(.22,.61,.36,1)" },
+    [
+      { transform: "translateX(0)" },
+      { transform: "translateX(-3px)" },
+      { transform: "translateX(3px)" },
+      { transform: "translateX(-2px)" },
+      { transform: "translateX(0)" },
+    ],
+    { duration: 260, easing: "ease-out" },
   );
 
   await el.animate(
     [
       { transform: "translate(0,0) scale(1)", opacity: 1 },
-      { transform: `translate(${dx}px, ${dy}px) scale(.12)`, opacity: 0 },
+      { transform: `translate(${dx}px, ${dy}px) scale(.3)`, opacity: 0 },
     ],
-    { duration: 240, easing: "cubic-bezier(.4,0,.7,.4)", fill: "forwards" },
+    { duration: 170, easing: "cubic-bezier(.4,0,.8,.3)", fill: "forwards" },
   ).finished;
 
   goHome(el);
 
   await el.animate(
-    [{ opacity: 0, transform: "scale(.88)" }, { opacity: 1, transform: "scale(1)" }],
-    { duration: 240, easing: "cubic-bezier(.22,.61,.36,1)" },
+    [{ opacity: 0, transform: "scale(.9)" }, { opacity: 1, transform: "scale(1)" }],
+    { duration: 220, easing: "cubic-bezier(.22,.61,.36,1)" },
   ).finished;
 }
 
@@ -115,8 +125,10 @@ function draggable(el: HTMLElement): void {
 
       const next = targets.find((t) => hits(t.rect, ev.clientX, ev.clientY)) ?? null;
       if (next !== over) {
-        over?.el.classList.remove("receiving");
-        next?.el.classList.add("receiving");
+        over?.el.classList.remove("rejecting");
+        next?.el.classList.add("rejecting");
+        // the cursor says no before the drop does
+        el.classList.toggle("barred", next !== null);
         over = next;
       }
     };
@@ -134,10 +146,11 @@ function draggable(el: HTMLElement): void {
         });
       }
 
+      el.classList.remove("barred");
       if (moved && over !== null) {
-        void swallow(el, over.el);
+        void refuse(el, over.el);
       }
-      over?.el.classList.remove("receiving");
+      over?.el.classList.remove("rejecting");
       over = null;
     };
 

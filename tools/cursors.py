@@ -92,6 +92,24 @@ ART = {
  "...#*******#....",
  "....#######.....",
 ],
+"no": [
+ "................",
+ "....########....",
+ "...###****###...",
+ "..###*******##..",
+ ".#####*******##.",
+ ".##*###******##.",
+ ".#***###******#.",
+ ".#****###*****#.",
+ ".#*****###****#.",
+ ".#******###***#.",
+ ".##******###*##.",
+ ".##*******#####.",
+ "..##*******###..",
+ "...###****###...",
+ "....########....",
+ "................",
+],
 }
 PIXEL = {"#": (0, 0, 0, 255), "*": (255, 255, 255, 255)}
 
@@ -104,7 +122,7 @@ def check():
             bad = set(row) - set("#*.")
             assert not bad, f"{name} row {i}: unknown {bad}"
     # a hand is four fingers and a thumb: five fills side by side somewhere
-    for name in ("open", "grab", "point"):
+    for name in ("open", "grab", "point"):   # the no-entry sign is not a hand
         widest = max(len([g for g in r.replace("#", " ").split() if g]) for r in ART[name])
         assert widest >= 5, f"{name}: only {widest} digits, a hand has five"
     return True
