@@ -59,13 +59,18 @@ in a project's `index.md`, or on an item in a desktop's `items` list.
 Icons move freely around a desktop — drag them anywhere, they stay put.
 Dropping one **into** a folder is refused: the folder greys out, the
 cursor turns to a no-entry sign, and on release the icon falls in, the
-folder shakes it off, and the icon returns to where it lives.
+folder shakes it off, and the icon returns to **where that drag
+started** — not to where the content file first put it. Moving things
+around survives a refusal.
 
 That is deliberate. Repositioning an icon is not a state change.
 Re-filing a project is — and there is no such state to change, because a
 project belongs to the desktop whose folder holds it **on disk**. The
 guardrail makes the rule visible instead of letting a visitor believe
 they moved something.
+
+Windows are exempt. A window is furniture, not content — it drags over
+folders freely and is never refused.
 
 To genuinely move a project, move its folder in `content/`.
 
