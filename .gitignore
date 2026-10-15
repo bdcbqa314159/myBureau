@@ -15,5 +15,21 @@
 # npm packages — restored by `npm ci` from package-lock.json
 node_modules/
 
-# design references: client IP, large, local only
+# ---------------------------------------------------------------
+# CLIENT MATERIAL — never commit. This repository is PUBLIC.
+#
+# Briefs, proto decks, mood boards and design sources belong to the
+# client and are not ours to publish. They live in _ref/, which is
+# local only. If a client sends you a file, it goes in _ref/ first.
+# ---------------------------------------------------------------
 /_ref/
+
+# design sources, wherever they land
+*.pdf
+*.ai
+*.psd
+*.sketch
+*.fig
+*.indd
+*.afdesign
+*.afphoto

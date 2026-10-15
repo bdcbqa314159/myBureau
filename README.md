@@ -110,6 +110,16 @@ JS for dragging and windows. Transitions are native CSS — View Transitions
 and scroll-driven animation. No frontend framework, no bundler, no runtime
 dependencies.
 
+## Client material
+
+This repository is public. Briefs, proto decks, mood boards and design
+source files are the client's property and must never be committed —
+they live in `_ref/`, which is git-ignored and local only.
+
+Design source extensions (`.pdf`, `.psd`, `.ai`, `.fig`, …) are ignored
+repo-wide as a backstop, but the rule is the convention, not the
+pattern list: **if a client sent it, it goes in `_ref/`.**
+
 ## Placeholders
 
 Every image currently in the repo is machine-generated noise, for testing
