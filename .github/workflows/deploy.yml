@@ -11,11 +11,8 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: pages-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
+  # runs on every PR and every push. The required status check.
   build:
     runs-on: ubuntu-latest
     steps:
@@ -30,14 +27,23 @@ jobs:
         with:
           tool: zola@0.23.6
       - run: zola build
+
+      # only the real deploy publishes an artifact — a PR build that
+      # uploaded one would contend with an in-flight deploy
       - uses: actions/upload-pages-artifact@v3
+        if: github.event_name != 'pull_request'
         with:
           path: public
 
   deploy:
     needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    # scoped to this job, and never cancelled: killing a deploy
+    # mid-flight leaves Pages serving stale output
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
