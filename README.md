@@ -103,24 +103,24 @@ in the `@font-face` rules to a single value and add one rule per weight.
 
 ## Changing the cursors
 
-Four 16×16 pixel-art cursors live in `static/img/cursors/`, each at 2x
-(32px) and 4x (64px, for retina):
+Four 16×16 pixel-art cursors live in `static/img/cursors/`, each at 1x
+(16px) and 2x (32px, for retina):
 
 | file | shown on | hotspot |
 |---|---|---|
 | `arrow` | everything | corner `0 0` |
-| `point` | links, buttons | fingertip `10 0` |
-| `open` | icons and window title bars — things you can pick up | centre `16 16` |
-| `grab` | whatever you are currently holding | centre `16 16` |
+| `point` | links, buttons | fingertip `5 0` |
+| `open` | icons and window title bars — things you can pick up | centre `8 8` |
+| `grab` | whatever you are currently holding | centre `8 8` |
 
 To redraw one: replace both the `.png` and the `@2x.png`, keeping the
-dimensions (32×32 and 64×64) and the transparent background. Keep the
+dimensions (16×16 and 32×32) and the transparent background. Keep the
 pixels hard — export with nearest-neighbour, never bicubic, or the
 retro read is lost.
 
 If a new cursor's visual anchor moves, update its hotspot in the
 `CURSORS` block of `site.css`. The hotspot is where the click actually
-lands, in CSS pixels of the 32px image. Get it wrong and the cursor
+lands, in CSS pixels of the 16px image. Get it wrong and the cursor
 looks fine but clicks land somewhere else.
 
 ## Running it locally
