@@ -71,6 +71,36 @@ in the browser, but those moves are not saved — `x`/`y` is the resting layout.
 
 ---
 
+## Changing the typeface
+
+All typography lives in one block at the top of `static/css/site.css`,
+marked `TYPE SYSTEM`. Nothing below it names a font or a pixel size — every
+rule reads a token. To re-skin the site:
+
+1. drop the `.woff2` files into `static/fonts/`
+2. rewrite the `@font-face` rules under `FACES`
+3. point `--font-display`, `--font-body`, `--font-ui` at the new family
+4. adjust `--tracking-display` — a different face will want different spacing
+
+Three families, because the site has three jobs:
+
+| token | used for |
+|---|---|
+| `--font-display` | wordmarks, nav, icon labels, page titles |
+| `--font-body` | running text (defaults to display) |
+| `--font-ui` | the Win95 window only |
+
+Two weights, per the brief — `--w-light` (300) and `--w-bold` (700). No
+others exist. `font-synthesis-weight: none` means a missing weight fails
+visibly instead of being faked by the browser.
+
+Five sizes, one fluid ramp — `--f-1` (fine print) through `--f-5`
+(wordmark). Each scales with the viewport. Adding a sixth size is a
+decision, not a reflex.
+
+If the replacement face is **not** variable, change `font-weight: 300 700`
+in the `@font-face` rules to a single value and add one rule per weight.
+
 ## Running it locally
 
 ```bash

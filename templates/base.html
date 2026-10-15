@@ -10,9 +10,10 @@
 </head>
 <body class="{% block bodyclass %}{% endblock %}">
 
+{# three slots, never two things in one place — see site.css "top bar" #}
 <header class="bar">
-  <a class="bar-left" href="{{ get_url(path='/') }}">valentina for</a>
-  <a class="bar-mid" href="{{ get_url(path='/') }}">STUDIO S</a>
+  {% block bar_left %}<a class="bar-left" href="{{ get_url(path='/') }}">STUDIO S</a>{% endblock %}
+  {% block bar_mid %}<span class="bar-mid"></span>{% endblock %}
   <nav class="bar-nav">
     {% for item in config.extra.nav %}<a href="{{ item.url }}">{{ item.name }}</a>{% endfor %}
   </nav>

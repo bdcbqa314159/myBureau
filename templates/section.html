@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{% if section.components | length %}{{ section.title }} — {% endif %}{{ config.title }}{% endblock %}
 {% block bodyclass %}desktop{% endblock %}
+{% block bar_mid %}<span class="bar-mid is-page">{{ section.title }}</span>{% endblock %}
 {% block content %}
 
 <main class="desk" style="view-transition-name:vt-{{ section.components | last | default(value="home") }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.png')) }}')">
-  {% if section.title != config.title %}<span class="desk-label">{{ section.title }}</span>{% endif %}
 
   {# one icon per child page — drop a folder in, it appears here #}
   {% for p in section.pages %}

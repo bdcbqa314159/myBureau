@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block title %}{{ section.title }} — {{ config.title }}{% endblock %}
 {% block bodyclass %}gallery{% endblock %}
+{% block bar_mid %}<span class="bar-mid is-page">{{ section.title }}</span>{% endblock %}
 {% block content %}
 <main class="grid">
   {# drop photos next to _index.md and they appear here #}
