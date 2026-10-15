@@ -304,7 +304,7 @@ body.project .credit { color: var(--ink); text-shadow: none; }
 }
 
 /* ====================================================================
-   CURSORS — Windows 95 era, 16x16 pixel art at 2x and 4x
+   CURSORS — Windows 95 era, 16x16 pixel art at 1x and 2x
    --------------------------------------------------------------------
    Four states, matching what a 1995 desktop actually did:
      arrow   everywhere
@@ -313,20 +313,20 @@ body.project .credit { color: var(--ink); text-shadow: none; }
      grab    things you are holding
 
    Each rule is declared twice on purpose. The second uses image-set()
-   so retina screens get the 4x file and the pixels stay hard — a
+   so retina screens get the 2x file and the pixels stay hard — a
    smoothed pixel cursor defeats the whole point. If a browser lacks
    image-set() the second declaration is invalid at PARSE time and is
    discarded, leaving the first intact. (var() could not be used here:
    an unsupported value inside var() invalidates at COMPUTED-VALUE time,
    which discards the fallback declaration too.)
 
-   Hotspots are in CSS pixels of the 32px image: the arrow points from
+   Hotspots are in CSS pixels of the 16px image: the arrow points from
    its corner, the hands act from their centre, the finger from its tip.
    ==================================================================== */
 body                                   { cursor: url("../img/cursors/arrow.png") 0 0, auto; }
-a, button, summary, [role="button"]    { cursor: url("../img/cursors/point.png") 10 0, pointer; }
-.icon, .win-bar                        { cursor: url("../img/cursors/open.png") 16 16, grab; }
-.icon.dragging, .win-bar:active        { cursor: url("../img/cursors/grab.png") 16 16, grabbing; }
+a, button, summary, [role="button"]    { cursor: url("../img/cursors/point.png") 5 0, pointer; }
+.icon, .win-bar                        { cursor: url("../img/cursors/open.png") 8 8, grab; }
+.icon.dragging, .win-bar:active        { cursor: url("../img/cursors/grab.png") 8 8, grabbing; }
 
 body {
   cursor: image-set(url("../img/cursors/arrow.png") 1x,
@@ -334,15 +334,15 @@ body {
 }
 a, button, summary, [role="button"] {
   cursor: image-set(url("../img/cursors/point.png") 1x,
-                    url("../img/cursors/point@2x.png") 2x) 10 0, pointer;
+                    url("../img/cursors/point@2x.png") 2x) 5 0, pointer;
 }
 .icon, .win-bar {
   cursor: image-set(url("../img/cursors/open.png") 1x,
-                    url("../img/cursors/open@2x.png") 2x) 16 16, grab;
+                    url("../img/cursors/open@2x.png") 2x) 8 8, grab;
 }
 .icon.dragging, .win-bar:active {
   cursor: image-set(url("../img/cursors/grab.png") 1x,
-                    url("../img/cursors/grab@2x.png") 2x) 16 16, grabbing;
+                    url("../img/cursors/grab@2x.png") 2x) 8 8, grabbing;
 }
 
 /* text entry keeps the system I-beam — never fight a caret */
