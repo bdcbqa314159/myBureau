@@ -9,6 +9,11 @@ const calm = (): boolean =>
 
 let topZ = 10;
 
+/** Things dragged since their last pointerdown. A drag must never also
+ *  count as a click — dropping `about me.txt` somewhere moves it, it does
+ *  not open it. */
+const justDragged = new WeakSet<HTMLElement>();
+
 /** An element's resting position. Captured at the start of every drag, so a
  *  refused drop returns it to where it was a moment ago — not to wherever
  *  the content file first put it. Moving things around has to survive a
@@ -58,15 +63,20 @@ async function refuse(el: HTMLElement, folder: HTMLElement, back: Spot): Promise
     { duration: 260, easing: "ease-out" },
   );
 
-  await el.animate(
+  // fill:forwards holds the icon invisible at the folder while we move it
+  // back. It must then be cancelled — left running, it reasserts itself
+  // once the fade-in ends and the icon disappears for good.
+  const fall = el.animate(
     [
       { transform: "translate(0,0) scale(1)", opacity: 1 },
       { transform: `translate(${dx}px, ${dy}px) scale(.3)`, opacity: 0 },
     ],
     { duration: 170, easing: "cubic-bezier(.4,0,.8,.3)", fill: "forwards" },
-  ).finished;
+  );
+  await fall.finished;
 
   restore(el, back);
+  fall.cancel();
 
   await el.animate(
     [{ opacity: 0, transform: "scale(.9)" }, { opacity: 1, transform: "scale(1)" }],
@@ -99,6 +109,7 @@ function draggable(el: HTMLElement, nests: boolean): void {
     const surface = el.offsetParent;
     if (!(surface instanceof HTMLElement)) return;
 
+    justDragged.delete(el);                   // a fresh press, a fresh verdict
     const back = spotOf(el);                  // where this drag started
     const start = el.getBoundingClientRect();
     const grabX = e.clientX - start.left;
@@ -142,13 +153,7 @@ function draggable(el: HTMLElement, nests: boolean): void {
       el.releasePointerCapture(ev.pointerId);
       el.classList.remove("dragging", "barred");
 
-      // a drag must not also fire the click that follows it
-      if (moved) {
-        el.addEventListener("click", (c: Event) => c.preventDefault(), {
-          once: true,
-          capture: true,
-        });
-      }
+      if (moved) justDragged.add(el);
 
       if (moved && over !== null) {
         void refuse(el, over.el, back);
@@ -166,12 +171,22 @@ function draggable(el: HTMLElement, nests: boolean): void {
 document.querySelectorAll<HTMLElement>(".icon").forEach((el) => draggable(el, true));
 document.querySelectorAll<HTMLElement>(".win").forEach((el) => draggable(el, false));
 
-// icons carrying data-window open a <dialog> instead of navigating
-document.querySelectorAll<HTMLAnchorElement>(".icon[data-window]").forEach((icon) => {
+/** One handler per icon. Two separate listeners could not work: suppressing
+ *  a click with preventDefault() stops an <a> navigating but does nothing to
+ *  another listener on the same element, so a dragged `about me.txt` still
+ *  opened its window. Deciding both outcomes in one place removes the
+ *  ordering question entirely. */
+document.querySelectorAll<HTMLElement>(".icon").forEach((icon) => {
   icon.addEventListener("click", (e: Event): void => {
-    e.preventDefault();
+    if (justDragged.has(icon)) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      justDragged.delete(icon);
+      return;                       // it was moved, not opened
+    }
     const id = icon.dataset["window"];
-    if (id === undefined) return;
+    if (id === undefined) return;   // an ordinary link: let it navigate
+    e.preventDefault();
     const win = document.getElementById(id);
     if (win instanceof HTMLDialogElement) win.showModal();
   });
