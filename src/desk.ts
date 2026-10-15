@@ -1,4 +1,4 @@
-// Desktop behaviour: pick icons up, drop them on folders, open windows.
+// Desktop behaviour: move things freely, refuse to nest them, open windows.
 // ponytail: pointer events and the Web Animations API. No drag library.
 
 const clamp = (v: number, lo: number, hi: number): number =>
@@ -9,39 +9,31 @@ const calm = (): boolean =>
 
 let topZ = 10;
 
-/** Where an icon rests when nothing is dragging it. Captured once, before
- *  the first drag overwrites the inline style. */
-interface Home { left: string; top: string; x: string; y: string }
+/** An element's resting position. Captured at the start of every drag, so a
+ *  refused drop returns it to where it was a moment ago — not to wherever
+ *  the content file first put it. Moving things around has to survive a
+ *  refusal, or "you can move things" is not true. */
+interface Spot { left: string; top: string; x: string; y: string }
 
-function rememberHome(el: HTMLElement): void {
-  if (el.dataset["home"] !== undefined) return;
-  const home: Home = {
-    left: el.style.left,
-    top: el.style.top,
-    x: el.style.getPropertyValue("--x"),
-    y: el.style.getPropertyValue("--y"),
-  };
-  el.dataset["home"] = JSON.stringify(home);
+const spotOf = (el: HTMLElement): Spot => ({
+  left: el.style.left,
+  top: el.style.top,
+  x: el.style.getPropertyValue("--x"),
+  y: el.style.getPropertyValue("--y"),
+});
+
+function restore(el: HTMLElement, spot: Spot): void {
+  el.style.left = spot.left;
+  el.style.top = spot.top;
+  el.style.setProperty("--x", spot.x);
+  el.style.setProperty("--y", spot.y);
 }
 
-function goHome(el: HTMLElement): void {
-  const raw = el.dataset["home"];
-  if (raw === undefined) return;
-  const home = JSON.parse(raw) as Home;
-  el.style.left = home.left;
-  el.style.top = home.top;
-  el.style.setProperty("--x", home.x);
-  el.style.setProperty("--y", home.y);
-}
-
-/** Refuse the drop. Moving an icon around a desktop is free — that is not
- *  a state change. Putting one thing INSIDE another is, and the site does
- *  not have that state to change: a project belongs to the desktop whose
- *  folder it sits in on disk. So the attempt is shown, and undone.
- *
- *  The icon falls into the folder, the folder shakes it off, the icon
- *  returns to where it lives. */
-async function refuse(el: HTMLElement, folder: HTMLElement): Promise<void> {
+/** Refuse to nest. Moving an icon around a desktop is free. Putting one
+ *  INSIDE another is a different thing, and the site has no such state to
+ *  change: a project belongs to the desktop whose folder holds it on disk.
+ *  So the attempt is shown, and undone — back to where the drag began. */
+async function refuse(el: HTMLElement, folder: HTMLElement, back: Spot): Promise<void> {
   const from = el.getBoundingClientRect();
   const to = folder.getBoundingClientRect();
   const dx = to.left + to.width / 2 - (from.left + from.width / 2);
@@ -51,11 +43,10 @@ async function refuse(el: HTMLElement, folder: HTMLElement): Promise<void> {
   folder.classList.remove("rejecting");
 
   if (calm()) {
-    goHome(el);
+    restore(el, back);
     return;
   }
 
-  // the folder shrugs it off — a refusal, not a gulp
   folder.animate(
     [
       { transform: "translateX(0)" },
@@ -75,7 +66,7 @@ async function refuse(el: HTMLElement, folder: HTMLElement): Promise<void> {
     { duration: 170, easing: "cubic-bezier(.4,0,.8,.3)", fill: "forwards" },
   ).finished;
 
-  goHome(el);
+  restore(el, back);
 
   await el.animate(
     [{ opacity: 0, transform: "scale(.9)" }, { opacity: 1, transform: "scale(1)" }],
@@ -88,15 +79,17 @@ interface Target { el: HTMLElement; rect: DOMRect }
 const hits = (r: DOMRect, x: number, y: number): boolean =>
   x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
 
-function draggable(el: HTMLElement): void {
-  rememberHome(el);
-
+/** @param nests  whether this thing is content that could be filed into a
+ *                folder. Icons are. Windows are furniture — they move over
+ *                anything, including folders, and are never refused. */
+function draggable(el: HTMLElement, nests: boolean): void {
   el.addEventListener("pointerdown", (e: PointerEvent): void => {
     if (e.button !== 0) return;
 
     const surface = el.offsetParent;
     if (!(surface instanceof HTMLElement)) return;
 
+    const back = spotOf(el);                  // where this drag started
     const start = el.getBoundingClientRect();
     const grabX = e.clientX - start.left;
     const grabY = e.clientY - start.top;
@@ -104,9 +97,11 @@ function draggable(el: HTMLElement): void {
     let over: Target | null = null;
 
     // folders do not move mid-drag, so measure them once
-    const targets: Target[] = [...document.querySelectorAll<HTMLElement>(".icon[data-folder]")]
-      .filter((f) => f !== el)
-      .map((f) => ({ el: f, rect: f.getBoundingClientRect() }));
+    const targets: Target[] = nests
+      ? [...document.querySelectorAll<HTMLElement>(".icon[data-folder]")]
+          .filter((f) => f !== el)
+          .map((f) => ({ el: f, rect: f.getBoundingClientRect() }))
+      : [];
 
     el.style.zIndex = String(++topZ);
     el.setPointerCapture(e.pointerId);
@@ -127,7 +122,6 @@ function draggable(el: HTMLElement): void {
       if (next !== over) {
         over?.el.classList.remove("rejecting");
         next?.el.classList.add("rejecting");
-        // the cursor says no before the drop does
         el.classList.toggle("barred", next !== null);
         over = next;
       }
@@ -136,7 +130,7 @@ function draggable(el: HTMLElement): void {
     const onUp = (ev: PointerEvent): void => {
       el.removeEventListener("pointermove", onMove);
       el.releasePointerCapture(ev.pointerId);
-      el.classList.remove("dragging");
+      el.classList.remove("dragging", "barred");
 
       // a drag must not also fire the click that follows it
       if (moved) {
@@ -146,9 +140,8 @@ function draggable(el: HTMLElement): void {
         });
       }
 
-      el.classList.remove("barred");
       if (moved && over !== null) {
-        void refuse(el, over.el);
+        void refuse(el, over.el, back);
       }
       over?.el.classList.remove("rejecting");
       over = null;
@@ -160,7 +153,8 @@ function draggable(el: HTMLElement): void {
   });
 }
 
-document.querySelectorAll<HTMLElement>(".icon, .win").forEach(draggable);
+document.querySelectorAll<HTMLElement>(".icon").forEach((el) => draggable(el, true));
+document.querySelectorAll<HTMLElement>(".win").forEach((el) => draggable(el, false));
 
 // icons carrying data-window open a <dialog> instead of navigating
 document.querySelectorAll<HTMLAnchorElement>(".icon[data-window]").forEach((icon) => {
