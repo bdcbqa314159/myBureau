@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{% if section.components | length %}{{ section.title }} — {% endif %}{{ config.title }}{% endblock %}
+{% block bodyclass %}desktop{% endblock %}
+{% block content %}
+
+<main class="desk" style="view-transition-name:vt-{{ section.components | last | default(value="home") }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.png')) }}')">
+  {% if section.title != config.title %}<span class="desk-label">{{ section.title }}</span>{% endif %}
+
+  {# one icon per child page — drop a folder in, it appears here #}
+  {% for p in section.pages %}
+  <a class="icon" href="{{ p.permalink }}"
+     style="--x:{{ p.extra.x | default(value=50) }}%; --y:{{ p.extra.y | default(value=50) }}%; view-transition-name:vt-{{ p.slug }}"
+     data-vt="{{ p.slug }}">
+    <img src="{{ p.permalink }}{{ p.extra.icon | default(value='icon.png') }}" alt="">
+    <span>{{ p.title }}</span>
+  </a>
+  {% endfor %}
+
+  {# non-page items: links to other desktops, dialog windows #}
+  {% for item in section.extra.items | default(value=[]) %}
+  <a class="icon" href="{{ item.url | default(value='#') }}"
+     style="--x:{{ item.x }}%; --y:{{ item.y }}%; view-transition-name:vt-{{ item.name | slugify }}"
+     {% if item.window %}data-window="{{ item.window }}"{% endif %}
+     data-vt="{{ item.name | slugify }}">
+    <img src="{{ get_url(path=item.icon) }}" alt="">
+    <span>{{ item.name }}</span>
+  </a>
+  {% endfor %}
+</main>
+
+{% block windows %}{% endblock %}
+<script src="{{ get_url(path='js/desk.js') }}"></script>
+{% endblock %}

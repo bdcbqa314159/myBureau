@@ -1,0 +1,104 @@
+myBureau — PROPRIETARY SOFTWARE LICENCE
+ALL RIGHTS RESERVED
+
+Copyright (c) 2026 Bernardo Cohen ("the Author").
+
+This repository is public so the work can be read and cited.
+PUBLIC IS NOT OPEN SOURCE. Publication grants no rights whatsoever.
+
+====================================================================
+0. SCOPE — WHAT THIS LICENCE COVERS
+====================================================================
+This licence covers THE SOFTWARE ONLY: the engine known as myBureau —
+its templates, stylesheets, TypeScript sources, content architecture,
+build configuration and tooling.
+
+It does NOT cover the creative design or the creative assets of any
+client. Those belong to their authors. See NOTICE.
+
+====================================================================
+1. OWNERSHIP — NOT A WORK MADE FOR HIRE
+====================================================================
+The Software was authored by the Author and remains the Author's
+exclusive property.
+
+The Software is NOT a work made for hire. No engagement, commission,
+invoice, payment or collaboration transfers copyright in the Software
+to any client, employer or third party. A client commissioning a site
+built with myBureau acquires the LICENCE in section 3, and acquires
+nothing else.
+
+Any transfer of copyright in the Software requires a separate
+instrument signed by the Author that says so explicitly.
+
+====================================================================
+2. RESERVED RIGHTS — REUSE OF THE ENGINE
+====================================================================
+The Author expressly retains the perpetual, unrestricted right to
+reuse, adapt, relicense, sell and commercialise the Software — in
+whole or in part — for any other client, product or purpose.
+
+Building a site for a client with myBureau does not make the engine
+exclusive to that client, does not restrict the Author from building
+comparable sites for others, and creates no non-compete of any kind.
+
+Generic machinery is not client property. The desktop metaphor, the
+drag behaviour, the window system, the content model and the build
+pipeline are the Author's and travel with the Author.
+
+====================================================================
+3. CLIENT LICENCE
+====================================================================
+A client for whom the Author deploys this Software ("the Client") is
+granted a perpetual, worldwide, non-exclusive, non-transferable,
+royalty-free licence to:
+
+  (a) operate the Software as the engine of the Client's own website;
+  (b) add, replace and remove the Client's own creative assets within
+      it; and
+  (c) have the Software maintained on the Client's behalf.
+
+That licence is CONDITIONAL on the attribution in section 4.
+
+The licence does NOT include the right to: resell, redistribute,
+relicense or sublicense the Software; use it for any site other than
+the Client's own; extract the engine for a different project; or
+transfer it to a third party, including on sale of the business,
+without the Author's written consent.
+
+====================================================================
+4. ATTRIBUTION — CONDITION OF SECTION 3
+====================================================================
+Every public deployment must carry a visible, human-readable credit
+to the Author on the site, in the form:
+
+    site by Bernardo Cohen
+
+linking to a URL nominated by the Author. It may be discreet. It may
+not be hidden, obscured, removed, or made invisible to assistive
+technology.
+
+Removal of the credit terminates the licence in section 3
+immediately and automatically.
+
+====================================================================
+5. EVERYONE ELSE
+====================================================================
+Any person who is not the Author and not a licensed Client may READ
+and STUDY this source.
+
+They may NOT use, copy, fork for use, modify, merge, publish,
+distribute, sublicense, sell, deploy, train models on, or
+incorporate this Software in whole or in part into any other work,
+product, template, theme or service, without a separate written
+agreement signed by the Author.
+
+====================================================================
+6. NO WARRANTY
+====================================================================
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR
+OTHERWISE, ARISING FROM THE SOFTWARE OR ITS USE.

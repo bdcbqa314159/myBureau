@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ config.title }}{% endblock %}</title>
+<link rel="preload" as="font" type="font/woff2" crossorigin
+      href="{{ get_url(path='fonts/inter-tight-latin.woff2') }}">
+<link rel="stylesheet" href="{{ get_url(path='css/site.css') }}">
+</head>
+<body class="{% block bodyclass %}{% endblock %}">
+
+<header class="bar">
+  <a class="bar-left" href="{{ get_url(path='/') }}">valentina for</a>
+  <a class="bar-mid" href="{{ get_url(path='/') }}">STUDIO S</a>
+  <nav class="bar-nav">
+    {% for item in config.extra.nav %}<a href="{{ item.url }}">{{ item.name }}</a>{% endfor %}
+  </nav>
+</header>
+
+{% block content %}{% endblock %}
+
+<footer class="credit">
+  <a href="{{ config.extra.author_url }}" rel="author">site by {{ config.extra.author }}</a>
+</footer>
+
+</body>
+</html>

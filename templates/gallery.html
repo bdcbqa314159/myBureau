@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ section.title }} — {{ config.title }}{% endblock %}
+{% block bodyclass %}gallery{% endblock %}
+{% block content %}
+<main class="grid">
+  {# drop photos next to _index.md and they appear here #}
+  {% for asset in section.assets %}
+    {% if asset | split(pat=".") | last in config.extra.image_types %}
+      <img src="{{ get_url(path=asset) }}" alt="" loading="lazy">
+    {% endif %}
+  {% endfor %}
+</main>
+{% endblock %}

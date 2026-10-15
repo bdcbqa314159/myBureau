@@ -1,0 +1,24 @@
+{% extends "section.html" %}
+{% block windows %}
+
+<dialog class="win" id="about">
+  <div class="win-bar"><span>about me.txt</span><form method="dialog"><button aria-label="close">✕</button></form></div>
+  <div class="win-body">{{ section.content | safe }}</div>
+</dialog>
+
+<dialog class="win" id="contact">
+  <div class="win-bar"><span>System message</span><form method="dialog"><button aria-label="close">✕</button></form></div>
+  <div class="win-body">
+    <form class="contact-form" method="post" action="{{ config.extra.form_action | default(value='') }}">
+      <label>mail : <input type="email" name="email" required></label>
+      <label>Object : <input type="text" name="subject"></label>
+      <label>Message : <textarea name="message" rows="5" required></textarea></label>
+      <div class="win-buttons">
+        <button type="submit">Ok</button>
+        <button type="button" data-close>Cancel</button>
+      </div>
+    </form>
+  </div>
+</dialog>
+
+{% endblock %}

@@ -1,0 +1,71 @@
+NOTICE — WHO OWNS WHAT
+======================
+
+This repository contains two kinds of work with two different
+owners. Read this before assuming anything about either.
+
+--------------------------------------------------------------------
+THE SOFTWARE  —  Bernardo Cohen
+--------------------------------------------------------------------
+The myBureau engine: templates/, static/css/, src/, config.toml,
+tsconfig.json, the build workflow, and the content architecture that
+turns a folder of images into a page.
+
+Copyright (c) 2026 Bernardo Cohen. Proprietary. See LICENSE.
+
+Not a work made for hire. The Author retains the right to reuse this
+engine for other clients. See LICENSE sections 1 and 2.
+
+--------------------------------------------------------------------
+THE DESIGN  —  STUDIO S
+--------------------------------------------------------------------
+The creative direction of this particular site — the proto, the
+layouts, the palette, the choice of textures, the arrangement of each
+desktop, the copy — is the work of the client, STUDIO S, and belongs
+to them.
+
+The Author implemented that design. Implementing a design does not
+transfer it. Equally, commissioning an implementation does not
+transfer the engine that implements it.
+
+--------------------------------------------------------------------
+THE UNDERLYING IDEA  —  nobody
+--------------------------------------------------------------------
+Copyright protects expression, not ideas. The concept of "a portfolio
+presented as a computer desktop" is not owned by either party and
+could not be: it is an idea, and it has four decades of prior art.
+
+What is owned is this specific expression of it — the design by
+STUDIO S, the software by Bernardo Cohen.
+
+--------------------------------------------------------------------
+THE CREATIVE ASSETS  —  STUDIO S
+--------------------------------------------------------------------
+Photographs, artwork, graphic design, film scans and copy under
+content/ and static/img/ are the exclusive property of STUDIO S and
+appear here solely to build and operate their website.
+
+They are NOT licensed for any other use. They may not be copied,
+reproduced, redistributed, scraped, or used for machine-learning
+training, datasets or derivative works without written permission.
+Publication on a public web page does not place them in the public
+domain.
+
+The Author retains the right to display this work as a portfolio
+reference of the engineering engagement.
+
+--------------------------------------------------------------------
+CURRENT ASSET STATUS
+--------------------------------------------------------------------
+Every image presently in this repository is a machine-generated
+PLACEHOLDER — procedural noise with no creative content and no
+copyright claim by anyone. They exist to test layout, loading and
+aspect ratios, and will be deleted as the client's real work lands.
+
+--------------------------------------------------------------------
+THIS IS NOT THE AGREEMENT
+--------------------------------------------------------------------
+These files declare the intended position. They are not a signed
+contract between the parties and are not legal advice. The terms
+above should be restated in a short engagement letter signed by both
+the Author and the Client before the site goes live.

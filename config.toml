@@ -1,0 +1,16 @@
+base_url = "https://bdcbqa314159.github.io/myBureau"
+title = "valentina for STUDIO S"
+compile_sass = false
+build_search_index = false
+
+
+[extra]
+author = "Bernardo Cohen"
+author_url = "https://github.com/bdcbqa314159"
+image_types = ["jpg", "jpeg", "png", "webp", "avif", "gif"]
+nav = [
+  { name = "DA", url = "/da/" },
+  { name = "graphic design", url = "/graphic-design/" },
+  { name = "pellicules", url = "/pellicules/" },
+  { name = "contact", url = "#contact" },
+]
