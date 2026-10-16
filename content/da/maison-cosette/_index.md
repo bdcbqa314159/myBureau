@@ -1,10 +1,9 @@
 +++
 title = "maison cosette"
+template = "section.html"
 
 [extra]
-folder = true
 x = 80
 y = 70
+wallpaper = "img/wall-da.png"
 +++
-
-Texte de présentation à venir.

@@ -1,10 +1,9 @@
 +++
-title = "Logofolio"
+title = "marks.pdf"
 
 [extra]
-folder = true
-x = 82
-y = 72
+x = 26
+y = 34
 +++
 
 Texte de présentation à venir.

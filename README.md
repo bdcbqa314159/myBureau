@@ -45,34 +45,31 @@ The description paragraph that opens the project page.
 That is the whole contract. The desktop icon, the project page, the
 image list and the navigation are all derived from it. Nothing else to edit.
 
-### Make something a folder
+### Folders and files
 
-A folder is anything other icons can be dropped onto. Declare it:
+The filesystem is the structure. There is no flag to set:
 
-```toml
-[extra]
-folder = true
-```
+| on disk | is | opens |
+|---|---|---|
+| a directory with `_index.md` | a **folder** | a new bureau |
+| a directory with `index.md` | a **file** | a project page |
 
-in a project's `index.md`, or on an item in a desktop's `items` list.
+So a folder is a directory that has things in it, exactly as in Finder.
+Nesting works to any depth — a bureau inside a bureau inside a bureau.
 
-Icons move freely around a desktop — drag them anywhere, they stay put.
-Dropping one **into** a folder is refused: the folder greys out, the
-cursor turns to a no-entry sign, and on release the icon falls in, the
-folder shakes it off, and the icon returns to **where that drag
-started** — not to where the content file first put it. Moving things
-around survives a refusal.
+To turn a project into a folder, rename its `index.md` to `_index.md`,
+add `template = "section.html"`, and put project directories inside it.
 
-That is deliberate. Repositioning an icon is not a state change.
-Re-filing a project is — and there is no such state to change, because a
-project belongs to the desktop whose folder holds it **on disk**. The
-guardrail makes the rule visible instead of letting a visitor believe
-they moved something.
+### Leaving and coming back
 
-Windows are exempt. A window is furniture, not content — it drags over
-folders freely and is never refused.
+Icons you move are remembered **for the session**, per bureau. Leave a
+bureau and return, and they are put back where you dropped them and then
+walked home — a visible tidy-up rather than a reset that already
+happened. Close the tab and the memory goes with it.
 
-To genuinely move a project, move its folder in `content/`.
+The walk is a FLIP animation: the icon is never actually laid out in the
+wrong place, only its transform moves, so the page is correct from the
+first frame.
 
 ### Add photos to `pellicules`
 

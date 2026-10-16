@@ -14,6 +14,96 @@ let topZ = 10;
  *  not open it. */
 const justDragged = new WeakSet<HTMLElement>();
 
+// ---------------------------------------------------------------------
+// Leaving a bureau and coming back
+//
+// Where you left things is remembered for the session, per bureau. On
+// return the icons are put back exactly where you dropped them, then
+// walked home — so the reset is something you watch happen rather than
+// something that already happened before the page appeared.
+// ---------------------------------------------------------------------
+
+const DESK_KEY = `bureau:${location.pathname}`;
+
+type Layout = Record<string, { left: string; top: string }>;
+
+function readLayout(): Layout {
+  try {
+    const raw = sessionStorage.getItem(DESK_KEY);
+    return raw === null ? {} : (JSON.parse(raw) as Layout);
+  } catch {
+    return {};                       // private mode, quota, corrupt entry
+  }
+}
+
+function saveLayout(): void {
+  const out: Layout = {};
+  document.querySelectorAll<HTMLElement>(".desk .icon").forEach((el) => {
+    const key = el.dataset["vt"];
+    if (key === undefined || el.style.left === "") return;   // never moved
+    out[key] = { left: el.style.left, top: el.style.top };
+  });
+  try {
+    if (Object.keys(out).length === 0) sessionStorage.removeItem(DESK_KEY);
+    else sessionStorage.setItem(DESK_KEY, JSON.stringify(out));
+  } catch { /* nothing we can do, and nothing worth breaking over */ }
+}
+
+/** Put everything back, visibly. FLIP: place each icon where it was left,
+ *  measure, restore its real position, measure again, then animate the
+ *  difference away. The icon never actually sits anywhere wrong — only the
+ *  transform moves, so layout is correct from the first frame. */
+function tidyUp(): void {
+  const icons = [...document.querySelectorAll<HTMLElement>(".desk .icon")];
+  const left = readLayout();
+  try { sessionStorage.removeItem(DESK_KEY); } catch { /* private mode */ }
+
+  const quiet = calm();
+  let staggered = 0;
+
+  icons.forEach((el) => {
+    const key = el.dataset["vt"];
+    const was = key === undefined ? undefined : left[key];
+
+    if (was === undefined) {
+      // never moved: a soft arrival, slightly staggered
+      if (!quiet) {
+        el.animate(
+          [{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "scale(1)" }],
+          { duration: 420, delay: staggered * 35, easing: "cubic-bezier(.22,.61,.36,1)", fill: "backwards" },
+        );
+        staggered += 1;
+      }
+      return;
+    }
+
+    if (quiet) return;               // reduced motion: it is simply home
+
+    el.style.left = was.left;        // F — where you left it
+    el.style.top = was.top;
+    const from = el.getBoundingClientRect();
+
+    el.style.left = "";              // L — where it belongs
+    el.style.top = "";
+    const home = el.getBoundingClientRect();
+
+    const dx = from.left - home.left;
+    const dy = from.top - home.top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+
+    el.animate(                      // I + P — play the difference away
+      [
+        { transform: `translate(${dx}px, ${dy}px)`, opacity: .85 },
+        { transform: "translate(0, 0)", opacity: 1 },
+      ],
+      { duration: 620, delay: staggered * 45, easing: "cubic-bezier(.33,.9,.3,1)", fill: "backwards" },
+    );
+    staggered += 1;
+  });
+
+  document.documentElement.classList.remove("booting");
+}
+
 /** An element's resting position. Captured at the start of every drag, so a
  *  refused drop returns it to where it was a moment ago — not to wherever
  *  the content file first put it. Moving things around has to survive a
@@ -157,6 +247,8 @@ function draggable(el: HTMLElement, nests: boolean): void {
 
       if (moved && over !== null) {
         void refuse(el, over.el, back);
+      } else if (moved) {
+        saveLayout();
       }
       over?.el.classList.remove("rejecting");
       over = null;
@@ -167,6 +259,8 @@ function draggable(el: HTMLElement, nests: boolean): void {
     el.addEventListener("pointercancel", onUp, { once: true });
   });
 }
+
+window.addEventListener("pagehide", saveLayout);
 
 document.querySelectorAll<HTMLElement>(".icon").forEach((el) => draggable(el, true));
 document.querySelectorAll<HTMLElement>(".win").forEach((el) => draggable(el, false));
@@ -195,3 +289,5 @@ document.querySelectorAll<HTMLElement>(".icon").forEach((icon) => {
 document.querySelectorAll<HTMLButtonElement>("[data-close]").forEach((b) => {
   b.addEventListener("click", (): void => b.closest("dialog")?.close());
 });
+
+tidyUp();
