@@ -92,6 +92,20 @@ Nesting works to any depth — a bureau inside a bureau inside a bureau.
 To turn a project into a folder, rename its `index.md` to `_index.md`,
 add `template = "section.html"`, and put project directories inside it.
 
+### Arriving
+
+A bureau is one large wallpaper plus one request per icon, so left alone
+it assembles itself in front of the visitor — pieces landing one at a
+time. Instead, a small overlay is held until the wallpaper, every icon
+and the fonts have decoded, then the whole desk is revealed at once.
+
+Capped at four seconds: past that it reveals regardless and lets the
+stragglers land. A portfolio must never be held hostage by one slow
+image. A broken image cannot hang it either.
+
+This hides the stutter; it does not make the page lighter. The real fix
+is smaller images — see the pipeline work still outstanding.
+
 ### Leaving and coming back
 
 Icons you move are remembered **for the session**, per bureau. Leave a

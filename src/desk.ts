@@ -49,6 +49,71 @@ function saveLayout(): void {
   } catch { /* nothing we can do, and nothing worth breaking over */ }
 }
 
+// ---------------------------------------------------------------------
+// Arriving
+//
+// The wallpaper is one large background image and every icon is its own
+// request, so left alone a bureau assembles itself in front of the
+// visitor — pieces landing one at a time. The overlay is held until they
+// have all decoded, then everything is revealed at once.
+//
+// Capped, because a portfolio must never be held hostage by one slow
+// image: past the cap we reveal regardless and let the stragglers land.
+// ---------------------------------------------------------------------
+
+const PATIENCE_MS = 4000;
+
+function deskImages(): string[] {
+  const urls: string[] = [];
+  const desk = document.querySelector<HTMLElement>(".desk");
+  if (desk !== null) {
+    const found = /url\(["']?(.+?)["']?\)/.exec(getComputedStyle(desk).backgroundImage);
+    const wallpaper = found?.[1];
+    if (wallpaper !== undefined) urls.push(wallpaper);
+  }
+  document.querySelectorAll<HTMLImageElement>(".desk .icon img").forEach((i) => urls.push(i.src));
+  return urls;
+}
+
+const settled = (url: string): Promise<void> =>
+  new Promise((done) => {
+    const img = new Image();
+    img.onload = () => done();
+    img.onerror = () => done();        // a broken image must not hold the page
+    img.src = url;
+  });
+
+async function whenPainted(): Promise<void> {
+  const everything = Promise.all([
+    ...deskImages().map(settled),
+    document.fonts.ready.then(() => undefined),
+  ]).then(() => undefined);
+  const cap = new Promise<void>((go) => { window.setTimeout(go, PATIENCE_MS); });
+  await Promise.race([everything, cap]);
+}
+
+/** Reveal the bureau: the overlay fades while the icons arrive underneath,
+ *  so the two motions overlap instead of queueing. */
+function reveal(): void {
+  const loader = document.querySelector<HTMLElement>(".loader");
+  if (loader === null) {
+    tidyUp();
+    return;
+  }
+  // keep it painted while .booting goes away, then take it out entirely
+  loader.classList.add("is-leaving");
+  tidyUp();
+  if (calm()) {
+    loader.remove();
+    return;
+  }
+  void loader
+    .animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: 420, easing: "cubic-bezier(.4,0,.6,1)", fill: "forwards",
+    })
+    .finished.then(() => loader.remove());
+}
+
 /** Put everything back, visibly. FLIP: place each icon where it was left,
  *  measure, restore its real position, measure again, then animate the
  *  difference away. The icon never actually sits anywhere wrong — only the
@@ -290,4 +355,4 @@ document.querySelectorAll<HTMLButtonElement>("[data-close]").forEach((b) => {
   b.addEventListener("click", (): void => b.closest("dialog")?.close());
 });
 
-tidyUp();
+void whenPainted().then(reveal);

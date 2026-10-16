@@ -179,6 +179,29 @@ body.desktop { overflow: hidden; }
    return. Removed by tidyUp() on the same frame it starts animating. */
 .booting .desk .icon { opacity: 0; }
 @media (prefers-reduced-motion: reduce) { .booting .desk .icon { opacity: 1; } }
+
+/* ---- loading ----
+   Three hard-edged squares, same pixel vocabulary as the cursors. The
+   overlay only exists while .booting is set (by script), or while it is
+   fading out — so a browser without JS never sees it, and it cannot
+   strand anyone behind it. */
+.loader { display: none; }
+.booting .loader, .loader.is-leaving {
+  display: grid; place-items: center;
+  position: fixed; inset: 0; z-index: 2000;
+  background: #0d0b0a;
+}
+.loader .dots { display: flex; gap: .4rem; }
+.loader .dots i {
+  width: .4rem; height: .4rem; background: #fff; opacity: .16;
+  animation: blink 1.05s infinite steps(1, end);
+}
+.loader .dots i:nth-child(2) { animation-delay: .18s; }
+.loader .dots i:nth-child(3) { animation-delay: .36s; }
+@keyframes blink { 0%, 72%, 100% { opacity: .16; } 36% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .loader .dots i { animation: none; opacity: .6; }
+}
 .desk {
   position: relative; height: 100dvh;
   background: var(--wallpaper) center / cover no-repeat;
