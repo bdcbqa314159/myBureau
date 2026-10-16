@@ -1,27 +1,44 @@
 {% extends "base.html" %}
 {% block title %}{% if section.components | length %}{{ section.title }} — {% endif %}{{ id.title }}{% endblock %}
 {% block bodyclass %}desktop{% endblock %}
+
+{# Set before first paint so returning to a bureau never flashes the icons
+   home before walking them home. Added by script, so a browser without JS
+   never hides anything — and only on pages that actually have a desk. #}
+{% block boot %}<script>document.documentElement.classList.add("booting")</script>{% endblock %}
 {% block bar_mid %}<span class="bar-mid is-page">{{ section.title }}</span>{% endblock %}
 {% block content %}
 
-<main class="desk" style="view-transition-name:vt-{{ section.components | last | default(value="home") }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.png')) }}')">
+<main class="desk" style="view-transition-name:vt-{{ section.components | last | default(value='home') }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.png')) }}')">
 
-  {# one icon per child page — drop a folder in, it appears here #}
+  {# FOLDERS — a directory with an _index.md is a bureau of its own.
+     Drop one in and it appears here, opening onto a new desktop. #}
+  {% for path in section.subsections %}
+  {% set sub = get_section(path=path) %}
+  <a class="icon" href="{{ sub.permalink }}"
+     style="--x:{{ sub.extra.x | default(value=50) }}%; --y:{{ sub.extra.y | default(value=50) }}%; view-transition-name:vt-{{ sub.components | last }}"
+     data-vt="{{ sub.components | last }}" data-folder>
+    <img src="{{ sub.permalink }}{{ sub.extra.icon | default(value='icon.png') }}" alt="">
+    <span>{{ sub.title }}</span>
+  </a>
+  {% endfor %}
+
+  {# FILES — a directory with an index.md is a project, and opens a page. #}
   {% for p in section.pages %}
   <a class="icon" href="{{ p.permalink }}"
      style="--x:{{ p.extra.x | default(value=50) }}%; --y:{{ p.extra.y | default(value=50) }}%; view-transition-name:vt-{{ p.slug }}"
-     data-vt="{{ p.slug }}"{% if p.extra.folder %} data-folder{% endif %}>
+     data-vt="{{ p.slug }}">
     <img src="{{ p.permalink }}{{ p.extra.icon | default(value='icon.png') }}" alt="">
     <span>{{ p.title }}</span>
   </a>
   {% endfor %}
 
-  {# non-page items: links to other desktops, dialog windows #}
+  {# Neither: windows and anything else declared by hand. #}
   {% for item in section.extra.items | default(value=[]) %}
   <a class="icon" href="{{ item.url | default(value='#') }}"
      style="--x:{{ item.x }}%; --y:{{ item.y }}%; view-transition-name:vt-{{ item.name | slugify }}"
      {% if item.window %}data-window="{{ item.window }}"{% endif %}
-     data-vt="{{ item.name | slugify }}"{% if item.folder %} data-folder{% endif %}>
+     data-vt="{{ item.name | slugify }}">
     <img src="{{ get_url(path=item.icon) }}" alt="">
     <span>{{ item.name }}</span>
   </a>

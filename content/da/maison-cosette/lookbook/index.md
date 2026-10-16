@@ -1,9 +1,8 @@
 +++
-title = "Weber (Saint Gobain)"
+title = "lookbook.pdf"
 
 [extra]
-folder = true
-x = 16
+x = 66
 y = 58
 +++
 
