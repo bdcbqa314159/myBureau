@@ -1,0 +1,8 @@
+{% if config.extra.live %}User-agent: *
+Disallow:
+
+Sitemap: {{ get_url(path="sitemap.xml") }}
+{% else %}# Not live. This is an engine demo with placeholder content.
+User-agent: *
+Disallow: /
+{% endif %}

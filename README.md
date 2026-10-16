@@ -123,6 +123,21 @@ Two weights, per the brief — `--w-light` (300) and `--w-bold` (700). No
 others exist. `font-synthesis-weight: none` means a missing weight fails
 visibly instead of being faked by the browser.
 
+**Which weight prose gets is still open.** The rule we are proposing:
+
+> Bold for what you glance at. Light for what you read.
+
+Wordmarks, nav, icon labels and page titles are glanced — they stay bold.
+Project descriptions and the about-me text are read, which argues for
+light. The proto shows them bold, so bold is the default. Change
+`--w-prose` and every piece of running text moves together; nothing else
+does.
+
+The Win95 window follows the same split: the **chrome** (title bar,
+buttons, form controls) stays pixel-monospace because that is the 1995
+artifact, while the **content** is set in the body face, because it is
+writing rather than UI furniture.
+
 Five sizes, one fluid ramp — `--f-1` (fine print) through `--f-5`
 (wordmark). Each scales with the viewport. Adding a sixth size is a
 decision, not a reflex.
@@ -213,6 +228,44 @@ they live in `_ref/`, which is git-ignored and local only.
 Design source extensions (`.pdf`, `.psd`, `.ai`, `.fig`, …) are ignored
 repo-wide as a backstop, but the rule is the convention, not the
 pattern list: **if a client sent it, it goes in `_ref/`.**
+
+## Going live
+
+This deployment is a **demo of the engine**, not a client's site. While
+`live = false` in `config.toml`:
+
+- the site is called `myBureau`, not the client's name
+- every page carries `<meta name="robots" content="noindex, nofollow">`
+- `robots.txt` is `Disallow: /`
+
+That is deliberate. A public URL with a real person's name over
+placeholder content misrepresents them — a visitor cannot tell a
+placeholder from a portfolio piece, and a search engine certainly
+cannot. No name goes on this until the work on it is theirs.
+
+When the real assets and the real name are both in:
+
+```toml
+live = true
+```
+
+One flag changes the title, the wordmark, the owner line, the robots
+meta and `robots.txt` together. Verify afterwards:
+
+```bash
+zola build
+grep -c 'noindex' public/index.html    # must be 0
+head -2 public/robots.txt              # must allow crawling
+```
+
+### Launch checklist
+
+1. every placeholder image deleted — `find content static/img -name '*.png'` should show only real work and the UI art
+2. `live = true`
+3. the client's own domain in `base_url`, plus a `static/CNAME`
+4. `noindex` gone, `robots.txt` allowing crawlers
+5. the contact form pointed at a real backend
+6. the `site by` credit present — it is a condition of the licence, see LICENSE §4
 
 ## Placeholders
 

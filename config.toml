@@ -1,16 +1,41 @@
 base_url = "https://bdcbqa314159.github.io/myBureau"
-title = "valentina for STUDIO S"
+title = "myBureau"
 compile_sass = false
 build_search_index = false
 
-
 [extra]
+# ---------------------------------------------------------------
+# NOT LIVE YET.
+#
+# While `live = false` this deployment is a demo of the ENGINE. It
+# carries no client's name and tells search engines to stay away,
+# so placeholder content is harmless — nobody's portfolio is being
+# misrepresented, because nobody is named.
+#
+# Flip to true only when the real name and the real assets are both
+# in. See "Going live" in the README.
+# ---------------------------------------------------------------
+live = false
+
 author = "Bernardo Cohen"
 author_url = "https://github.com/bdcbqa314159"
+
 image_types = ["jpg", "jpeg", "png", "webp", "avif", "gif"]
+
 nav = [
   { name = "DA", url = "/da/" },
   { name = "graphic design", url = "/graphic-design/" },
   { name = "pellicules", url = "/pellicules/" },
   { name = "contact", url = "#contact" },
 ]
+
+# ---- whose site this is. `live` picks one. ----
+[extra.demo]
+owner  = "a demo of"
+studio = "myBureau"
+title  = "myBureau — desktop-metaphor site engine"
+
+[extra.real]
+owner  = "valentina for"
+studio = "STUDIO S"
+title  = "valentina for STUDIO S"

@@ -1,5 +1,5 @@
 +++
-title = "valentina for STUDIO S"
+title = "myBureau"
 template = "index.html"
 
 [extra]
