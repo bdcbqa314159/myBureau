@@ -1,6 +1,6 @@
 {% extends "section.html" %}
-{% block bar_left %}<a class="bar-left is-secondary" href="{{ get_url(path='/') }}">valentina for</a>{% endblock %}
-{% block bar_mid %}<a class="bar-mid is-wordmark" href="{{ get_url(path='/') }}">STUDIO S</a>{% endblock %}
+{% block bar_left %}<a class="bar-left is-secondary" href="{{ get_url(path='/') }}">{{ id.owner }}</a>{% endblock %}
+{% block bar_mid %}<a class="bar-mid is-wordmark" href="{{ get_url(path='/') }}">{{ id.studio }}</a>{% endblock %}
 
 {% block windows %}
 

@@ -105,9 +105,11 @@ a { color: inherit; }
    top bar — three slots, same grid on every page type
    --------------------------------------------------------------------
      page      left            centre         right
-     home      valentina for   STUDIO S       nav
-     desktop   STUDIO S        section name   nav
-     project   STUDIO S        project name   nav
+     home      owner           studio         nav
+     desktop   studio          section name   nav
+     project   studio          project name   nav
+
+   `owner` and `studio` come from config.toml, picked by `live`.
    Nothing is ever pinned to the same coordinates twice.
    ==================================================================== */
 .bar {

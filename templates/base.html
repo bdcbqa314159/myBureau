@@ -1,9 +1,13 @@
+{# one switch picks who this site belongs to — see config.toml #}
+{% if config.extra.live %}{% set_global id = config.extra.real %}
+{% else %}{% set_global id = config.extra.demo %}{% endif %}
 <!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{% block title %}{{ config.title }}{% endblock %}</title>
+<title>{% block title %}{{ id.title }}{% endblock %}</title>
+{% if not config.extra.live %}<meta name="robots" content="noindex, nofollow">{% endif %}
 <link rel="preload" as="font" type="font/woff2" crossorigin
       href="{{ get_url(path='fonts/inter-tight-latin.woff2') }}">
 <link rel="stylesheet" href="{{ get_url(path='css/site.css') }}">
@@ -12,7 +16,7 @@
 
 {# three slots, never two things in one place — see site.css "top bar" #}
 <header class="bar">
-  {% block bar_left %}<a class="bar-left" href="{{ get_url(path='/') }}">STUDIO S</a>{% endblock %}
+  {% block bar_left %}<a class="bar-left" href="{{ get_url(path='/') }}">{{ id.studio }}</a>{% endblock %}
   {% block bar_mid %}<span class="bar-mid"></span>{% endblock %}
   <nav class="bar-nav">
     {% for item in config.extra.nav %}<a href="{{ item.url }}">{{ item.name }}</a>{% endfor %}
