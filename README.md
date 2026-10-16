@@ -123,6 +123,21 @@ Two weights, per the brief — `--w-light` (300) and `--w-bold` (700). No
 others exist. `font-synthesis-weight: none` means a missing weight fails
 visibly instead of being faked by the browser.
 
+**Which weight prose gets is still open.** The rule we are proposing:
+
+> Bold for what you glance at. Light for what you read.
+
+Wordmarks, nav, icon labels and page titles are glanced — they stay bold.
+Project descriptions and the about-me text are read, which argues for
+light. The proto shows them bold, so bold is the default. Change
+`--w-prose` and every piece of running text moves together; nothing else
+does.
+
+The Win95 window follows the same split: the **chrome** (title bar,
+buttons, form controls) stays pixel-monospace because that is the 1995
+artifact, while the **content** is set in the body face, because it is
+writing rather than UI furniture.
+
 Five sizes, one fluid ramp — `--f-1` (fine print) through `--f-5`
 (wordmark). Each scales with the viewport. Adding a sixth size is a
 decision, not a reflex.

@@ -42,9 +42,18 @@
   --font-body:    var(--font-display);
   --font-ui:      ui-monospace, "SF Mono", Menlo, "Courier New", monospace;
 
-  /* ---- WEIGHTS — her brief: bold and light, nothing between ---- */
+  /* ---- WEIGHTS — the brief: bold and light, nothing between ---- */
   --w-light: 300;
   --w-bold:  700;
+
+  /* Prose — the one weight still being decided.
+     The rule: BOLD for what you glance at, LIGHT for what you read.
+     Wordmarks, nav, icon labels and titles are glanced, so they are
+     bold and not negotiable. Project descriptions and the about-me
+     text are read, which argues for light.
+     The proto shows them bold, so bold is the default. Change this
+     ONE value to see the alternative — nothing else moves. */
+  --w-prose: var(--w-bold);
 
   /* ---- TRACKING — per face; a different font will want different ---- */
   --tracking-display: -0.035em;
@@ -246,7 +255,22 @@ body.desktop { overflow: hidden; }
   box-shadow: inset 1px 1px 0 var(--lit), inset -1px -1px 0 var(--dim);
 }
 .win-bar button:active { box-shadow: inset -1px -1px 0 var(--lit), inset 1px 1px 0 var(--dim); }
-.win-body { padding: 1.1rem 1.2rem 1.3rem; }
+/* The chrome is the 1995 artifact and stays monospace. What a visitor
+   reads inside it is her writing, not UI furniture — bold monospace
+   prose at length is punishing. Controls below opt back into chrome. */
+.win-body {
+  padding: 1.1rem 1.2rem 1.3rem;
+  font-family: var(--font-body);
+  font-weight: var(--w-prose);
+  font-size: var(--f-3);
+  letter-spacing: var(--tracking-text);
+}
+.contact-form, .win-buttons {
+  font-family: var(--font-ui);
+  font-weight: var(--w-bold);
+  font-size: var(--f-2);
+  letter-spacing: var(--tracking-ui);
+}
 
 .contact-form { display: grid; gap: .7rem; }
 .contact-form label { display: grid; gap: .25rem; font-weight: var(--w-bold); }
@@ -272,7 +296,7 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 .proj { padding-top: clamp(5rem, 9vw, 8rem); }
 .proj-intro {
   max-width: 36ch; padding-inline: var(--pad);
-  font-size: var(--f-3); font-weight: var(--w-bold);
+  font-size: var(--f-3); font-weight: var(--w-prose);
   line-height: var(--lh-text); letter-spacing: var(--tracking-text);
 }
 .proj-intro p + p { margin-top: 1em; }
