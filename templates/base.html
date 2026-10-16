@@ -19,8 +19,16 @@
 <header class="bar">
   {% block bar_left %}<a class="bar-left" href="{{ get_url(path='/') }}">{{ id.studio }}</a>{% endblock %}
   {% block bar_mid %}<span class="bar-mid"></span>{% endblock %}
+  {# Every top-level bureau, straight from the filesystem. Add a folder
+     to content/ and it appears here as well as on the desktop — her brief
+     asks for the bandeau to reach every space, so it cannot be a list
+     someone has to remember to update. Windows are not places, so they
+     stay declared in config.toml. #}
   <nav class="bar-nav">
-    {% for item in config.extra.nav %}<a href="{{ item.url }}">{{ item.name }}</a>{% endfor %}
+    {% set root = get_section(path="_index.md") %}
+    {% for path in root.subsections %}{% set s = get_section(path=path) %}
+    <a href="{{ s.permalink }}">{{ s.title }}</a>{% endfor %}
+    {% for item in config.extra.nav_extra %}<a href="{{ item.url }}">{{ item.name }}</a>{% endfor %}
   </nav>
 </header>
 

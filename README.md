@@ -11,6 +11,38 @@ Design and creative assets belong to the client. See [NOTICE](NOTICE).
 
 ---
 
+## Previewing the site
+
+```bash
+./preview.sh
+```
+
+That is the whole thing. It installs what is missing, builds, opens your
+browser, and reloads the page whenever you change a file. Press `Ctrl-C`
+to stop.
+
+If it asks you to install Homebrew or Node first, do that once and run it
+again.
+
+## What the site works out for itself
+
+The filesystem is the structure. You should never have to edit a template:
+
+| you do | the site does |
+|---|---|
+| add a directory with `_index.md` | a **folder** appears, opening a new bureau |
+| add a directory with `index.md` | a **file** appears, opening a project page |
+| drop images into a project | they become the page, in filename order |
+| drop photos into `pellicules/` | they fill the gallery |
+| add a top-level bureau | it appears on the desktop **and in the top bar** |
+| forget `icon.png` | a generic folder or file picture is used |
+| forget `x` / `y` | the icon is placed on a free grid slot, never stacked |
+| export `PHOTO.JPG` in capitals | matched the same as lowercase |
+| name two projects the same in different bureaus | kept distinct, no transition clash |
+
+Only things that are **neither** a folder nor a file — the windows — are
+declared by hand, in `config.toml`.
+
 ## Adding content — no code required
 
 The site reads the filesystem. Drop files in, they appear.

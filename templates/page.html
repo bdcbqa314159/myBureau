@@ -3,13 +3,13 @@
 {% block bodyclass %}project{% endblock %}
 {% block bar_mid %}<span class="bar-mid is-page">{{ page.title }}</span>{% endblock %}
 {% block content %}
-<main class="proj" style="view-transition-name:vt-{{ page.slug }}">
+<main class="proj" style="view-transition-name:vt-{{ page.path | slugify }}">
   <div class="proj-intro">{{ page.content | safe }}</div>
 
   {# every image in the folder, in filename order; icon.png is the desktop icon, not content #}
   {% for asset in page.assets %}
     {% set file = asset | split(pat="/") | last %}
-    {% if file | split(pat=".") | last in config.extra.image_types and file != "icon.png" %}
+    {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" %}
       <figure class="proj-fig"><img src="{{ get_url(path=asset) }}" alt="" loading="lazy"></figure>
     {% endif %}
   {% endfor %}
