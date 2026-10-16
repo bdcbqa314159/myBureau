@@ -9,6 +9,12 @@
 {% block boot %}<script>document.documentElement.classList.add("booting")</script>{% endblock %}
 {% block content %}
 
+{# Held in front of the desk until the wallpaper and every icon have
+   actually decoded, so the bureau arrives in one piece instead of
+   assembling itself in front of the visitor. Hidden unless .booting,
+   which is set by script — no JS means no overlay, ever. #}
+<div class="loader" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span></div>
+
 <main class="desk" style="view-transition-name:vt-{{ section.path | slugify | default(value='home') }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.png')) }}')">
 {% set_global slot = 0 %}
 
