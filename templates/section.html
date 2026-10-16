@@ -1,47 +1,47 @@
 {% extends "base.html" %}
 {% block title %}{% if section.components | length %}{{ section.title }} — {% endif %}{{ id.title }}{% endblock %}
 {% block bodyclass %}desktop{% endblock %}
+{% block bar_mid %}<span class="bar-mid is-page">{{ section.title }}</span>{% endblock %}
 
 {# Set before first paint so returning to a bureau never flashes the icons
    home before walking them home. Added by script, so a browser without JS
    never hides anything — and only on pages that actually have a desk. #}
 {% block boot %}<script>document.documentElement.classList.add("booting")</script>{% endblock %}
-{% block bar_mid %}<span class="bar-mid is-page">{{ section.title }}</span>{% endblock %}
 {% block content %}
 
-<main class="desk" style="view-transition-name:vt-{{ section.components | last | default(value='home') }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.png')) }}')">
+<main class="desk" style="view-transition-name:vt-{{ section.path | slugify | default(value='home') }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.png')) }}')">
+{% set_global slot = 0 %}
 
-  {# FOLDERS — a directory with an _index.md is a bureau of its own.
-     Drop one in and it appears here, opening onto a new desktop. #}
-  {% for path in section.subsections %}
-  {% set sub = get_section(path=path) %}
-  <a class="icon" href="{{ sub.permalink }}"
-     style="--x:{{ sub.extra.x | default(value=50) }}%; --y:{{ sub.extra.y | default(value=50) }}%; view-transition-name:vt-{{ sub.components | last }}"
-     data-vt="{{ sub.components | last }}" data-folder>
-    <img src="{{ sub.permalink }}{{ sub.extra.icon | default(value='icon.png') }}" alt="">
-    <span>{{ sub.title }}</span>
-  </a>
+  {# FOLDERS — a directory with an _index.md is a bureau of its own. #}
+  {% for p in section.subsections %}
+    {% set sub = get_section(path=p) %}
+    {% set_global ic_title = sub.title %}{% set_global ic_href = sub.permalink %}
+    {% set_global ic_path = sub.path %}{% set_global ic_assets = sub.assets %}
+    {% set_global ic_x = sub.extra.x %}{% set_global ic_y = sub.extra.y %}
+    {% set_global ic_slot = slot %}{% set_global ic_kind = "folder" %}{% set_global ic_window = "" %}
+    {% include "_icon.html" %}
+    {% if not sub.extra.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
 
   {# FILES — a directory with an index.md is a project, and opens a page. #}
   {% for p in section.pages %}
-  <a class="icon" href="{{ p.permalink }}"
-     style="--x:{{ p.extra.x | default(value=50) }}%; --y:{{ p.extra.y | default(value=50) }}%; view-transition-name:vt-{{ p.slug }}"
-     data-vt="{{ p.slug }}">
-    <img src="{{ p.permalink }}{{ p.extra.icon | default(value='icon.png') }}" alt="">
-    <span>{{ p.title }}</span>
-  </a>
+    {% set_global ic_title = p.title %}{% set_global ic_href = p.permalink %}
+    {% set_global ic_path = p.path %}{% set_global ic_assets = p.assets %}
+    {% set_global ic_x = p.extra.x %}{% set_global ic_y = p.extra.y %}
+    {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}{% set_global ic_window = "" %}
+    {% include "_icon.html" %}
+    {% if not p.extra.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
 
   {# Neither: windows and anything else declared by hand. #}
   {% for item in section.extra.items | default(value=[]) %}
-  <a class="icon" href="{{ item.url | default(value='#') }}"
-     style="--x:{{ item.x }}%; --y:{{ item.y }}%; view-transition-name:vt-{{ item.name | slugify }}"
-     {% if item.window %}data-window="{{ item.window }}"{% endif %}
-     data-vt="{{ item.name | slugify }}">
-    <img src="{{ get_url(path=item.icon) }}" alt="">
-    <span>{{ item.name }}</span>
-  </a>
+    {% set_global ic_title = item.name %}{% set_global ic_href = item.url | default(value="#") %}
+    {% set_global ic_path = item.name %}{% set_global ic_assets = [] %}
+    {% set_global ic_x = item.x %}{% set_global ic_y = item.y %}
+    {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}
+    {% set_global ic_window = item.window | default(value="") %}
+    {% include "_icon.html" %}
+    {% if not item.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
 </main>
 
