@@ -63,6 +63,55 @@ copyright claim by anyone. They exist to test layout, loading and
 aspect ratios, and will be deleted as the client's real work lands.
 
 --------------------------------------------------------------------
+THE 1995 DESKTOP LOOK  -  independent recreation
+--------------------------------------------------------------------
+The window chrome, the cursors and the desktop metaphor are an
+independent recreation of a mid-1990s graphical interface. NO
+MICROSOFT ASSET IS USED, AND NONE MAY BE ADDED.
+
+What that means in practice:
+
+  THE LOOK is not owned by anyone. Copyright protects expression, not
+  visual style. Grey bevelled panels, a coloured title bar, inset
+  borders and a close box are an aesthetic, and an aesthetic cannot be
+  owned. Recreating one is as legitimate as designing a site to look
+  like a newspaper.
+
+  THE WINDOW CHROME here is CSS: hex colours and box-shadow insets
+  (#c0c0c0, #000082, inset 1px bevels). There is no imported bitmap,
+  no icon file, no theme package, no third-party stylesheet.
+
+  THE CURSORS are original pixel art, drawn in tools/cursors.py as
+  ASCII and generated to PNG. An arrow, a pointing hand, an open hand,
+  a fist and a no-entry sign are generic interface symbols that predate
+  Windows by a decade.
+
+  THE TYPEFACE is Inter Tight under the SIL Open Font License 1.1,
+  self-hosted. No Microsoft font is used or referenced.
+
+  NO TRADEMARK is used. The dialog is labelled "System message". The
+  words Windows and Microsoft, and the four-pane logo, appear nowhere,
+  and nothing here implies endorsement by or association with anyone.
+
+RULES FOR ANYONE WORKING ON THIS
+--------------------------------
+  - Do NOT add icons, bitmaps, fonts or sounds extracted from any
+    Microsoft product, or downloaded from a "Windows 95 icon pack".
+    Those archives are overwhelmingly unlicensed re-uploads, and a
+    client site is the wrong place to find out.
+  - Do NOT add the Windows or Microsoft name or logo.
+  - DO draw replacements, or use assets the client authored, or use
+    assets under a licence that permits commercial web use - and
+    record which, here.
+
+CLIENT-SUPPLIED ARTWORK
+-----------------------
+Folder and file artwork supplied by the client is theirs, under the
+CREATIVE ASSETS section above. Where such artwork incorporates
+photographed or sourced texture, the client is responsible for holding
+a licence permitting commercial web use.
+
+--------------------------------------------------------------------
 THIS IS NOT THE AGREEMENT
 --------------------------------------------------------------------
 These files declare the intended position. They are not a signed
