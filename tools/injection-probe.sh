@@ -7,6 +7,19 @@
 # entirely and POSTs straight at the endpoint with curl — exactly as an
 # attacker would — then you read the raw source of what arrives.
 #
+# WEB3FORMS REFUSES THIS. Every request from curl comes back 403:
+#
+#   "This method is not allowed. Use our API in client side or contact
+#    support with server IP address (Pro plan is required)"
+#
+# Tested with a browser User-Agent, with a matching Origin, with a Referer,
+# and with all three. All 403. That is a real defence against the cheap
+# attack — and it also means THIS SCRIPT CANNOT TEST THEM. Only a browser
+# can reach them, so see "Testing a browser-only backend" in the README.
+#
+# The script stays because it is the right test for a backend that does
+# accept server-side POSTs — a Cloudflare Worker, for instance.
+#
 # It sends REAL submissions to whatever address the access key points at.
 # Run it against your own address, never a client's.
 #

@@ -296,6 +296,48 @@ It probes whichever key is live, and warns before touching a client
 inbox. Every address in the payloads is under `example.com`, which
 RFC 2606 reserves for documentation.
 
+### Testing a browser-only backend
+
+Web3Forms refuses every request that does not come from a browser. Tested
+from `curl` with a browser User-Agent, a matching `Origin`, a `Referer`,
+and all three together — **403 in every case**:
+
+> This method is not allowed. Use our API in client side or contact
+> support with server IP address (Pro plan is required)
+
+That is a genuine defence: the cheap attack — point `curl` at the
+endpoint and fire injection payloads — simply does not work. It is a
+heuristic rather than a proof, so a headless browser could still get
+through, but it removes the trivial path and the drive-by scanners that
+use it.
+
+It also means `tools/injection-probe.sh` cannot test them. To check
+whether they strip injected headers, you need a real browser:
+
+1. open the live site, open the contact window
+2. open DevTools → Console
+3. paste this and run it
+
+```js
+fetch("https://api.web3forms.com/submit", {
+  method: "POST",
+  body: new URLSearchParams({
+    access_key: document.querySelector('[name="access_key"]').value,
+    email: "probe@example.com\nBcc: should-not-exist@example.net",
+    subject: "PROBE header injection",
+    message: "If the received headers carry a Bcc, this backend is unsafe.",
+  }),
+}).then(r => r.json()).then(console.log);
+```
+
+This runs from the page's own origin, so it reaches them — and it
+bypasses our validation entirely, which is the point: it tests **their**
+handling, not ours.
+
+Then open what arrives and read the raw source (Gmail: ⋯ → Show
+original). **A `Bcc:` header we did not write means the backend is
+unsafe.** No such header means they strip or escape newlines correctly.
+
 ### Read this before trusting any of it
 
 **All of the above runs in the visitor's browser.** An attacker does not

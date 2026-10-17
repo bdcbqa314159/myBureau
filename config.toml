@@ -60,7 +60,7 @@ endpoint = "https://api.web3forms.com/submit"
 
 [extra.contact.demo]
 # Bernardo's test key. Receives while live = false.
-access_key = ""
+access_key = "fe39bfbb-f3bb-462f-ba55-136c9535b226"
 
 [extra.contact.real]
 # STUDIO S. Receives once live = true. Registered by her, to her address.
