@@ -15,7 +15,7 @@
    which is set by script — no JS means no overlay, ever. #}
 <div class="loader" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span></div>
 
-<main class="desk" style="view-transition-name:vt-{{ section.path | slugify | default(value='home') }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.png')) }}')">
+<main class="desk" style="view-transition-name:vt-{{ section.path | slugify | default(value='home') }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.svg')) }}')">
 {% set_global slot = 0 %}
 
   {# FOLDERS — a directory with an _index.md is a bureau of its own. #}
@@ -23,7 +23,7 @@
     {% set sub = get_section(path=p) %}
     {% set_global ic_title = sub.title %}{% set_global ic_href = sub.permalink %}
     {% set_global ic_path = sub.path %}{% set_global ic_assets = sub.assets %}
-    {% set_global ic_x = sub.extra.x %}{% set_global ic_y = sub.extra.y %}
+    {% set_global ic_declared = sub.extra.icon %}{% set_global ic_x = sub.extra.x %}{% set_global ic_y = sub.extra.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "folder" %}{% set_global ic_window = "" %}
     {% include "_icon.html" %}
     {% if not sub.extra.x %}{% set_global slot = slot + 1 %}{% endif %}
@@ -33,7 +33,7 @@
   {% for p in section.pages %}
     {% set_global ic_title = p.title %}{% set_global ic_href = p.permalink %}
     {% set_global ic_path = p.path %}{% set_global ic_assets = p.assets %}
-    {% set_global ic_x = p.extra.x %}{% set_global ic_y = p.extra.y %}
+    {% set_global ic_declared = p.extra.icon %}{% set_global ic_x = p.extra.x %}{% set_global ic_y = p.extra.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}{% set_global ic_window = "" %}
     {% include "_icon.html" %}
     {% if not p.extra.x %}{% set_global slot = slot + 1 %}{% endif %}
@@ -43,7 +43,7 @@
   {% for item in section.extra.items | default(value=[]) %}
     {% set_global ic_title = item.name %}{% set_global ic_href = item.url | default(value="#") %}
     {% set_global ic_path = item.name %}{% set_global ic_assets = [] %}
-    {% set_global ic_x = item.x %}{% set_global ic_y = item.y %}
+    {% set_global ic_declared = item.icon %}{% set_global ic_x = item.x %}{% set_global ic_y = item.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}
     {% set_global ic_window = item.window | default(value="") %}
     {% include "_icon.html" %}

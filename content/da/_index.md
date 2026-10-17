@@ -3,7 +3,8 @@ title = "DA"
 template = "section.html"
 
 [extra]
+icon = "img/icons/folder-rust.svg"
 x = 66
 y = 66
-wallpaper = "img/wall-da.png"
+wallpaper = "img/wall-da.svg"
 +++

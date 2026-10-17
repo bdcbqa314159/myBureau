@@ -10,8 +10,26 @@
       ic_path   the full path, slugified — two projects called
                 "calendar" in different bureaus must not collide
 -#}
-{%- set_global ic_pic = get_url(path="img/file.png") -%}
-{%- if ic_kind == "folder" -%}{%- set_global ic_pic = get_url(path="img/folder.png") -%}{%- endif -%}
+{#- Which picture. Most explicit wins:
+      1. a file named icon.* sitting in the project folder  (she drew it)
+      2. an icon = "..." path declared in the front matter
+      3. folders get a folder
+      4. otherwise the extension in the TITLE decides, the way a real
+         desktop works: june's cry.mov gets a film strip, 12 regards.pdf
+         gets a document, theodora.jpeg gets a photograph
+      5. a document, when nothing else applies                         -#}
+{%- set ext = ic_title | split(pat=".") | last | lower -%}
+{%- if ext in ["mov", "mp4", "m4v", "avi", "webm"] -%}
+  {%- set_global ic_pic = get_url(path="img/icons/movie.svg") -%}
+{%- elif ext in ["jpg", "jpeg", "png", "gif", "webp", "avif", "tif", "tiff"] -%}
+  {%- set_global ic_pic = get_url(path="img/icons/photo.svg") -%}
+{%- else -%}
+  {%- set_global ic_pic = get_url(path="img/icons/doc.svg") -%}
+{%- endif -%}
+{%- if ic_kind == "folder" -%}
+  {%- set_global ic_pic = get_url(path="img/icons/folder.svg") -%}
+{%- endif -%}
+{%- if ic_declared -%}{%- set_global ic_pic = get_url(path=ic_declared) -%}{%- endif -%}
 {%- for a in ic_assets -%}
   {%- if a | split(pat="/") | last | split(pat=".") | first == "icon" -%}
     {%- set_global ic_pic = get_url(path=a) -%}
