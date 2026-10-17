@@ -101,6 +101,7 @@ function wire(form: HTMLFormElement): void {
   const say = form.querySelector<HTMLElement>("[data-says]");
   const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
   const endpoint = form.getAttribute("action") ?? "";
+  const key = form.querySelector<HTMLInputElement>('input[name="access_key"]')?.value ?? "";
 
   const tell = (msg: string): void => {
     if (say !== null) say.textContent = msg;
@@ -129,8 +130,9 @@ function wire(form: HTMLFormElement): void {
       return;
     }
 
-    if (endpoint === "") {
-      tell("Le formulaire n'est pas encore relie. Ecris directement.");
+    // No key means no destination. Say so rather than posting into a void.
+    if (endpoint === "" || key === "") {
+      tell("Le formulaire n'est pas encore relie.");
       return;
     }
 
@@ -141,6 +143,7 @@ function wire(form: HTMLFormElement): void {
       method: "POST",
       headers: { Accept: "application/json" },
       body: new URLSearchParams({
+        access_key: key,
         email: clean(submission.email.trim()),
         subject: clean(submission.subject.trim()),
         message: clean(submission.message.trim()),

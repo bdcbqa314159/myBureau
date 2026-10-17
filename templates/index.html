@@ -14,6 +14,9 @@
   <div class="win-body">
     <form class="contact-form" action="{{ config.extra.contact.endpoint }}" method="post" novalidate>
 
+      {# Where it goes. Public by design — the browser has to send it. #}
+      <input type="hidden" name="access_key" value="{{ contact_key }}">
+
       {# A field no person can see and no screen reader reaches. Filled in
          means a bot. Moved off-screen rather than display:none, because
          some bots skip hidden fields and some assistive tech reads them. #}

@@ -240,6 +240,104 @@ disables after one click.
 Nothing the visitor typed is ever echoed back into the page. A
 "thanks, you said X" confirmation would be a stored-XSS vector for free.
 
+### Handing the form over
+
+The form POSTs to one endpoint that is the same for every user of the
+service. **The access key is the only thing that says where a submission
+goes.** There is no per-site URL to migrate.
+
+Two keys live in `config.toml`, picked by the same `live` flag that swaps
+the name and the robots policy:
+
+```toml
+[extra.contact.demo]
+access_key = ""      # receives while live = false
+
+[extra.contact.real]
+access_key = ""      # receives once live = true
+```
+
+They are deliberately tied together. With a single key, flipping
+`live = true` would put her name up, let crawlers in, and leave her
+enquiries arriving in the developer's inbox — silently, until a client
+says they never heard back. Identity and destination change together or
+not at all.
+
+To hand over:
+
+1. **she** registers at web3forms.com with her address — the key is
+   emailed to the destination, so it has to be her
+2. she sends the key
+3. it goes in `[extra.contact.real]`
+4. `live = true` on launch
+
+Same site, same URL, same form, same validation. One value moves.
+
+An empty key means the form says it is not connected rather than posting
+into a void. The key is public by design: it sits in the page HTML so the
+browser can submit it. It is a destination, not a secret.
+
+### Verifying a backend
+
+```bash
+./tools/injection-probe.sh
+```
+
+Sends three submissions straight at the endpoint with `curl`, bypassing
+the page exactly as an attacker would, then you read the raw source of
+what arrives. One control, one `Bcc:` injected through the mail field,
+one through the subject.
+
+**Pass** — only the control arrives intact, and no received message
+carries a `Bcc:` or `Content-Type:` header we did not write.
+**Fail** — pick a different backend.
+
+It probes whichever key is live, and warns before touching a client
+inbox. Every address in the payloads is under `example.com`, which
+RFC 2606 reserves for documentation.
+
+### Testing a browser-only backend
+
+Web3Forms refuses every request that does not come from a browser. Tested
+from `curl` with a browser User-Agent, a matching `Origin`, a `Referer`,
+and all three together — **403 in every case**:
+
+> This method is not allowed. Use our API in client side or contact
+> support with server IP address (Pro plan is required)
+
+That is a genuine defence: the cheap attack — point `curl` at the
+endpoint and fire injection payloads — simply does not work. It is a
+heuristic rather than a proof, so a headless browser could still get
+through, but it removes the trivial path and the drive-by scanners that
+use it.
+
+It also means `tools/injection-probe.sh` cannot test them. To check
+whether they strip injected headers, you need a real browser:
+
+1. open the live site, open the contact window
+2. open DevTools → Console
+3. paste this and run it
+
+```js
+fetch("https://api.web3forms.com/submit", {
+  method: "POST",
+  body: new URLSearchParams({
+    access_key: document.querySelector('[name="access_key"]').value,
+    email: "probe@example.com\nBcc: should-not-exist@example.net",
+    subject: "PROBE header injection",
+    message: "If the received headers carry a Bcc, this backend is unsafe.",
+  }),
+}).then(r => r.json()).then(console.log);
+```
+
+This runs from the page's own origin, so it reaches them — and it
+bypasses our validation entirely, which is the point: it tests **their**
+handling, not ours.
+
+Then open what arrives and read the raw source (Gmail: ⋯ → Show
+original). **A `Bcc:` header we did not write means the backend is
+unsafe.** No such header means they strip or escape newlines correctly.
+
 ### Read this before trusting any of it
 
 **All of the above runs in the visitor's browser.** An attacker does not
