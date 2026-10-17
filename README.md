@@ -240,6 +240,62 @@ disables after one click.
 Nothing the visitor typed is ever echoed back into the page. A
 "thanks, you said X" confirmation would be a stored-XSS vector for free.
 
+### Handing the form over
+
+The form POSTs to one endpoint that is the same for every user of the
+service. **The access key is the only thing that says where a submission
+goes.** There is no per-site URL to migrate.
+
+Two keys live in `config.toml`, picked by the same `live` flag that swaps
+the name and the robots policy:
+
+```toml
+[extra.contact.demo]
+access_key = ""      # receives while live = false
+
+[extra.contact.real]
+access_key = ""      # receives once live = true
+```
+
+They are deliberately tied together. With a single key, flipping
+`live = true` would put her name up, let crawlers in, and leave her
+enquiries arriving in the developer's inbox — silently, until a client
+says they never heard back. Identity and destination change together or
+not at all.
+
+To hand over:
+
+1. **she** registers at web3forms.com with her address — the key is
+   emailed to the destination, so it has to be her
+2. she sends the key
+3. it goes in `[extra.contact.real]`
+4. `live = true` on launch
+
+Same site, same URL, same form, same validation. One value moves.
+
+An empty key means the form says it is not connected rather than posting
+into a void. The key is public by design: it sits in the page HTML so the
+browser can submit it. It is a destination, not a secret.
+
+### Verifying a backend
+
+```bash
+./tools/injection-probe.sh
+```
+
+Sends three submissions straight at the endpoint with `curl`, bypassing
+the page exactly as an attacker would, then you read the raw source of
+what arrives. One control, one `Bcc:` injected through the mail field,
+one through the subject.
+
+**Pass** — only the control arrives intact, and no received message
+carries a `Bcc:` or `Content-Type:` header we did not write.
+**Fail** — pick a different backend.
+
+It probes whichever key is live, and warns before touching a client
+inbox. Every address in the payloads is under `example.com`, which
+RFC 2606 reserves for documentation.
+
 ### Read this before trusting any of it
 
 **All of the above runs in the visitor's browser.** An attacker does not

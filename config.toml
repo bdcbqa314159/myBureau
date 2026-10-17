@@ -40,12 +40,28 @@ studio = "STUDIO S"
 title  = "valentina for STUDIO S"
 
 # ---- contact form ----------------------------------------------------
-# Where the form POSTs. EMPTY until a backend is chosen, which keeps the
-# form inert rather than silently dropping messages.
+# One endpoint for everybody on the service — the access key is the only
+# thing that says where a submission goes.
 #
-# Everything the browser checks is a courtesy: an attacker POSTs straight
-# at this endpoint and none of our code runs. Pick a backend for ITS
-# server-side validation, rate limiting and spam filtering — that is the
-# only enforcement that counts. See "The contact form" in the README.
+# Two keys, picked by `live`, for the same reason the name and the robots
+# policy are: on launch day the destination must change WITH the identity.
+# A single key would mean flipping live = true puts her name up while her
+# enquiries still arrive in Bernardo's inbox, silently, until a client
+# says they never heard back.
+#
+# Empty key = the form says it is not connected rather than swallowing
+# the message. The key is public by design; it lives in the page HTML so
+# the browser can submit. It is a destination, not a secret.
+#
+# Everything the browser checks is a courtesy — an attacker POSTs straight
+# at the endpoint. Verify the backend with tools/injection-probe.sh.
 [extra.contact]
-endpoint = ""
+endpoint = "https://api.web3forms.com/submit"
+
+[extra.contact.demo]
+# Bernardo's test key. Receives while live = false.
+access_key = ""
+
+[extra.contact.real]
+# STUDIO S. Receives once live = true. Registered by her, to her address.
+access_key = ""

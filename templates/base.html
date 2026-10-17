@@ -1,6 +1,6 @@
 {# one switch picks who this site belongs to — see config.toml #}
-{% if config.extra.live %}{% set_global id = config.extra.real %}
-{% else %}{% set_global id = config.extra.demo %}{% endif %}
+{% if config.extra.live %}{% set_global id = config.extra.real %}{% set_global contact_key = config.extra.contact.real.access_key %}
+{% else %}{% set_global id = config.extra.demo %}{% set_global contact_key = config.extra.contact.demo.access_key %}{% endif %}
 <!doctype html>
 <html lang="fr">
 <head>
