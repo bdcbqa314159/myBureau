@@ -321,6 +321,15 @@ img.will-fade.is-in { opacity: 1; }
   box-shadow: inset 1px 1px 0 rgb(0 0 0 / .35);
 }
 .contact-form textarea { resize: vertical; }
+
+/* The honeypot. Off-screen rather than display:none — some bots skip
+   hidden fields, and aria-hidden plus tabindex=-1 keeps it away from
+   anyone using a keyboard or a screen reader. */
+.trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+.says:empty { display: none; }
+.says { margin-top: .5rem; font-weight: var(--w-bold); }
+.win-note { margin-top: .8rem; font-size: .82em; opacity: .7; line-height: 1.35; }
 .win-buttons { display: flex; gap: 1rem; justify-content: center; margin-top: 1.1rem; }
 .win-buttons button {
   min-width: 7rem; padding: .3rem 1rem; font: inherit;

@@ -201,6 +201,64 @@ in the browser, but those moves are not saved — `x`/`y` is the resting layout.
 
 ---
 
+## The contact form
+
+### Where it sends
+
+Nowhere yet. `config.toml`:
+
+```toml
+[extra.contact]
+endpoint = ""
+```
+
+Empty on purpose — the form tells the visitor it is not connected rather
+than silently swallowing their message. Set it when a backend is chosen
+and the form starts working; that is the only line that changes.
+
+### What is checked, and what that is worth
+
+`src/contact.ts` rejects, before sending:
+
+| field | rejected |
+|---|---|
+| mail | newlines, control characters, commas, semicolons, `Bcc:`-style headers, over 254 chars, anything not shaped like one address |
+| objet | newlines, control characters, headers, over 150 chars |
+| message | control characters, headers, over 4000 chars, more than six links |
+
+The newline rules are the important ones. **A newline in a field that
+lands in a mail header lets an attacker append their own** — `Bcc:`
+followed by five thousand addresses — and the mail goes out in her name.
+That is how a contact form becomes a spam relay, and it is why the
+subject gets the same treatment as the address: the subject *is* a header.
+
+Bots get a honeypot field placed off-screen (not `display:none`, which
+some bots skip and some screen readers announce), a two-and-a-half second
+floor on how fast a form can be submitted, and a submit button that
+disables after one click.
+
+Nothing the visitor typed is ever echoed back into the page. A
+"thanks, you said X" confirmation would be a stored-XSS vector for free.
+
+### Read this before trusting any of it
+
+**All of the above runs in the visitor's browser.** An attacker does not
+use the form — they POST straight at the endpoint with `curl`, and none
+of this code executes.
+
+This is the sign on the door. The lock is whatever validates on the
+receiving side. Pick the backend for **its** server-side validation, rate
+limiting and spam filtering, not for how pleasant its API is.
+
+### Checking it
+
+```bash
+npm test     # compiles, then runs the validators against hostile input
+```
+
+Thirty cases, including every header-injection shape. CI runs it on every
+pull request, so a change that loosens the email rule fails the build.
+
 ## Changing the typeface
 
 All typography lives in one block at the top of `static/css/site.css`,

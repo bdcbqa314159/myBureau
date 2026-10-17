@@ -23,6 +23,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc
+      - run: node tools/contact-check.mjs    # contact form rejects what it must
       - uses: taiki-e/install-action@v2
         with:
           tool: zola@0.23.6

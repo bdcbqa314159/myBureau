@@ -5,7 +5,8 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch --preserveWatchOutput",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "test": "tsc && node tools/contact-check.mjs"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
