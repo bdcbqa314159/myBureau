@@ -8,7 +8,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ id.title }}{% endblock %}</title>
 {% if not config.extra.live %}<meta name="robots" content="noindex, nofollow">{% endif %}
-{% block boot %}{% endblock %}
+{# Set before first paint. `js` stays for the life of the page; `booting`
+   is removed the moment the page is revealed. Added by script, so a
+   browser without JS never hides anything. #}
+<script>
+(function(d){d.classList.add("js","booting");
+/* Failsafe: if desk.js never loads or throws before revealing, un-hide the
+   page anyway. A portfolio must never stay blank because a script died. */
+setTimeout(function(){d.classList.remove("booting")},6000)})(document.documentElement)
+</script>
 <link rel="preload" as="font" type="font/woff2" crossorigin
       href="{{ get_url(path='fonts/inter-tight-latin.woff2') }}">
 <link rel="stylesheet" href="{{ get_url(path='css/site.css') }}">
@@ -32,11 +40,16 @@
   </nav>
 </header>
 
+{# Held in front of the page until it is actually ready, so it arrives in
+   one piece instead of assembling itself in front of the visitor. #}
+<div class="loader" aria-hidden="true"><span class="dots"><i></i><i></i><i></i></span></div>
+
 {% block content %}{% endblock %}
 
 <footer class="credit">
   <a href="{{ config.extra.author_url }}" rel="author">site by {{ config.extra.author }}</a>
 </footer>
 
+<script src="{{ get_url(path='js/desk.js') }}"></script>
 </body>
 </html>

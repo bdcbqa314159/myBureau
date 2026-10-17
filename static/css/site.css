@@ -189,8 +189,12 @@ body.desktop { overflow: hidden; }
 .booting .loader, .loader.is-leaving {
   display: grid; place-items: center;
   position: fixed; inset: 0; z-index: 2000;
-  background: #0d0b0a;
+  /* the overlay is the page's own ground, so the reveal is a fade and
+     not a flash of the wrong colour */
+  background: var(--loader-bg, #0d0b0a);
 }
+body.project { --loader-bg: var(--cream); }
+body.project .loader .dots i { background: var(--ink); }
 .loader .dots { display: flex; gap: .4rem; }
 .loader .dots i {
   width: .4rem; height: .4rem; background: #fff; opacity: .16;
@@ -199,6 +203,15 @@ body.desktop { overflow: hidden; }
 .loader .dots i:nth-child(2) { animation-delay: .18s; }
 .loader .dots i:nth-child(3) { animation-delay: .36s; }
 @keyframes blink { 0%, 72%, 100% { opacity: .16; } 36% { opacity: 1; } }
+
+/* Pictures that arrive after the reveal come in rather than appear.
+   The hiding class is applied BY THE SCRIPT, never by CSS alone — if the
+   script fails to load or throws, nothing is left invisible. */
+img.will-fade { opacity: 0; transition: opacity .5s var(--ease); }
+img.will-fade.is-in { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  img.will-fade { opacity: 1; transition: none; }
+}
 @media (prefers-reduced-motion: reduce) {
   .loader .dots i { animation: none; opacity: .6; }
 }

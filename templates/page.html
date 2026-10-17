@@ -10,7 +10,9 @@
   {% for asset in page.assets %}
     {% set file = asset | split(pat="/") | last %}
     {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" %}
-      <figure class="proj-fig"><img src="{{ get_url(path=asset) }}" alt="" loading="lazy"></figure>
+      {# the first picture is the page; everything below it can arrive later #}
+      <figure class="proj-fig"><img src="{{ get_url(path=asset) }}" alt=""
+        {% if loop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}></figure>
     {% endif %}
   {% endfor %}
 

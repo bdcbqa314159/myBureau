@@ -63,7 +63,14 @@ function saveLayout(): void {
 
 const PATIENCE_MS = 4000;
 
-function deskImages(): string[] {
+/** What this page must have in hand before it is worth showing.
+ *
+ *  A bureau is a composed scene: the wallpaper and every icon, or it
+ *  assembles itself in public. A project page or a gallery is a scroll —
+ *  waiting for every photograph would mean staring at dots for seconds,
+ *  so only what is not deferred counts, which is roughly the first
+ *  screen. Everything below fades in as it lands. */
+function needed(): string[] {
   const urls: string[] = [];
   const desk = document.querySelector<HTMLElement>(".desk");
   if (desk !== null) {
@@ -71,8 +78,24 @@ function deskImages(): string[] {
     const wallpaper = found?.[1];
     if (wallpaper !== undefined) urls.push(wallpaper);
   }
-  document.querySelectorAll<HTMLImageElement>(".desk .icon img").forEach((i) => urls.push(i.src));
+  document
+    .querySelectorAll<HTMLImageElement>('img:not([loading="lazy"])')
+    .forEach((i) => { if (i.src !== "") urls.push(i.src); });
   return urls;
+}
+
+/** A picture arriving below the fold should read as intentional, not as
+ *  the page twitching. */
+function fadeInLateArrivals(): void {
+  document.querySelectorAll<HTMLImageElement>('img[loading="lazy"]').forEach((img) => {
+    if (img.complete) return;          // already here — leave it alone
+    // hidden only now, by script. CSS alone would strand every lazy image
+    // if this file failed to load.
+    img.classList.add("will-fade");
+    const show = (): void => img.classList.add("is-in");
+    img.addEventListener("load", show, { once: true });
+    img.addEventListener("error", show, { once: true });   // a gap, not a hole
+  });
 }
 
 const settled = (url: string): Promise<void> =>
@@ -85,7 +108,7 @@ const settled = (url: string): Promise<void> =>
 
 async function whenPainted(): Promise<void> {
   const everything = Promise.all([
-    ...deskImages().map(settled),
+    ...needed().map(settled),
     document.fonts.ready.then(() => undefined),
   ]).then(() => undefined);
   const cap = new Promise<void>((go) => { window.setTimeout(go, PATIENCE_MS); });
@@ -95,6 +118,7 @@ async function whenPainted(): Promise<void> {
 /** Reveal the bureau: the overlay fades while the icons arrive underneath,
  *  so the two motions overlap instead of queueing. */
 function reveal(): void {
+  fadeInLateArrivals();
   const loader = document.querySelector<HTMLElement>(".loader");
   if (loader === null) {
     tidyUp();
