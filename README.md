@@ -77,6 +77,50 @@ The description paragraph that opens the project page.
 That is the whole contract. The desktop icon, the project page, the
 image list and the navigation are all derived from it. Nothing else to edit.
 
+### Icons
+
+You rarely need to set one. The extension in the **title** decides, the
+way a real desktop works:
+
+| title ends in | icon |
+|---|---|
+| `.mov` `.mp4` `.m4v` `.avi` `.webm` | film strip |
+| `.jpg` `.png` `.gif` `.webp` `.tif` … | Polaroid |
+| anything else | document |
+| (it is a folder) | folder |
+
+So naming a project `june's cry.mov` gets you a film strip and
+`12 regards.pdf` gets you a document, with nothing to configure.
+
+To override, most explicit wins:
+
+1. a file named `icon.*` in the project folder — her artwork
+2. `icon = "img/icons/folder-rust.svg"` in the front matter
+3. the extension rule above
+
+Folders ship in four colourways — `folder.svg` (amber), `folder-rust`,
+`folder-olive`, `folder-slate`.
+
+### Regenerating the art
+
+```bash
+python3 tools/icons.py           # icons + wallpapers
+python3 tools/icons.py --check   # validate, write nothing
+```
+
+Icons and wallpapers are **code**, for the same reason the cursors are:
+an SVG diff in a pull request is readable, a binary diff is two blobs.
+
+Wallpapers are SVG too — a duotone wash, film grain from
+`feTurbulence`, and a vignette. Under 1 KB each instead of ~380 KB, and
+the grain is computed rather than compressed, so it never bands. Point a
+section at a photograph instead whenever you have one:
+
+```toml
+[extra]
+wallpaper = "img/my-photo.jpg"
+```
+
 ### Folders and files
 
 The filesystem is the structure. There is no flag to set:
