@@ -38,3 +38,14 @@ title  = "myBureau — desktop-metaphor site engine"
 owner  = "valentina for"
 studio = "STUDIO S"
 title  = "valentina for STUDIO S"
+
+# ---- contact form ----------------------------------------------------
+# Where the form POSTs. EMPTY until a backend is chosen, which keeps the
+# form inert rather than silently dropping messages.
+#
+# Everything the browser checks is a courtesy: an attacker POSTs straight
+# at this endpoint and none of our code runs. Pick a backend for ITS
+# server-side validation, rate limiting and spam filtering — that is the
+# only enforcement that counts. See "The contact form" in the README.
+[extra.contact]
+endpoint = ""

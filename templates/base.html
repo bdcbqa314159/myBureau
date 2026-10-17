@@ -51,5 +51,7 @@ setTimeout(function(){d.classList.remove("booting")},6000)})(document.documentEl
 </footer>
 
 <script src="{{ get_url(path='js/desk.js') }}"></script>
+{# a module, so it defers; harmless on pages with no form #}
+<script type="module" src="{{ get_url(path='js/contact.js') }}"></script>
 </body>
 </html>
