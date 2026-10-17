@@ -138,17 +138,31 @@ add `template = "section.html"`, and put project directories inside it.
 
 ### Arriving
 
-A bureau is one large wallpaper plus one request per icon, so left alone
-it assembles itself in front of the visitor — pieces landing one at a
-time. Instead, a small overlay is held until the wallpaper, every icon
-and the fonts have decoded, then the whole desk is revealed at once.
+Every page waits behind a small overlay until it is worth showing, then
+reveals at once. What counts as ready depends on the page:
 
-Capped at four seconds: past that it reveals regardless and lets the
-stragglers land. A portfolio must never be held hostage by one slow
-image. A broken image cannot hang it either.
+| page | waits for |
+|---|---|
+| a bureau | the wallpaper and every icon — it is a composed scene and must appear whole |
+| a project page | the fonts and the first picture; the rest are `loading="lazy"` |
+| the gallery | the fonts; every photograph is lazy |
 
-This hides the stutter; it does not make the page lighter. The real fix
-is smaller images — see the pipeline work still outstanding.
+A scroll page that waited for all its images would mean staring at dots
+for seconds, so only what is not deferred counts. Pictures arriving later
+fade in, so a photograph appearing below the fold reads as intentional.
+
+Three failure modes, all handled:
+
+- **no JavaScript** — the `booting` class is added *by script*, so nothing
+  is ever hidden and no overlay appears
+- **the script fails to load** — an inline failsafe clears `booting` after
+  six seconds. A portfolio must never stay blank because a script died
+- **an image is broken or slow** — `onerror` settles like `onload`, and the
+  whole wait is capped at four seconds
+
+This hides the lag; it does not remove it. 8.8 MB of content images with
+no resizing, no WebP and no `srcset` is the real cause — see the image
+pipeline work still outstanding.
 
 ### Leaving and coming back
 
