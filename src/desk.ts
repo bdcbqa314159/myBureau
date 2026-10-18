@@ -474,6 +474,7 @@ function arrange(): void {
     if (home === undefined) return;
     el.style.left = "";
     el.style.top = "";
+    el.style.width = "";        // release a width pinned by a previous pass
     el.style.setProperty("--x", home.x);
     el.style.setProperty("--y", home.y);
   });
@@ -486,7 +487,19 @@ function arrange(): void {
 
   // On a narrow screen the grid has done its job; from here the icons
   // are objects again so they can be picked up.
-  if (narrowScreen()) desk.classList.add("arranged");
+  //
+  // The WIDTH has to be pinned along with the position. The phone rules
+  // give an icon `width: 100%`, which is the grid cell while it is laid
+  // out by the grid — and the whole desk the moment it becomes absolute.
+  // Without this the icons are correct on first paint and then fill the
+  // screen as soon as this pass runs.
+  if (narrowScreen()) {
+    desk.classList.add("arranged");
+    icons.forEach((el, i) => {
+      const b = base[i];
+      if (b !== undefined) el.style.width = `${b.w}px`;
+    });
+  }
 
   // --- 2 and 3. the visitor's choice, then the clamp -----------------
   const bar = document.querySelector<HTMLElement>(".bar");
