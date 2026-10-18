@@ -12,6 +12,22 @@ Claude opens pull requests. **Claude never merges them.**
 Bernardo inspects the diff and merges. That is the only review gate this
 repo has, and it does not get bypassed.
 
+## One open PR at a time
+
+Open one. Wait for Bernardo to merge it. Then start the next.
+
+Do not open a second PR while one is waiting. If a second is genuinely
+unavoidable — an urgent regression while something else is in review —
+rebase it onto the first **before** asking for review, and say which
+order they must be merged in.
+
+Never hand over two PRs that touch the same file and were branched from
+the same commit. They may merge cleanly by luck, and when they do not,
+the second silently reverts the first. The symptom is "the bug you just
+fixed is back", which is a miserable thing to debug.
+
+Rebase in order. Always.
+
 ## Check the PR is still open before pushing to its branch
 
 Twice now a follow-up has been pushed to a branch whose PR Bernardo had
