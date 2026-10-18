@@ -175,6 +175,58 @@ a { color: inherit; }
 @media (max-width: 56rem) { .bar-left.is-secondary { display: none; } }
 
 /* ====================================================================
+   Phones
+   --------------------------------------------------------------------
+   A bureau needs room to arrange things in, and a phone has none. So on
+   a narrow screen the desk stops being a scatter and becomes a grid: the
+   same icons, the same labels, the same destinations — tidied, because
+   there is no space to be untidy in.
+
+   Dragging goes with it. Arranging your own desktop is a thing you do
+   with a pointer; on a touch screen it only competes with scrolling.
+   The script checks the same width and does not attach the handlers.
+
+   The gallery and the project pages already work here and are left
+   alone — they were always scroll pages.
+   ==================================================================== */
+@media (max-width: 40rem) {
+  /* the bandeau: the centre label takes its own row rather than
+     colliding with the wordmark on one side and the nav on the other */
+  /* One column, in reading order: who this is, where you are, where you
+     can go. Side by side they collided; and on the home desktop the left
+     slot is empty, which put the nav above the wordmark. */
+  .bar {
+    grid-template-columns: 1fr;
+    row-gap: .15rem;
+  }
+  .bar-left, .bar-mid, .bar-nav { justify-self: start; text-align: left; }
+  .bar-mid.is-wordmark { font-size: var(--f-4); }
+  .bar-mid.is-page { opacity: .85; }
+  .bar-mid.is-wordmark { font-size: var(--f-4); }
+  .bar-nav { gap: .5rem; font-size: var(--f-1); }
+
+  /* the desk: a grid, not a scatter */
+  .desk {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    align-content: start;
+    gap: 1.6rem .5rem;
+    padding: 7.5rem .75rem 2rem;
+    height: auto; min-height: 100dvh;
+  }
+  .desk .icon {
+    position: static;
+    width: 100%;
+    cursor: pointer;
+    touch-action: auto;          /* scrolling wins over dragging */
+  }
+  body.desktop { overflow: auto; }
+
+  .win-film { width: 94vw; }
+  .credit { font-size: .64rem; }
+}
+
+/* ====================================================================
    desktop
    ==================================================================== */
 body.desktop { overflow: hidden; }

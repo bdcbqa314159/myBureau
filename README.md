@@ -164,6 +164,32 @@ This hides the lag; it does not remove it. 8.8 MB of content images with
 no resizing, no WebP and no `srcset` is the real cause — see the image
 pipeline work still outstanding.
 
+### On a phone
+
+The gallery and the project pages already worked — they were always
+scroll pages. Two things did not:
+
+- **the bandeau** collided, the centre label running into the wordmark on
+  one side and the nav on the other. It now stacks in reading order: who
+  this is, where you are, where you can go.
+- **the bureau** overlapped. Percentage positions that compose nicely on
+  a wide screen crowd into each other at 390px, so icons sat on top of
+  one another and some were unreachable.
+
+A bureau needs room to arrange things in, and a phone has none. So below
+`40rem` the desk stops being a scatter and becomes a three-column grid —
+same icons, same labels, same destinations, tidied because there is no
+space to be untidy in. `x` and `y` are simply ignored there.
+
+**Dragging is off on phones for now.** Not because it is unwanted, but
+because the naive version is worse than none: `touch-action: none` on an
+icon means a touch starting there cannot scroll the page, and with a grid
+of icons covering the screen that leaves almost nowhere to scroll from.
+
+The right answer is **long-press to lift**, which is how every phone home
+screen works: a quick touch opens, a held touch picks up. That is a
+separate piece of work and is worth doing — see the note in the PR.
+
 ### Leaving and coming back
 
 Icons you move are remembered **for the session**, per bureau. Leave a
