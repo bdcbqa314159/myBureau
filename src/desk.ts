@@ -452,23 +452,40 @@ function keepOnScreen(): void {
   const bar = document.querySelector<HTMLElement>(".bar");
   const ceiling = bar === null ? 0 : bar.getBoundingClientRect().height + 8;
 
+  const taken: { left: number; top: number; w: number; h: number }[] = [];
+
   desk.querySelectorAll<HTMLElement>(".icon").forEach((el) => {
     const r = el.getBoundingClientRect();
     const was = { left: r.left - frame.left, top: r.top - frame.top };
-    const put = {
-      left: clamp(was.left, 0, Math.max(0, frame.width - r.width)),
-      top: clamp(was.top, ceiling, Math.max(ceiling, frame.height - r.height)),
-    };
-    if (Math.abs(put.left - was.left) < 0.5 && Math.abs(put.top - was.top) < 0.5) return;
-    el.style.left = `${put.left}px`;
-    el.style.top = `${put.top}px`;
-    el.style.setProperty("--x", "auto");
-    el.style.setProperty("--y", "auto");
+    let left = clamp(was.left, 0, Math.max(0, frame.width - r.width));
+    let top = clamp(was.top, ceiling, Math.max(ceiling, frame.height - r.height));
+    const moved = Math.abs(left - was.left) > 0.5 || Math.abs(top - was.top) > 0.5;
+
+    if (moved) {
+      // Two icons hanging off the same edge both clamp to the same place
+      // and end up stacked. Walk one up until it is clear of whatever is
+      // already there — a tidied icon must still be a separate object.
+      let guard = 0;
+      while (guard < 40 && taken.some((o) =>
+        left < o.left + o.w && left + r.width > o.left &&
+        top < o.top + o.h && top + r.height > o.top)) {
+        top -= r.height * 0.55;
+        if (top < ceiling) { top = ceiling; left = Math.max(0, left - r.width * 0.6); }
+        guard += 1;
+      }
+      el.style.left = `${left}px`;
+      el.style.top = `${top}px`;
+      el.style.setProperty("--x", "auto");
+      el.style.setProperty("--y", "auto");
+    }
+    taken.push({ left, top, w: r.width, h: r.height });
   });
 }
 
 pinTheGrid();
-keepOnScreen();
+// NOT here: at script time no icon image has loaded, so every icon
+// measures almost no height and the clamp moves things that were fine.
+// It runs from reveal(), once whenPainted() says the pictures are in.
 
 // A window that was wide enough a moment ago may not be any more.
 let settling = 0;
