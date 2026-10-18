@@ -52,8 +52,8 @@ for _i, (_seed, _w, _h) in enumerate(_GALLERY, start=1):
 # ---- project pages ----
 _PROJECTS = [
     "graphic-design/grocery-list", "graphic-design/calendar",
-    "graphic-design/douze-regards", "graphic-design/weber/terrasses",
-    "graphic-design/weber/facades", "graphic-design/logofolio/marks",
+    "graphic-design/douze-regards", "graphic-design/atelier-mirabelle/terrasses",
+    "graphic-design/atelier-mirabelle/facades", "graphic-design/logofolio/marks",
     "graphic-design/logofolio/wordmarks", "da/theodora",
     "da/confidence-glow", "da/maison-cosette/jojo",
     "da/maison-cosette/lookbook",
