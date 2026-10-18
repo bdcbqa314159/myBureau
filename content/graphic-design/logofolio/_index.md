@@ -6,5 +6,5 @@ template = "section.html"
 icon = "img/icons/folder-olive.svg"
 x = 82
 y = 72
-wallpaper = "img/wall-graphic.svg"
+wallpaper = "img/wall-graphic.jpg"
 +++

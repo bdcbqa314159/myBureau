@@ -55,61 +55,34 @@ The Author retains the right to display this work as a portfolio
 reference of the engineering engagement.
 
 --------------------------------------------------------------------
-CURRENT ASSET STATUS
+CURRENT ASSET STATUS  -  placeholders, not the client's work
 --------------------------------------------------------------------
-Every image presently in this repository is a machine-generated
-PLACEHOLDER — procedural noise with no creative content and no
-copyright claim by anyone. They exist to test layout, loading and
-aspect ratios, and will be deleted as the client's real work lands.
+NO IMAGE CURRENTLY IN THIS REPOSITORY IS THE CLIENT'S WORK.
 
---------------------------------------------------------------------
-THE 1995 DESKTOP LOOK  -  independent recreation
---------------------------------------------------------------------
-The window chrome, the cursors and the desktop metaphor are an
-independent recreation of a mid-1990s graphical interface. NO
-MICROSOFT ASSET IS USED, AND NONE MAY BE ADDED.
+Every photograph is a stand-in fetched from Lorem Picsum, which serves
+photography from Unsplash. They are here to test layout, legibility,
+proportion and loading against real pictures, because procedural noise
+cannot answer those questions.
 
-What that means in practice:
+They are used under the Unsplash License: free for commercial and
+non-commercial use, no permission required, no attribution required.
+That licence permits this use. It is not the reason they are leaving.
 
-  THE LOOK is not owned by anyone. Copyright protects expression, not
-  visual style. Grey bevelled panels, a coloured title bar, inset
-  borders and a close box are an aesthetic, and an aesthetic cannot be
-  owned. Recreating one is as legitimate as designing a site to look
-  like a newspaper.
+THEY MUST BE REMOVED BEFORE LAUNCH, and not because of any licence —
+because a portfolio built from someone else's photographs misrepresents
+the photographer whose name is on it. A visitor cannot tell a stand-in
+from a portfolio piece, and one borrowed image quietly devalues every
+real one beside it. This is why the site also carries no client name
+while `live = false`.
 
-  THE WINDOW CHROME here is CSS: hex colours and box-shadow insets
-  (#c0c0c0, #000082, inset 1px bevels). There is no imported bitmap,
-  no icon file, no theme package, no third-party stylesheet.
+Every placeholder path is listed in tools/placeholders.py, so removing
+them is one command with nothing left behind to wonder about:
 
-  THE CURSORS are original pixel art, drawn in tools/cursors.py as
-  ASCII and generated to PNG. An arrow, a pointing hand, an open hand,
-  a fist and a no-entry sign are generic interface symbols that predate
-  Windows by a decade.
+    python3 tools/placeholders.py --purge
 
-  THE TYPEFACE is Inter Tight under the SIL Open Font License 1.1,
-  self-hosted. No Microsoft font is used or referenced.
-
-  NO TRADEMARK is used. The dialog is labelled "System message". The
-  words Windows and Microsoft, and the four-pane logo, appear nowhere,
-  and nothing here implies endorsement by or association with anyone.
-
-RULES FOR ANYONE WORKING ON THIS
---------------------------------
-  - Do NOT add icons, bitmaps, fonts or sounds extracted from any
-    Microsoft product, or downloaded from a "Windows 95 icon pack".
-    Those archives are overwhelmingly unlicensed re-uploads, and a
-    client site is the wrong place to find out.
-  - Do NOT add the Windows or Microsoft name or logo.
-  - DO draw replacements, or use assets the client authored, or use
-    assets under a licence that permits commercial web use - and
-    record which, here.
-
-CLIENT-SUPPLIED ARTWORK
------------------------
-Folder and file artwork supplied by the client is theirs, under the
-CREATIVE ASSETS section above. Where such artwork incorporates
-photographed or sourced texture, the client is responsible for holding
-a licence permitting commercial web use.
+The generated icons and wallpapers under static/img/icons/ are a
+separate matter: those are original work, drawn in tools/icons.py, and
+may stay or be replaced as the client prefers.
 
 --------------------------------------------------------------------
 THIS IS NOT THE AGREEMENT

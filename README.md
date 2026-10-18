@@ -202,6 +202,32 @@ bar to bring it back up. Closing it stops the sound.
 The project page still exists, so without JavaScript the icon simply
 navigates there. Nothing is lost, it is just less fun.
 
+### The placeholder photographs
+
+Every photograph in this repository is a stand-in, fetched from Lorem
+Picsum (which serves Unsplash photography) and seeded so the same seed
+returns the same picture on every machine and every build.
+
+```bash
+python3 tools/placeholders.py           # fetch what is missing
+python3 tools/placeholders.py --check   # report, write nothing
+python3 tools/placeholders.py --purge   # delete every one of them
+```
+
+Real pictures, because procedural noise cannot answer the questions that
+matter. Swapping them in immediately exposed one: **white text over a
+bright sky was barely legible.** The shadow had been tuned against dark
+synthetic gradients and failed the first time it met a cloud. It now uses
+three layers — one hugging each glyph, one for the edge, one for
+separation — and the top bar sits on a scrim, the way a menu bar survives
+a light wallpaper.
+
+**They must all go before launch.** Not for licensing — the Unsplash
+License permits this — but because a portfolio built from someone else's
+photographs misrepresents the photographer whose name is on it. Every
+path is listed in `tools/placeholders.py`, so `--purge` removes the lot.
+See NOTICE.
+
 ### Images are resized at build time
 
 Photographs are not served as they were exported. Every one is resized
