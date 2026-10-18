@@ -12,6 +12,13 @@ Claude opens pull requests. **Claude never merges them.**
 Bernardo inspects the diff and merges. That is the only review gate this
 repo has, and it does not get bypassed.
 
+## Check the PR is still open before pushing to its branch
+
+Twice now a follow-up has been pushed to a branch whose PR Bernardo had
+already merged, so the work landed nowhere and looked lost. Before
+pushing a follow-up commit, check the PR state. If it is merged, branch
+fresh from `main` instead.
+
 ## One branch, one capability
 
 One concern per branch, one PR. Branch names: `type/…`, `feel/…`,
