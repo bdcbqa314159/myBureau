@@ -352,7 +352,8 @@ img.will-fade.is-in { opacity: 1; }
 .win-film.is-mini .spread { grid-template-columns: 1fr; }
 .win-film.is-mini .spread-note { display: none; }
 .win-film.is-mini .win-bar { cursor: pointer; }
-.win-film.is-mini [data-mini] { display: none; }
+.win-controls button { min-width: 1.5rem; }
+/* the toggle stays — it is the way back up */
 
 @media (max-width: 52rem) {
   .spread { grid-template-columns: 1fr; }

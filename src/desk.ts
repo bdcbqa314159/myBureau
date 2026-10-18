@@ -435,6 +435,15 @@ function shrink(win: HTMLDialogElement): void {
   win.show();                        // same element, same video, still playing
 }
 
+/** The one button says what pressing it will do. */
+function label(win: HTMLDialogElement): void {
+  const b = win.querySelector<HTMLButtonElement>("[data-mini]");
+  if (b === null) return;
+  const mini = win.classList.contains("is-mini");
+  b.textContent = mini ? "\u2b1c" : "\u2013";          // restore : minimise
+  b.setAttribute("aria-label", mini ? "Agrandir" : "Réduire");
+}
+
 function grow(win: HTMLDialogElement): void {
   if (!win.classList.contains("is-mini")) return;
   win.classList.remove("is-mini");
@@ -447,19 +456,31 @@ function grow(win: HTMLDialogElement): void {
 }
 
 document.querySelectorAll<HTMLDialogElement>(".win-film").forEach((win) => {
-  win.querySelector<HTMLButtonElement>("[data-mini]")?.addEventListener("click", (e) => {
+  // One button, both directions. It was a minimise button that hid itself
+  // once pressed, which left the only way back a click on the title bar —
+  // and that never worked: a window drags by its bar, a drag captures the
+  // pointer, and the capture retargets the click to the dialog. So the
+  // handler on the bar could not fire, and the film was stuck small.
+  //
+  // A button is also simply clearer than a title bar you have to guess at.
+  const toggle = win.querySelector<HTMLButtonElement>("[data-mini]");
+  toggle?.addEventListener("click", (e: Event): void => {
     e.preventDefault();
-    shrink(win);
+    const mini = win.classList.contains("is-mini");
+    if (mini) grow(win);
+    else shrink(win);
+    label(win);
   });
 
-  // While small, the title bar is the way back up — but only a click, never
-  // the end of a drag, or moving it would reopen it every time.
-  const bar = win.querySelector<HTMLElement>(".win-bar");
-  bar?.addEventListener("click", (e: Event): void => {
+  // Keeping the title bar as a second way back, now bound where the click
+  // actually lands — on the dialog, because of that same pointer capture.
+  win.addEventListener("click", (e: Event): void => {
     if (!win.classList.contains("is-mini")) return;
     if (justDragged.has(win)) { justDragged.delete(win); return; }
-    if ((e.target as HTMLElement).closest("button") !== null) return;
+    const t = e.target;
+    if (t instanceof Element && t.closest("button, video") !== null) return;
     grow(win);
+    label(win);
   });
 
   // Closing it entirely should also stop the sound — but minimising
@@ -471,6 +492,7 @@ document.querySelectorAll<HTMLDialogElement>(".win-film").forEach((win) => {
   win.addEventListener("close", (): void => {
     if (win.open) return;              // it was a swap, not a close
     win.classList.remove("is-mini");
+    label(win);                        // reopening starts expanded
     win.querySelector("video")?.pause();
   });
 });
