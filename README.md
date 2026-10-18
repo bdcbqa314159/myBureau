@@ -181,14 +181,18 @@ A bureau needs room to arrange things in, and a phone has none. So below
 same icons, same labels, same destinations, tidied because there is no
 space to be untidy in. `x` and `y` are simply ignored there.
 
-**Dragging is off on phones for now.** Not because it is unwanted, but
-because the naive version is worse than none: `touch-action: none` on an
-icon means a touch starting there cannot scroll the page, and with a grid
-of icons covering the screen that leaves almost nowhere to scroll from.
+**Icons can be picked up on a phone too.** The script measures where the
+grid put everything, pins those positions as absolute and adds
+`arranged` — nothing moves on screen, but the icons stop being laid out
+and start being objects again. Dragging, the nesting guardrail and the
+tidy-up on return all work exactly as they do with a pointer.
 
-The right answer is **long-press to lift**, which is how every phone home
-screen works: a quick touch opens, a held touch picks up. That is a
-separate piece of work and is worth doing — see the note in the PR.
+No long-press is needed, because a bureau does not scroll: there is
+nothing for a drag to fight. A short movement threshold keeps a tap from
+counting as a drag, so tapping still opens things.
+
+Without JavaScript the grid simply stays a grid — tidy, reachable, not
+draggable.
 
 ### Leaving and coming back
 

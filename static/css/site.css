@@ -205,22 +205,30 @@ a { color: inherit; }
   .bar-mid.is-wordmark { font-size: var(--f-4); }
   .bar-nav { gap: .5rem; font-size: var(--f-1); }
 
-  /* the desk: a grid, not a scatter */
+  /* The desk starts as a grid, because percentage positions composed for
+     a wide screen collide at 390px. Without JavaScript it stays one — a
+     tidy, reachable fallback.
+
+     With JavaScript the script measures where the grid put everything,
+     converts those positions to absolute and adds .arranged. Nothing
+     moves on screen; the icons simply stop being laid out and start
+     being objects again, so they can be picked up exactly as on a
+     desktop. The arrangement is tidy because there is no room to be
+     untidy, not because things are nailed down. */
   .desk {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     align-content: start;
-    gap: 1.6rem .5rem;
-    padding: 7.5rem .75rem 2rem;
-    height: auto; min-height: 100dvh;
+    gap: 1.4rem .4rem;
+    padding: 6.5rem .6rem 1.5rem;
+    height: 100dvh;
   }
-  .desk .icon {
-    position: static;
-    width: 100%;
-    cursor: pointer;
-    touch-action: auto;          /* scrolling wins over dragging */
-  }
-  body.desktop { overflow: auto; }
+  .desk .icon { position: static; width: 100%; }
+
+  .desk.arranged { display: block; padding: 0; }
+  .desk.arranged .icon { position: absolute; }
+
+  :root { --icon-w: 6.4rem; }
 
   .win-film { width: 94vw; }
   .credit { font-size: .64rem; }
