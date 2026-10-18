@@ -296,6 +296,69 @@ It probes whichever key is live, and warns before touching a client
 inbox. Every address in the payloads is under `example.com`, which
 RFC 2606 reserves for documentation.
 
+### Verdict on Web3Forms — tested, 17 Oct 2026
+
+**Safe. Fail-closed.** Two tests, read from the raw source of what arrived.
+
+**1. Server-side POSTs are refused outright.** Every `curl` request returns
+403 — tested bare, with a browser User-Agent, with a matching `Origin`,
+with a `Referer`, and with all three:
+
+> This method is not allowed. Use our API in client side...
+
+So the cheap attack — point `curl` at the endpoint and fire payloads —
+does not work. That is a heuristic rather than a proof (a headless browser
+is still a browser), but it removes the drive-by scanners.
+
+**2. Injected headers never become headers.** Submitted from a real
+browser, bypassing our own validation, with a newline and `Bcc:` in the
+mail field. The DKIM `h=` lists settle it, because they enumerate every
+header that was signed:
+
+```
+clean     h=From:Reply-To:To:Subject:MIME-Version:Content-Type:Message-ID:Date
+poisoned  h=From:         To:Subject:MIME-Version:Content-Type:Message-ID:Date
+```
+
+Exactly one header differs. Given a poisoned value they **drop `Reply-To`
+altogether** rather than sanitise it and send. Fail-closed: they would
+rather lose reply-ability than emit a header they cannot vouch for.
+
+The payload appeared only in the body, with the colon HTML-escaped
+(`Bcc&#x3A;`) — deliberate output encoding, not luck.
+
+**Also confirmed:** a clean submission does set `Reply-To` to the
+visitor's address, so replying works normally. The sending domain is
+theirs (`web3forms.com` via Amazon SES, SPF/DKIM/DMARC all pass), so
+abuse would burn their reputation and not the client's.
+
+**3. A poisoned subject cannot inject either** — and it is handled
+differently, which is the interesting part:
+
+| field | poisoned with | what they do |
+|---|---|---|
+| email → `Reply-To` | newline + `Bcc:` | **drop the header entirely** |
+| subject → `Subject` | newline + `Bcc:` | **strip the newline, keep the value** |
+
+```
+Subject: PROBE subject injectionBcc: attacker@example.net
+h=From:Reply-To:To:Subject:MIME-Version:Content-Type:Message-ID:Date
+```
+
+`Subject` is present, no `Bcc` in the signed list, and the payload sits
+inside the subject's *value* as literal text — note `injectionBcc:` run
+together where the newline was removed.
+
+Two strategies, each right for its field. An address containing a newline
+is definitionally invalid, so there is nothing to salvage and dropping it
+is correct. A subject is free text someone legitimately typed, so
+stripping the newline preserves their message. That is considered design,
+not one blunt rule applied twice.
+
+**They log the visitor's IP** and print it in the notification footer. IP
+addresses are personal data under GDPR, which is why the privacy line
+beside the form names it.
+
 ### Testing a browser-only backend
 
 Web3Forms refuses every request that does not come from a browser. Tested
