@@ -342,6 +342,13 @@ function draggable(el: HTMLElement, nests: boolean): void {
     el.setPointerCapture(e.pointerId);
 
     const onMove = (ev: PointerEvent): void => {
+      // A finger is never perfectly still. Without a threshold every tap
+      // registers as a drag, which suppresses the click that should have
+      // opened the thing — on a touch screen, that means nothing opens.
+      if (!moved) {
+        const far = Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY);
+        if (far < 6) return;
+      }
       moved = true;
       el.classList.add("dragging");
 
@@ -388,14 +395,43 @@ function draggable(el: HTMLElement, nests: boolean): void {
 
 window.addEventListener("pagehide", saveLayout);
 
-/** Arranging a desktop is something you do with a pointer. On a phone the
- *  icons are laid out on a grid instead (see the Phones block in the CSS),
- *  and dragging would only fight the scroll. Same breakpoint, both places. */
-const roomToArrange = window.matchMedia("(min-width: 40rem)").matches;
+/** On a narrow screen the desk is laid out as a grid, because positions
+ *  composed for a wide screen collide at 390px. Measure where the grid put
+ *  everything, pin those positions as absolute, and the icons stop being
+ *  laid out and start being objects again — pickable exactly as on a
+ *  desktop, from a tidy starting arrangement rather than a scatter.
+ *
+ *  Nothing moves on screen: the positions written are the ones just
+ *  measured. Without JavaScript the grid simply stays a grid, which is a
+ *  perfectly good fallback.
+ *
+ *  A bureau does not scroll, so there is nothing for a drag to fight and
+ *  no need to make anyone hold their finger down to pick something up. */
+function pinTheGrid(): void {
+  if (window.matchMedia("(min-width: 40rem)").matches) return;
+  const desk = document.querySelector<HTMLElement>(".desk");
+  if (desk === null || desk.classList.contains("arranged")) return;
 
-if (roomToArrange) {
-  document.querySelectorAll<HTMLElement>(".icon").forEach((el) => draggable(el, true));
+  const icons = [...desk.querySelectorAll<HTMLElement>(".icon")];
+  const frame = desk.getBoundingClientRect();
+  const spots = icons.map((el) => {
+    const r = el.getBoundingClientRect();
+    return { left: r.left - frame.left, top: r.top - frame.top, width: r.width };
+  });
+
+  desk.classList.add("arranged");
+  icons.forEach((el, i) => {
+    const s = spots[i];
+    if (s === undefined) return;
+    el.style.left = `${s.left}px`;
+    el.style.top = `${s.top}px`;
+    el.style.width = `${s.width}px`;
+  });
 }
+
+pinTheGrid();
+
+document.querySelectorAll<HTMLElement>(".icon").forEach((el) => draggable(el, true));
 document.querySelectorAll<HTMLElement>(".win").forEach((el) => draggable(el, false));
 
 /** One handler per icon. Two separate listeners could not work: suppressing
