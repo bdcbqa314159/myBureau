@@ -287,6 +287,20 @@ function draggable(el: HTMLElement, nests: boolean): void {
   el.addEventListener("pointerdown", (e: PointerEvent): void => {
     if (e.button !== 0) return;
 
+    const from = e.target;
+    if (!(from instanceof Element)) return;
+
+    // Never hijack a control. The drag captures the pointer, which
+    // retargets the pointerup and means the click never reaches the
+    // button — which is why minimise and close did nothing at all.
+    if (from.closest("button, a[href], input, textarea, select, video, [contenteditable]") !== null) {
+      return;
+    }
+
+    // A window moves by its title bar, like a window. Dragging it by the
+    // body would make the text unselectable and fight the video controls.
+    if (el.classList.contains("win") && from.closest(".win-bar") === null) return;
+
     // A fixed-position element reports offsetParent === null, so windows —
     // which are all position:fixed — used to bail out here and never move
     // at all. For those the surface is the viewport, and the coordinates
