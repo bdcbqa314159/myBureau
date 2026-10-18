@@ -270,14 +270,34 @@ body.desktop .bar::before, body.gallery .bar::before {
 }
 body.project { --loader-bg: var(--cream); }
 body.project .loader .dots i { background: var(--ink); }
-.loader .dots { display: flex; gap: .4rem; }
+.loader .dots { display: flex; gap: .45rem; }
 .loader .dots i {
-  width: .4rem; height: .4rem; background: #fff; opacity: .16;
-  animation: blink 1.05s infinite steps(1, end);
+  width: .4rem; height: .4rem; background: #fff;
+  opacity: .14;
+  /* A slow breath rather than a blink. The cycle is long enough to read
+     as patience instead of activity, the easing spends most of its time
+     near the extremes so it swells and settles rather than sawing, and
+     the three are staggered by well under a third of the cycle so they
+     overlap into one travelling pulse rather than three lights taking
+     turns.
+
+     Opacity only: the squares sit on whole pixels, and scaling them
+     would soften exactly the hard edges that make them read as pixels.
+
+     The delays are NEGATIVE so the cycle starts already in progress: the
+     first dot is at its brightest the instant the overlay appears. A
+     loader often lives for less than a second, and one that begins at
+     its dimmest looks like nothing is happening. -1.09s is the peak of
+     the curve; the other two trail it by the same stagger as before. */
+  animation: breathe 2.6s cubic-bezier(.42, 0, .58, 1) infinite;
+  animation-delay: -1.09s;
 }
-.loader .dots i:nth-child(2) { animation-delay: .18s; }
-.loader .dots i:nth-child(3) { animation-delay: .36s; }
-@keyframes blink { 0%, 72%, 100% { opacity: .16; } 36% { opacity: 1; } }
+.loader .dots i:nth-child(2) { animation-delay: -0.77s; }
+.loader .dots i:nth-child(3) { animation-delay: -0.45s; }
+@keyframes breathe {
+  0%, 100% { opacity: .14; }
+  42%      { opacity: 1; }
+}
 
 /* Pictures that arrive after the reveal come in rather than appear.
    The hiding class is applied BY THE SCRIPT, never by CSS alone — if the

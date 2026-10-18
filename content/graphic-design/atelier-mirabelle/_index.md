@@ -1,5 +1,5 @@
 +++
-title = "Weber (Saint Gobain)"
+title = "Atelier Mirabelle"
 template = "section.html"
 
 [extra]

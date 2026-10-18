@@ -75,6 +75,12 @@ from a portfolio piece, and one borrowed image quietly devalues every
 real one beside it. This is why the site also carries no client name
 while `live = false`.
 
+CLIENT AND PROJECT NAMES ON THIS DEMO ARE INVENTED. No company named
+anywhere on this site is, or has been, a client. A real company's name
+on a demo implies a working relationship that does not exist, which is
+the same reason no Microsoft asset appears here. If a name reads as a
+real brand, it is a mistake and should be changed.
+
 Every placeholder path is listed in tools/placeholders.py, so removing
 them is one command with nothing left behind to wonder about:
 
