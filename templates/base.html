@@ -11,6 +11,29 @@
 {# Set before first paint. `js` stays for the life of the page; `booting`
    is removed the moment the page is revealed. Added by script, so a
    browser without JS never hides anything. #}
+{# Prerender the next bureau while a visitor is still deciding.
+
+   `moderate` fires on hover — about 200ms before the click — which is
+   long enough to build the whole page, photographs included. The
+   navigation is then instantaneous: no loader, no images arriving one
+   after another, nothing that feels like a slow connection.
+
+   Matched by SELECTOR rather than by url pattern, so it keeps working
+   when the site moves from a github.io subpath to her own domain.
+   Cross-origin links — the instagram and youtube shortcuts — are not
+   prerendered, which the spec handles for us.
+
+   Ignored entirely by browsers that do not support it, which simply
+   navigate as before. #}
+<script type="speculationrules">
+{
+  "prerender": [{
+    "where": { "selector_matches": ".bar-nav a, a.icon" },
+    "eagerness": "moderate"
+  }]
+}
+</script>
+
 <script>
 (function(d){d.classList.add("js","booting");
 /* Failsafe: if desk.js never loads or throws before revealing, un-hide the

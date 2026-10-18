@@ -357,6 +357,28 @@ Replace the file in `static/img/`, or point a section at a different one:
 wallpaper = "img/my-wallpaper.jpg"
 ```
 
+### One pass decides where things sit
+
+Layout runs through a single function, and running it twice gives the
+same answer as running it once. It runs on load, on resize and on every
+orientation change.
+
+For each icon, always in this order:
+
+1. **a base position** — the grid on a narrow screen, the position in the
+   content file on a wide one
+2. **the visitor's own** — if they dragged it, that wins over the base
+3. **a clamp** — nudged back on if it would hang off the desk or hide
+   under the bandeau
+
+Nothing in that pipeline destroys the position written in the content
+file, so turning a phone sideways and back puts everything exactly where
+it started.
+
+The walk-home animation on returning to a bureau writes no positions at
+all. It only animates the gap between where you left something and where
+this pass has put it.
+
 ### Icons stay on the desk
 
 `x` and `y` are percentages of the desk, but an icon is a fixed number of

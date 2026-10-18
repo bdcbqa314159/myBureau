@@ -14,6 +14,13 @@ let topZ = 10;
  *  not open it. */
 const justDragged = new WeakSet<HTMLElement>();
 
+/** Where the VISITOR put things, in pixels relative to the desk.
+ *
+ *  Only their own moves belong here. A position the clamp chose on their
+ *  behalf is not an arrangement, and remembering those made every return
+ *  to a bureau land somewhere new. */
+const byHand = new WeakMap<HTMLElement, { left: number; top: number }>();
+
 // ---------------------------------------------------------------------
 // Leaving a bureau and coming back
 //
@@ -25,7 +32,7 @@ const justDragged = new WeakSet<HTMLElement>();
 
 const DESK_KEY = `bureau:${location.pathname}`;
 
-type Layout = Record<string, { left: string; top: string }>;
+type Layout = Record<string, { left: number; top: number }>;
 
 function readLayout(): Layout {
   try {
@@ -40,8 +47,9 @@ function saveLayout(): void {
   const out: Layout = {};
   document.querySelectorAll<HTMLElement>(".desk .icon").forEach((el) => {
     const key = el.dataset["vt"];
-    if (key === undefined || el.style.left === "") return;   // never moved
-    out[key] = { left: el.style.left, top: el.style.top };
+    const mine = byHand.get(el);
+    if (key === undefined || mine === undefined) return;
+    out[key] = mine;
   });
   try {
     if (Object.keys(out).length === 0) sessionStorage.removeItem(DESK_KEY);
@@ -117,20 +125,36 @@ async function whenPainted(): Promise<void> {
 
 /** Reveal the bureau: the overlay fades while the icons arrive underneath,
  *  so the two motions overlap instead of queueing. */
+/** Arriving from inside the site is not the same as arriving cold.
+ *
+ *  On a cross-document view transition the browser snapshots the NEW page
+ *  as soon as it can render — and our first paint is an opaque overlay
+ *  covering everything. So the morph animated the old page into a blank
+ *  screen: a cut, then dots, then pictures arriving one by one. The
+ *  transition was working; the loader was hiding it.
+ *
+ *  When a transition is running the old page stays on screen until this
+ *  one is ready, which is the whole point. There is nothing to cover. */
+let arrivedByTransition = false;
+window.addEventListener("pagereveal", (e: Event): void => {
+  if ("viewTransition" in e && e.viewTransition !== null) arrivedByTransition = true;
+});
+
 function reveal(): void {
   fadeInLateArrivals();
   const loader = document.querySelector<HTMLElement>(".loader");
   if (loader === null) {
+    arrange();
     tidyUp();
-    keepOnScreen();
     return;
   }
   // keep it painted while .booting goes away, then take it out entirely
   loader.classList.add("is-leaving");
-  tidyUp();
-  keepOnScreen();        // a remembered spot may not fit this window
-  if (calm()) {
-    loader.remove();
+  arrange();        // decide where everything belongs…
+  tidyUp();         // …then animate the gap from where it was left
+
+  if (arrivedByTransition || calm()) {
+    loader.remove();     // nothing to fade: the old page covered the gap
     return;
   }
   void loader
@@ -140,49 +164,48 @@ function reveal(): void {
     .finished.then(() => loader.remove());
 }
 
-/** Put everything back, visibly. FLIP: place each icon where it was left,
- *  measure, restore its real position, measure again, then animate the
- *  difference away. The icon never actually sits anywhere wrong — only the
- *  transform moves, so layout is correct from the first frame. */
+/** Walk everything home, visibly.
+ *
+ *  Purely visual: it does not write a single position. arrange() has
+ *  already put every icon where it belongs, so this only animates the
+ *  gap between where you left something and where it now is — a FLIP
+ *  with no layout involved at all.
+ *
+ *  The earlier version wrote positions itself, which meant it and the
+ *  layout pass were two things deciding the same thing. They disagreed,
+ *  and the disagreement was visible on every second visit. */
 function tidyUp(): void {
-  const icons = [...document.querySelectorAll<HTMLElement>(".desk .icon")];
+  const desk = document.querySelector<HTMLElement>(".desk");
+  if (desk === null) return;
+  const icons = [...desk.querySelectorAll<HTMLElement>(".icon")];
   const left = readLayout();
   try { sessionStorage.removeItem(DESK_KEY); } catch { /* private mode */ }
 
   const quiet = calm();
+  if (quiet) return;                 // already home, and nothing should move
+
+  const frame = desk.getBoundingClientRect();
   let staggered = 0;
 
   icons.forEach((el) => {
     const key = el.dataset["vt"];
     const was = key === undefined ? undefined : left[key];
+    const now = el.getBoundingClientRect();
 
     if (was === undefined) {
-      // never moved: a soft arrival, slightly staggered
-      if (!quiet) {
-        el.animate(
-          [{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "scale(1)" }],
-          { duration: 420, delay: staggered * 35, easing: "cubic-bezier(.22,.61,.36,1)", fill: "backwards" },
-        );
-        staggered += 1;
-      }
+      el.animate(
+        [{ opacity: 0, transform: "scale(.96)" }, { opacity: 1, transform: "scale(1)" }],
+        { duration: 420, delay: staggered * 35, easing: "cubic-bezier(.22,.61,.36,1)", fill: "backwards" },
+      );
+      staggered += 1;
       return;
     }
 
-    if (quiet) return;               // reduced motion: it is simply home
-
-    el.style.left = was.left;        // F — where you left it
-    el.style.top = was.top;
-    const from = el.getBoundingClientRect();
-
-    el.style.left = "";              // L — where it belongs
-    el.style.top = "";
-    const home = el.getBoundingClientRect();
-
-    const dx = from.left - home.left;
-    const dy = from.top - home.top;
+    const dx = was.left - (now.left - frame.left);
+    const dy = was.top - (now.top - frame.top);
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
 
-    el.animate(                      // I + P — play the difference away
+    el.animate(
       [
         { transform: `translate(${dx}px, ${dy}px)`, opacity: .85 },
         { transform: "translate(0, 0)", opacity: 1 },
@@ -195,10 +218,6 @@ function tidyUp(): void {
   document.documentElement.classList.remove("booting");
 }
 
-/** An element's resting position. Captured at the start of every drag, so a
- *  refused drop returns it to where it was a moment ago — not to wherever
- *  the content file first put it. Moving things around has to survive a
- *  refusal, or "you can move things" is not true. */
 interface Spot { left: string; top: string; x: string; y: string; translate: string }
 
 const spotOf = (el: HTMLElement): Spot => ({
@@ -383,6 +402,12 @@ function draggable(el: HTMLElement, nests: boolean): void {
       if (moved && over !== null) {
         void refuse(el, over.el, back);
       } else if (moved) {
+        const desk = el.closest<HTMLElement>(".desk");
+        if (desk !== null) {
+          const f = desk.getBoundingClientRect();
+          const r = el.getBoundingClientRect();
+          byHand.set(el, { left: r.left - f.left, top: r.top - f.top });
+        }
         saveLayout();
       }
       over?.el.classList.remove("rejecting");
@@ -397,102 +422,113 @@ function draggable(el: HTMLElement, nests: boolean): void {
 
 window.addEventListener("pagehide", saveLayout);
 
-/** On a narrow screen the desk is laid out as a grid, because positions
- *  composed for a wide screen collide at 390px. Measure where the grid put
- *  everything, pin those positions as absolute, and the icons stop being
- *  laid out and start being objects again — pickable exactly as on a
- *  desktop, from a tidy starting arrangement rather than a scatter.
- *
- *  Nothing moves on screen: the positions written are the ones just
- *  measured. Without JavaScript the grid simply stays a grid, which is a
- *  perfectly good fallback.
- *
- *  A bureau does not scroll, so there is nothing for a drag to fight and
- *  no need to make anyone hold their finger down to pick something up. */
-function pinTheGrid(): void {
-  if (window.matchMedia("(min-width: 40rem)").matches) return;
-  const desk = document.querySelector<HTMLElement>(".desk");
-  if (desk === null || desk.classList.contains("arranged")) return;
+// ---------------------------------------------------------------------
+// Where things sit
+//
+// One pass, run whenever the layout could have changed, and IDEMPOTENT:
+// running it twice gives the same answer as running it once. That matters
+// because it runs on load, on resize and on every orientation change —
+// and because the previous version was three separate things writing
+// positions, one of which could never be undone. Rotating a phone left
+// pixel positions pinned into a layout that no longer used them.
+//
+// For each icon the pipeline is always the same:
+//
+//   1. a BASE position   — the grid on a narrow screen, the position
+//                          written in the content file on a wide one
+//   2. the VISITOR'S     — if they dragged it, that wins over the base
+//   3. a CLAMP           — nudged back on if it would hang off the desk
+//                          or hide under the bandeau
+//
+// Nothing destroys the authored position, so turning a phone sideways
+// and back puts everything exactly where it started.
+// ---------------------------------------------------------------------
 
-  const icons = [...desk.querySelectorAll<HTMLElement>(".icon")];
-  const frame = desk.getBoundingClientRect();
-  const spots = icons.map((el) => {
-    const r = el.getBoundingClientRect();
-    return { left: r.left - frame.left, top: r.top - frame.top, width: r.width };
-  });
+/** The position the content file asked for, captured before anything
+ *  overwrites it. */
+const authored = new WeakMap<HTMLElement, { x: string; y: string }>();
 
-  desk.classList.add("arranged");
-  icons.forEach((el, i) => {
-    const s = spots[i];
-    if (s === undefined) return;
-    el.style.left = `${s.left}px`;
-    el.style.top = `${s.top}px`;
-    el.style.width = `${s.width}px`;
+const narrowScreen = (): boolean =>
+  window.matchMedia("(max-width: 40rem)").matches;
+
+function rememberAuthored(el: HTMLElement): void {
+  if (authored.has(el)) return;
+  authored.set(el, {
+    x: el.style.getPropertyValue("--x"),
+    y: el.style.getPropertyValue("--y"),
   });
 }
 
-/** Nudge anything that is hanging off the desk back onto it.
- *
- *  Positions are percentages of the desk, but an icon is a fixed number
- *  of pixels wide. At 1440px an icon is about 11% of the width and
- *  `x = 82%` sits comfortably inside; at 820px the same icon is 18% wide
- *  and its right edge lands at 101% — half on, half off. The same applies
- *  vertically, and the bandeau is fixed on top, so an icon high on a
- *  short window disappears underneath it.
- *
- *  The drag already clamps to the desk. Initial placement never did, and
- *  neither did a window being resized afterwards.
- *
- *  Only ever moves things that are actually out of bounds, so a deliberate
- *  arrangement is left exactly where it was put. */
-function keepOnScreen(): void {
+function arrange(): void {
   const desk = document.querySelector<HTMLElement>(".desk");
   if (desk === null) return;
+  const icons = [...desk.querySelectorAll<HTMLElement>(".icon")];
+  icons.forEach(rememberAuthored);
+
+  // --- 1. the base layout -------------------------------------------
+  // Let CSS decide first: off a narrow screen that is the authored
+  // percentages, on one it is the grid. Measuring needs .arranged off.
+  desk.classList.remove("arranged");
+  icons.forEach((el) => {
+    const home = authored.get(el);
+    if (home === undefined) return;
+    el.style.left = "";
+    el.style.top = "";
+    el.style.setProperty("--x", home.x);
+    el.style.setProperty("--y", home.y);
+  });
+
   const frame = desk.getBoundingClientRect();
+  const base = icons.map((el) => {
+    const r = el.getBoundingClientRect();
+    return { left: r.left - frame.left, top: r.top - frame.top, w: r.width, h: r.height };
+  });
+
+  // On a narrow screen the grid has done its job; from here the icons
+  // are objects again so they can be picked up.
+  if (narrowScreen()) desk.classList.add("arranged");
+
+  // --- 2 and 3. the visitor's choice, then the clamp -----------------
   const bar = document.querySelector<HTMLElement>(".bar");
   const ceiling = bar === null ? 0 : bar.getBoundingClientRect().height + 8;
-
+  const floor = 10;                  // never flush against the bottom edge
   const taken: { left: number; top: number; w: number; h: number }[] = [];
 
-  desk.querySelectorAll<HTMLElement>(".icon").forEach((el) => {
-    const r = el.getBoundingClientRect();
-    const was = { left: r.left - frame.left, top: r.top - frame.top };
-    let left = clamp(was.left, 0, Math.max(0, frame.width - r.width));
-    let top = clamp(was.top, ceiling, Math.max(ceiling, frame.height - r.height));
-    const moved = Math.abs(left - was.left) > 0.5 || Math.abs(top - was.top) > 0.5;
+  icons.forEach((el, i) => {
+    const b = base[i];
+    if (b === undefined) return;
+    const mine = byHand.get(el);
+    let left = clamp(mine?.left ?? b.left, 0, Math.max(0, frame.width - b.w));
+    let top = clamp(mine?.top ?? b.top, ceiling,
+                    Math.max(ceiling, frame.height - b.h - floor));
 
-    if (moved) {
-      // Two icons hanging off the same edge both clamp to the same place
-      // and end up stacked. Walk one up until it is clear of whatever is
-      // already there — a tidied icon must still be a separate object.
-      let guard = 0;
-      while (guard < 40 && taken.some((o) =>
-        left < o.left + o.w && left + r.width > o.left &&
-        top < o.top + o.h && top + r.height > o.top)) {
-        top -= r.height * 0.55;
-        if (top < ceiling) { top = ceiling; left = Math.max(0, left - r.width * 0.6); }
-        guard += 1;
-      }
-      el.style.left = `${left}px`;
-      el.style.top = `${top}px`;
-      el.style.setProperty("--x", "auto");
-      el.style.setProperty("--y", "auto");
+    // Two icons hanging off the same edge clamp to the same place and
+    // end up stacked. Walk one clear of whatever is already there.
+    let guard = 0;
+    while (guard < 40 && taken.some((o) =>
+      left < o.left + o.w && left + b.w > o.left &&
+      top < o.top + o.h && top + b.h > o.top)) {
+      top -= b.h * 0.55;
+      if (top < ceiling) { top = ceiling; left = Math.max(0, left - b.w * 0.6); }
+      guard += 1;
     }
-    taken.push({ left, top, w: r.width, h: r.height });
+
+    el.style.left = `${left}px`;
+    el.style.top = `${top}px`;
+    el.style.setProperty("--x", "auto");
+    el.style.setProperty("--y", "auto");
+    taken.push({ left, top, w: b.w, h: b.h });
   });
 }
 
-pinTheGrid();
-// NOT here: at script time no icon image has loaded, so every icon
-// measures almost no height and the clamp moves things that were fine.
-// It runs from reveal(), once whenPainted() says the pictures are in.
-
-// A window that was wide enough a moment ago may not be any more.
+// Resizing, and turning a phone sideways, both land here.
 let settling = 0;
-window.addEventListener("resize", (): void => {
+const relayout = (): void => {
   window.clearTimeout(settling);
-  settling = window.setTimeout(keepOnScreen, 120);
-});
+  settling = window.setTimeout(arrange, 120);
+};
+window.addEventListener("resize", relayout);
+window.addEventListener("orientationchange", relayout);
 
 document.querySelectorAll<HTMLElement>(".icon").forEach((el) => draggable(el, true));
 document.querySelectorAll<HTMLElement>(".win").forEach((el) => draggable(el, false));
