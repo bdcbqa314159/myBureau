@@ -328,19 +328,29 @@ img.will-fade.is-in { opacity: 1; }
   -webkit-user-drag: none;   /* Safari: stop the native link/image drag */
   transition: scale .22s var(--ease);
 }
-.icon img {
-  width: 100%; pointer-events: none; -webkit-user-drag: none;
+.icon img { width: 100%; pointer-events: none; -webkit-user-drag: none; }
+
+/* The shadow lives on the ANCHOR, not on the image inside it.
+   A filtered element is rasterised to a bitmap at its own size. With the
+   filter on the <img> and the transform on its parent, the parent's
+   scale stretched that finished bitmap instead of re-rasterising the
+   vector — so every icon softened the moment it was picked up. Filter
+   and transform on the same element is one compositing step rather than
+   two, and `will-change` asks for the layer up front rather than at the
+   moment of grabbing. */
+.icon {
   filter: drop-shadow(0 2px 6px rgb(0 0 0 / .35));
-  transition: filter .22s var(--ease);
+  will-change: transform;
+  transition: filter .22s var(--ease), scale .22s var(--ease);
 }
 .icon:hover, .icon:focus-visible { scale: 1.045; }
-.icon:hover img { filter: drop-shadow(0 6px 16px rgb(0 0 0 / .5)); }
+.icon:hover { filter: drop-shadow(0 6px 16px rgb(0 0 0 / .5)); }
 .icon:focus-visible { outline: 2px solid #fff; outline-offset: .4rem; border-radius: 2px; }
 
 .icon.dragging {
   scale: 1.08; rotate: -1.4deg; transition: none;
 }
-.icon.dragging img { filter: drop-shadow(0 14px 28px rgb(0 0 0 / .55)); }
+.icon.dragging { filter: drop-shadow(0 14px 28px rgb(0 0 0 / .55)); }
 
 /* A folder refusing a drop. Icons move freely around a desktop — that is
    not a state change. Putting one inside another is, and there is no such
