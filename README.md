@@ -175,6 +175,33 @@ The walk is a FLIP animation: the icon is never actually laid out in the
 wrong place, only its transform moves, so the page is correct from the
 first frame.
 
+### Add a film
+
+Drop a video into a project folder and it stops being a page and becomes
+a window on the bureau:
+
+```
+content/da/junes-cry/
+    index.md      title, position, and the text that explains the film
+    clip.mp4      ← this is what makes it a film
+    poster.jpg    optional still, shown before it plays
+```
+
+Supported: `mp4` `webm` `mov` `m4v` — set in `config.toml` under
+`video_types`.
+
+Expanded, the window is a spread: the film on the left, your text on the
+right, divided like an open book. The text is simply the body of
+`index.md`, so it is written where everything else is written.
+
+**Minimised**, it stops being modal, shrinks to the corner, drops the
+text and keeps playing — so the bureau underneath is usable again and
+folders can still be dragged around while the film runs. Click the title
+bar to bring it back up. Closing it stops the sound.
+
+The project page still exists, so without JavaScript the icon simply
+navigates there. Nothing is lost, it is just less fun.
+
 ### Add photos to `pellicules`
 
 Drop image files straight into `content/pellicules/`. The gallery picks

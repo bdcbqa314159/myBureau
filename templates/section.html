@@ -19,12 +19,21 @@
     {% if not sub.extra.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
 
-  {# FILES — a directory with an index.md is a project, and opens a page. #}
+  {# FILES — a directory with an index.md is a project, and opens a page…
+     …unless it holds a video, in which case it opens a window right here:
+     the film beside the text that explains it. The page still exists, so
+     without JavaScript the icon simply navigates to it. #}
   {% for p in section.pages %}
+    {% set_global clip = "" %}
+    {% for a in p.assets %}
+      {% if a | split(pat=".") | last | lower in config.extra.video_types %}{% set_global clip = a %}{% endif %}
+    {% endfor %}
     {% set_global ic_title = p.title %}{% set_global ic_href = p.permalink %}
     {% set_global ic_path = p.path %}{% set_global ic_assets = p.assets %}
     {% set_global ic_declared = p.extra.icon %}{% set_global ic_x = p.extra.x %}{% set_global ic_y = p.extra.y %}
-    {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}{% set_global ic_window = "" %}
+    {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}
+    {% if clip %}{% set_global ic_window = "film-" ~ (p.path | slugify) %}
+    {% else %}{% set_global ic_window = "" %}{% endif %}
     {% include "_icon.html" %}
     {% if not p.extra.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
@@ -40,6 +49,38 @@
     {% if not item.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
 </main>
+
+{# A film and the thought behind it, side by side. Minimising keeps it
+   playing in the corner while the bureau stays usable. #}
+{% for p in section.pages %}
+  {% set_global clip = "" %}
+  {% set_global still = "" %}
+  {% for a in p.assets %}
+    {% set ext = a | split(pat=".") | last | lower %}
+    {% if ext in config.extra.video_types %}{% set_global clip = a %}{% endif %}
+    {% if a | split(pat="/") | last | split(pat=".") | first == "poster" %}{% set_global still = a %}{% endif %}
+  {% endfor %}
+  {% if clip %}
+  <dialog class="win win-film" id="film-{{ p.path | slugify }}">
+    <div class="win-bar">
+      <span>{{ p.title }}</span>
+      <span class="win-controls">
+        <button type="button" data-mini aria-label="Réduire">&#x2013;</button>
+        <form method="dialog"><button aria-label="Fermer">&#x2715;</button></form>
+      </span>
+    </div>
+    <div class="win-body spread">
+      <div class="spread-film">
+        <video controls playsinline preload="metadata"
+               {% if still %}poster="{{ get_url(path=still) }}"{% endif %}>
+          <source src="{{ get_url(path=clip) }}">
+        </video>
+      </div>
+      <div class="spread-note">{{ p.content | safe }}</div>
+    </div>
+  </dialog>
+  {% endif %}
+{% endfor %}
 
 {% block windows %}{% endblock %}
 {% endblock %}

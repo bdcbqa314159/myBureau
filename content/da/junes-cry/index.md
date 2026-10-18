@@ -6,4 +6,8 @@ x = 10
 y = 32
 +++
 
-Texte de présentation à venir.
+Un film court, tourné en une nuit.
+
+L'idée était simple : filmer le moment juste après, quand plus personne
+ne fait attention à la caméra. Pas de lumière ajoutée, pas de seconde
+prise.
