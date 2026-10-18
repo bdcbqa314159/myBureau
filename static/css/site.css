@@ -189,6 +189,15 @@ a { color: inherit; }
    The gallery and the project pages already work here and are left
    alone — they were always scroll pages.
    ==================================================================== */
+/* A phone held sideways is about 390px tall. The bandeau takes a
+   sixth of that, and a full-size icon with a two-line label takes half
+   of what is left — so they end up flush against the bottom edge with
+   nowhere to go. Smaller icons, and the desk fits again. */
+@media (max-height: 30rem) {
+  :root { --icon-w: 5rem; }
+  .icon { font-size: var(--f-1); }
+}
+
 @media (max-width: 40rem) {
   /* the bandeau: the centre label takes its own row rather than
      colliding with the wordmark on one side and the nav on the other */
