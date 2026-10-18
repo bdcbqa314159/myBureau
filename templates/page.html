@@ -24,6 +24,10 @@
     {% endif %}
   {% endfor %}
 
-  <a class="proj-back" href="{{ get_url(path=page.ancestors | last) }}">← retour</a>
+  {# ancestors gives a FILE PATH — get_section turns it into a URL.
+     Linking the path directly produced /da/_index.md, a 404 on every
+     project page in the site. #}
+  {% set home = get_section(path=page.ancestors | last) %}
+  <a class="proj-back" href="{{ home.permalink }}">← {{ home.title }}</a>
 </main>
 {% endblock %}

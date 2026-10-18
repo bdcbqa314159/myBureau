@@ -8,37 +8,4 @@
   <div class="win-bar"><span>about me.txt</span><form method="dialog"><button aria-label="close">✕</button></form></div>
   <div class="win-body">{{ section.content | safe }}</div>
 </dialog>
-
-<dialog class="win" id="contact">
-  <div class="win-bar"><span>System message</span><form method="dialog"><button aria-label="close">✕</button></form></div>
-  <div class="win-body">
-    <form class="contact-form" action="{{ config.extra.contact.endpoint }}" method="post" novalidate>
-
-      {# Where it goes. Public by design — the browser has to send it. #}
-      <input type="hidden" name="access_key" value="{{ contact_key }}">
-
-      {# A field no person can see and no screen reader reaches. Filled in
-         means a bot. Moved off-screen rather than display:none, because
-         some bots skip hidden fields and some assistive tech reads them. #}
-      <div class="trap" aria-hidden="true">
-        <label for="_trap">Laisse ce champ vide</label>
-        <input id="_trap" name="_trap" type="text" tabindex="-1" autocomplete="off">
-      </div>
-
-      <label>mail : <input type="email" name="email" maxlength="254" required autocomplete="email"></label>
-      <label>Object : <input type="text" name="subject" maxlength="150"></label>
-      <label>Message : <textarea name="message" rows="5" maxlength="4000" required></textarea></label>
-
-      <p class="says" data-says role="status" aria-live="polite"></p>
-
-      <p class="win-note">Ton adresse, ton message et ton adresse IP sont transmis à Web3Forms, qui les relaie par e-mail et les conserve 30 jours. Rien n'est stocké sur ce site.</p>
-
-      <div class="win-buttons">
-        <button type="submit">Ok</button>
-        <button type="button" data-close>Cancel</button>
-      </div>
-    </form>
-  </div>
-</dialog>
-
 {% endblock %}
