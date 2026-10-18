@@ -8,6 +8,10 @@
 # build output (zola)
 /public/
 
+# zola writes resized images here during the build, then copies them into
+# public/. Generated, never committed — `zola build` recreates them.
+/static/processed_images/
+
 # compiled from src/*.ts — CI rebuilds it
 /static/js/*.js
 /static/js/*.js.map

@@ -4,11 +4,24 @@
 {% block bar_mid %}<span class="bar-mid is-page">{{ section.title }}</span>{% endblock %}
 {% block content %}
 <main class="grid">
-  {# drop photos next to _index.md and they appear here #}
+  {# Drop photos next to _index.md and they appear here.
+
+     Each one is resized at build time and served as WebP — the originals
+     are far larger than the column they land in. width and height carry
+     the ORIGINAL proportions, which is what lets the browser reserve the
+     right space before the file arrives: without them a masonry of lazy
+     images reflows violently as each one lands. #}
   {% for asset in section.assets %}
     {% set file = asset | split(pat="/") | last %}
     {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" %}
-      <img src="{{ get_url(path=asset) }}" alt="" loading="lazy">
+      {% set shape = get_image_metadata(path=asset) %}
+      {% set one = resize_image(path=asset, width=560, op="fit_width", format="webp", quality=74) %}
+      {% set two = resize_image(path=asset, width=1120, op="fit_width", format="webp", quality=74) %}
+      <img src="{{ one.url }}"
+           srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
+           sizes="(max-width: 52rem) 50vw, 20vw"
+           width="{{ shape.width }}" height="{{ shape.height }}"
+           alt="" loading="lazy" decoding="async">
     {% endif %}
   {% endfor %}
 </main>

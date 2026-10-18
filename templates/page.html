@@ -10,8 +10,16 @@
   {% for asset in page.assets %}
     {% set file = asset | split(pat="/") | last %}
     {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" %}
-      {# the first picture is the page; everything below it can arrive later #}
-      <figure class="proj-fig"><img src="{{ get_url(path=asset) }}" alt=""
+      {# the first picture is the page; everything below it can arrive later.
+         Resized at build time, with the original proportions declared so
+         nothing shifts as each one lands. #}
+      {% set shape = get_image_metadata(path=asset) %}
+      {% set one = resize_image(path=asset, width=900, op="fit_width", format="webp", quality=78) %}
+      {% set two = resize_image(path=asset, width=1800, op="fit_width", format="webp", quality=78) %}
+      <figure class="proj-fig"><img src="{{ one.url }}"
+        srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
+        sizes="100vw"
+        width="{{ shape.width }}" height="{{ shape.height }}" alt="" decoding="async"
         {% if loop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}></figure>
     {% endif %}
   {% endfor %}

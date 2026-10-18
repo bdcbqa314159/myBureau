@@ -202,6 +202,29 @@ bar to bring it back up. Closing it stops the sound.
 The project page still exists, so without JavaScript the icon simply
 navigates there. Nothing is lost, it is just less fun.
 
+### Images are resized at build time
+
+Photographs are not served as they were exported. Every one is resized
+and converted to WebP during the build, at two widths, and the browser
+picks:
+
+| where | widths served |
+|---|---|
+| `pellicules` gallery | 560 and 1120 |
+| project pages | 900 and 1800 |
+
+The originals stay in `content/` untouched — drop in whatever came out of
+the camera. Nothing is overwritten and nothing needs preparing.
+
+Every image also carries its **original** `width` and `height`. That is
+not decoration: it is what lets the browser reserve the right space
+before the file arrives. Without it a masonry of lazily-loaded images
+reflows every time one lands, which is what made the gallery feel like it
+was struggling. The bytes were part of it; the jumping was the rest.
+
+Generated files live in `public/processed_images/` and are rebuilt by
+`zola build`, so nothing extra is committed.
+
 ### Add photos to `pellicules`
 
 Drop image files straight into `content/pellicules/`. The gallery picks
