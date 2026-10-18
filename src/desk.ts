@@ -456,8 +456,14 @@ document.querySelectorAll<HTMLDialogElement>(".win-film").forEach((win) => {
     grow(win);
   });
 
-  // Closing it entirely should also stop the sound.
+  // Closing it entirely should also stop the sound — but minimising
+  // calls close() too, on its way to show(), and the close event is
+  // queued rather than fired synchronously. So by the time this runs
+  // after a minimise the dialog is already open again, and `open` tells
+  // the two apart. Without this check, minimising stripped .is-mini and
+  // paused the film: it looked exactly like the button did nothing.
   win.addEventListener("close", (): void => {
+    if (win.open) return;              // it was a swap, not a close
     win.classList.remove("is-mini");
     win.querySelector("video")?.pause();
   });
