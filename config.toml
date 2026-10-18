@@ -22,6 +22,11 @@ author_url = "https://github.com/bdcbqa314159"
 
 image_types = ["jpg", "jpeg", "png", "webp", "avif", "gif"]
 
+# A project folder containing one of these opens as a window on the
+# bureau instead of navigating to a page: the film beside the text that
+# explains it. Drop a video in, and that is what it becomes.
+video_types = ["mp4", "webm", "mov", "m4v"]
+
 # Top-level bureaus come from the filesystem. Only things that are not
 # places belong here.
 nav_extra = [

@@ -299,6 +299,51 @@ img.will-fade.is-in { opacity: 1; }
 /* The chrome is the 1995 artifact and stays monospace. What a visitor
    reads inside it is her writing, not UI furniture — bold monospace
    prose at length is punishing. Controls below opt back into chrome. */
+/* ====================================================================
+   A film and the thought behind it
+   --------------------------------------------------------------------
+   Expanded, the window is a spread: the film on the left, the text that
+   explains it on the right, divided like an open book.
+
+   Minimised, it stops being modal — so the bureau underneath is usable
+   again, folders and all — shrinks to the corner, drops the text, and
+   keeps playing. The <video> element is never removed from the DOM, so
+   playback is uninterrupted across the change.
+   ==================================================================== */
+.win-film { width: min(62rem, 92vw); }
+.win-controls { display: flex; gap: .3rem; align-items: center; }
+.win-controls form { display: contents; }
+
+.win-body.spread { padding: 0; }
+.spread { display: grid; grid-template-columns: 1.45fr 1fr; align-items: stretch; }
+.spread-film { background: #000; display: grid; place-items: center; }
+.spread-film video { width: 100%; height: auto; display: block; }
+.spread-note {
+  border-left: 1px solid var(--dim);          /* the gutter */
+  padding: 1.1rem 1.2rem;
+  font-family: var(--font-body); font-weight: var(--w-prose);
+  font-size: var(--f-3); line-height: var(--lh-text);
+  letter-spacing: var(--tracking-text);
+  overflow-y: auto; max-height: 62vh;
+}
+.spread-note p + p { margin-top: .9em; }
+
+.win-film.is-mini {
+  left: auto; right: 1rem; top: auto; bottom: 1rem;
+  translate: none;
+  width: min(22rem, 46vw);
+  z-index: 1500;
+}
+.win-film.is-mini .spread { grid-template-columns: 1fr; }
+.win-film.is-mini .spread-note { display: none; }
+.win-film.is-mini .win-bar { cursor: pointer; }
+.win-film.is-mini [data-mini] { display: none; }
+
+@media (max-width: 52rem) {
+  .spread { grid-template-columns: 1fr; }
+  .spread-note { border-left: 0; border-top: 1px solid var(--dim); max-height: 34vh; }
+}
+
 .win-body {
   padding: 1.1rem 1.2rem 1.3rem;
   font-family: var(--font-body);

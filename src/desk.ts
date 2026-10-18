@@ -197,18 +197,20 @@ function tidyUp(): void {
  *  refused drop returns it to where it was a moment ago — not to wherever
  *  the content file first put it. Moving things around has to survive a
  *  refusal, or "you can move things" is not true. */
-interface Spot { left: string; top: string; x: string; y: string }
+interface Spot { left: string; top: string; x: string; y: string; translate: string }
 
 const spotOf = (el: HTMLElement): Spot => ({
   left: el.style.left,
   top: el.style.top,
   x: el.style.getPropertyValue("--x"),
   y: el.style.getPropertyValue("--y"),
+  translate: el.style.translate,
 });
 
 function restore(el: HTMLElement, spot: Spot): void {
   el.style.left = spot.left;
   el.style.top = spot.top;
+  el.style.translate = spot.translate;
   el.style.setProperty("--x", spot.x);
   el.style.setProperty("--y", spot.y);
 }
@@ -285,14 +287,27 @@ function draggable(el: HTMLElement, nests: boolean): void {
   el.addEventListener("pointerdown", (e: PointerEvent): void => {
     if (e.button !== 0) return;
 
-    const surface = el.offsetParent;
-    if (!(surface instanceof HTMLElement)) return;
+    // A fixed-position element reports offsetParent === null, so windows —
+    // which are all position:fixed — used to bail out here and never move
+    // at all. For those the surface is the viewport, and the coordinates
+    // are already viewport coordinates.
+    const parent = el.offsetParent;
+    const surface = parent instanceof HTMLElement ? parent : null;
 
     justDragged.delete(el);                   // a fresh press, a fresh verdict
     const back = spotOf(el);                  // where this drag started
     const start = el.getBoundingClientRect();
     const grabX = e.clientX - start.left;
     const grabY = e.clientY - start.top;
+
+    // Windows are centred with a translate. Pin them to where they visibly
+    // are before the first move, or setting left/top would jump them by
+    // half their own size.
+    if (surface === null) {
+      el.style.left = `${start.left}px`;
+      el.style.top = `${start.top}px`;
+      el.style.translate = "none";
+    }
     let moved = false;
     let over: Target | null = null;
 
@@ -310,7 +325,9 @@ function draggable(el: HTMLElement, nests: boolean): void {
       moved = true;
       el.classList.add("dragging");
 
-      const bounds = surface.getBoundingClientRect();
+      const bounds = surface === null
+        ? { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight }
+        : surface.getBoundingClientRect();
       el.style.left =
         clamp(ev.clientX - grabX - bounds.left, 0, bounds.width - start.width) + "px";
       el.style.top =
@@ -377,6 +394,59 @@ document.querySelectorAll<HTMLElement>(".icon").forEach((icon) => {
 
 document.querySelectorAll<HTMLButtonElement>("[data-close]").forEach((b) => {
   b.addEventListener("click", (): void => b.closest("dialog")?.close());
+});
+
+// ---------------------------------------------------------------------
+// Minimising a film
+//
+// Expanded it is modal, which is right while you are watching. Minimised
+// it must NOT be: the whole point is that the bureau stays usable —
+// folders draggable, other things openable — while it keeps playing.
+//
+// close() then show() swaps modality without ever detaching the <video>,
+// so playback carries straight through. Removing and re-inserting the
+// element, or setting a new src, would restart it.
+// ---------------------------------------------------------------------
+
+function shrink(win: HTMLDialogElement): void {
+  if (win.classList.contains("is-mini")) return;
+  win.classList.add("is-mini");
+  win.close();                       // leaves the top layer, stops being modal
+  win.show();                        // same element, same video, still playing
+}
+
+function grow(win: HTMLDialogElement): void {
+  if (!win.classList.contains("is-mini")) return;
+  win.classList.remove("is-mini");
+  // a drag may have pinned it; give the centring back
+  win.style.left = "";
+  win.style.top = "";
+  win.style.translate = "";
+  win.close();
+  win.showModal();
+}
+
+document.querySelectorAll<HTMLDialogElement>(".win-film").forEach((win) => {
+  win.querySelector<HTMLButtonElement>("[data-mini]")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    shrink(win);
+  });
+
+  // While small, the title bar is the way back up — but only a click, never
+  // the end of a drag, or moving it would reopen it every time.
+  const bar = win.querySelector<HTMLElement>(".win-bar");
+  bar?.addEventListener("click", (e: Event): void => {
+    if (!win.classList.contains("is-mini")) return;
+    if (justDragged.has(win)) { justDragged.delete(win); return; }
+    if ((e.target as HTMLElement).closest("button") !== null) return;
+    grow(win);
+  });
+
+  // Closing it entirely should also stop the sound.
+  win.addEventListener("close", (): void => {
+    win.classList.remove("is-mini");
+    win.querySelector("video")?.pause();
+  });
 });
 
 void whenPainted().then(reveal);
