@@ -357,6 +357,19 @@ Replace the file in `static/img/`, or point a section at a different one:
 wallpaper = "img/my-wallpaper.jpg"
 ```
 
+### Icons stay on the desk
+
+`x` and `y` are percentages of the desk, but an icon is a fixed number of
+pixels wide. At 1440px an icon is about 11% of the width, so `x = 82%`
+sits comfortably inside; at 820px the same icon is 18% wide and its right
+edge lands at 101% — half on, half off. The same applies vertically, and
+the bandeau is fixed on top, so an icon placed high on a short window
+disappears underneath it.
+
+Anything out of bounds is nudged back on, on load and on resize. Icons
+that already fit are never touched, so a deliberate arrangement stays
+exactly where it was put.
+
 ### Move an icon
 
 Edit `x` / `y` in that project's `index.md`. Visitors can drag icons around

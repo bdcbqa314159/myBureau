@@ -122,11 +122,13 @@ function reveal(): void {
   const loader = document.querySelector<HTMLElement>(".loader");
   if (loader === null) {
     tidyUp();
+    keepOnScreen();
     return;
   }
   // keep it painted while .booting goes away, then take it out entirely
   loader.classList.add("is-leaving");
   tidyUp();
+  keepOnScreen();        // a remembered spot may not fit this window
   if (calm()) {
     loader.remove();
     return;
@@ -429,7 +431,51 @@ function pinTheGrid(): void {
   });
 }
 
+/** Nudge anything that is hanging off the desk back onto it.
+ *
+ *  Positions are percentages of the desk, but an icon is a fixed number
+ *  of pixels wide. At 1440px an icon is about 11% of the width and
+ *  `x = 82%` sits comfortably inside; at 820px the same icon is 18% wide
+ *  and its right edge lands at 101% — half on, half off. The same applies
+ *  vertically, and the bandeau is fixed on top, so an icon high on a
+ *  short window disappears underneath it.
+ *
+ *  The drag already clamps to the desk. Initial placement never did, and
+ *  neither did a window being resized afterwards.
+ *
+ *  Only ever moves things that are actually out of bounds, so a deliberate
+ *  arrangement is left exactly where it was put. */
+function keepOnScreen(): void {
+  const desk = document.querySelector<HTMLElement>(".desk");
+  if (desk === null) return;
+  const frame = desk.getBoundingClientRect();
+  const bar = document.querySelector<HTMLElement>(".bar");
+  const ceiling = bar === null ? 0 : bar.getBoundingClientRect().height + 8;
+
+  desk.querySelectorAll<HTMLElement>(".icon").forEach((el) => {
+    const r = el.getBoundingClientRect();
+    const was = { left: r.left - frame.left, top: r.top - frame.top };
+    const put = {
+      left: clamp(was.left, 0, Math.max(0, frame.width - r.width)),
+      top: clamp(was.top, ceiling, Math.max(ceiling, frame.height - r.height)),
+    };
+    if (Math.abs(put.left - was.left) < 0.5 && Math.abs(put.top - was.top) < 0.5) return;
+    el.style.left = `${put.left}px`;
+    el.style.top = `${put.top}px`;
+    el.style.setProperty("--x", "auto");
+    el.style.setProperty("--y", "auto");
+  });
+}
+
 pinTheGrid();
+keepOnScreen();
+
+// A window that was wide enough a moment ago may not be any more.
+let settling = 0;
+window.addEventListener("resize", (): void => {
+  window.clearTimeout(settling);
+  settling = window.setTimeout(keepOnScreen, 120);
+});
 
 document.querySelectorAll<HTMLElement>(".icon").forEach((el) => draggable(el, true));
 document.querySelectorAll<HTMLElement>(".win").forEach((el) => draggable(el, false));
