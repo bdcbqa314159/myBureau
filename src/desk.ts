@@ -388,7 +388,14 @@ function draggable(el: HTMLElement, nests: boolean): void {
 
 window.addEventListener("pagehide", saveLayout);
 
-document.querySelectorAll<HTMLElement>(".icon").forEach((el) => draggable(el, true));
+/** Arranging a desktop is something you do with a pointer. On a phone the
+ *  icons are laid out on a grid instead (see the Phones block in the CSS),
+ *  and dragging would only fight the scroll. Same breakpoint, both places. */
+const roomToArrange = window.matchMedia("(min-width: 40rem)").matches;
+
+if (roomToArrange) {
+  document.querySelectorAll<HTMLElement>(".icon").forEach((el) => draggable(el, true));
+}
 document.querySelectorAll<HTMLElement>(".win").forEach((el) => draggable(el, false));
 
 /** One handler per icon. Two separate listeners could not work: suppressing
