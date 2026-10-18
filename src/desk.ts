@@ -290,12 +290,18 @@ function draggable(el: HTMLElement, nests: boolean): void {
     const from = e.target;
     if (!(from instanceof Element)) return;
 
-    // Never hijack a control. The drag captures the pointer, which
-    // retargets the pointerup and means the click never reaches the
-    // button — which is why minimise and close did nothing at all.
-    if (from.closest("button, a[href], input, textarea, select, video, [contenteditable]") !== null) {
-      return;
-    }
+    // Never hijack a control NESTED INSIDE the draggable thing. A drag
+    // captures the pointer, which retargets the pointerup, so the click
+    // never reaches the button — that is why minimise and close did
+    // nothing at all.
+    //
+    // The `!== el` matters more than it looks: an icon IS an <a href>,
+    // because that is how it still navigates with JavaScript off. Bailing
+    // on any matching ancestor stopped every icon from dragging at all.
+    const control = from.closest(
+      "button, a[href], input, textarea, select, video, [contenteditable]",
+    );
+    if (control !== null && control !== el) return;
 
     // A window moves by its title bar, like a window. Dragging it by the
     // body would make the text unselectable and fight the video controls.
