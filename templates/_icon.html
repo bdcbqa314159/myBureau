@@ -37,7 +37,17 @@
 {%- endfor -%}
 {%- set ac = 12 + (ic_slot % 4) * 25 -%}
 {%- set ar = 20 + ((ic_slot / 4) | round(method="floor")) * 26 -%}
-<a class="icon" href="{{ ic_href }}"
+{#- A link off the site opens in a new tab, and gets rel="noopener" so
+    the page it opens cannot reach back through window.opener. Detected by
+    scheme rather than a regex test, which this Zola's engine does not
+    take. -#}
+{%- set scheme = ic_href | split(pat=":") | first -%}
+{#- get_url returns an ABSOLUTE url, so a scheme alone proves nothing:
+    every internal link has one too. Splitting on our own base_url is the
+    test — a link to this site contains it, a link away from it does not. -#}
+{%- set parts = ic_href | split(pat=config.base_url) | length -%}
+{%- set away = (scheme == "https" or scheme == "http") and parts == 1 -%}
+<a class="icon" href="{{ ic_href }}"{% if away %} target="_blank" rel="noopener noreferrer"{% endif %}
    style="--x:{{ ic_x | default(value=ac) }}%; --y:{{ ic_y | default(value=ar) }}%; view-transition-name:vt-{{ ic_path | slugify }}"
    data-vt="{{ ic_path | slugify }}"
    {%- if ic_kind == "folder" %} data-folder{% endif -%}

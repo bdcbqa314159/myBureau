@@ -175,6 +175,53 @@ The walk is a FLIP animation: the icon is never actually laid out in the
 wrong place, only its transform moves, so the page is correct from the
 first frame.
 
+### Link to somewhere else
+
+Any desktop item with an `http` or `https` address becomes a shortcut.
+Add one to the `items` list in `content/_index.md`:
+
+```toml
+items = [
+  { name = "instagram", icon = "img/icons/shortcut.svg", url = "https://instagram.com/HER_HANDLE", x = 52, y = 30 },
+  { name = "youtube",   icon = "img/icons/shortcut.svg", url = "https://youtube.com/@HER_CHANNEL", x = 52, y = 58 },
+]
+```
+
+| field | what it does |
+|---|---|
+| `name` | the label under the icon — this is what a visitor reads |
+| `url` | where it goes. Replace the placeholder with the real account |
+| `icon` | `shortcut.svg` for anything off-site |
+| `x` `y` | position in percent. Omit both and it takes a free grid slot |
+
+The accounts shipped today are **placeholders pointing at the bare
+instagram.com and youtube.com homepages**. Put the real handles in before
+launch:
+
+```toml
+url = "https://instagram.com/studio.s"        # not instagram.com/
+url = "https://youtube.com/@studios"          # not youtube.com/
+```
+
+Any service works the same way — Vimeo, Behance, LinkedIn, a Linktree, a
+PDF portfolio. It is a url and a label.
+
+Links that leave the site get `target="_blank"` and
+`rel="noopener noreferrer"` automatically. Internal links do not: the
+test is whether the address contains this site's own `base_url`, because
+`get_url` makes internal links absolute too and a scheme alone proves
+nothing.
+
+**Why a shortcut icon and not the brand logos.** The Instagram and
+YouTube marks are trademarks with published guidelines — do not alter,
+do not recolour, minimum sizes. A drawn approximation would breach both
+the guidelines and the trademark. A flat modern logo would also look
+wrong on a 1995 desktop, where a shortcut with a filename does not.
+
+If the real marks are wanted, download the official brand assets from
+each service and point `icon` at them. Do not use a logo pack from a
+third-party site — see NOTICE.
+
 ### Add a film
 
 Drop a video into a project folder and it stops being a page and becomes

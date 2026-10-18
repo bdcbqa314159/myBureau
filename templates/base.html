@@ -82,6 +82,7 @@ setTimeout(function(){d.classList.remove("booting")},6000)})(document.documentEl
 
 <footer class="credit">
   <a href="{{ config.extra.author_url }}" rel="author">site by {{ config.extra.author }}</a>
+  {% if config.extra.studio %}<span class="credit-studio">{{ config.extra.studio }}</span>{% endif %}
 </footer>
 
 <script src="{{ get_url(path='js/desk.js') }}"></script>

@@ -81,6 +81,27 @@ def movie(dark, mid, light):
 {TAIL}"""
 
 
+def shortcut(dark, mid, light):
+    """A document with the little arrow badge, as Windows drew shortcuts.
+
+    Deliberately NOT a brand logo. Instagram and YouTube marks are
+    trademarks with published guidelines, an approximation would breach
+    both, and a flat modern logo on a 1995 desktop looks like an
+    anachronism anyway. A shortcut with a filename does not."""
+    return f"""{HEAD}
+<defs>{grad("sp", "#FFFFFF", "#E4E0D8")}</defs>
+<path d="M30 16h62l38 38v86a8 8 0 0 1-8 8H30a8 8 0 0 1-8-8V24a8 8 0 0 1 8-8z" fill="url(#sp)"/>
+<path d="M92 16l38 38H100a8 8 0 0 1-8-8z" fill="{mid}" opacity=".35"/>
+<g fill="{dark}" opacity=".3">
+<rect x="40" y="70" width="74" height="5" rx="2.5"/>
+<rect x="40" y="86" width="58" height="5" rx="2.5"/>
+</g>
+<rect x="22" y="96" width="44" height="44" rx="4" fill="#FBFAF7" stroke="{dark}" stroke-width="3"/>
+<path d="M36 128c0-12 7-18 17-18" fill="none" stroke="{dark}" stroke-width="5" stroke-linecap="round"/>
+<path d="M46 101l12 9-12 9z" fill="{dark}"/>
+{TAIL}"""
+
+
 def window(dark, mid, light):
     """The System message dialog, as an icon. Her proto puts one on the
     desktop for contact — a window you can pick up."""
@@ -101,10 +122,12 @@ def window(dark, mid, light):
 {TAIL}"""
 
 
-SHAPES = {"folder": folder, "doc": doc, "photo": photo, "movie": movie, "window": window}
+SHAPES = {"folder": folder, "doc": doc, "photo": photo, "movie": movie,
+          "window": window, "shortcut": shortcut}
 # one colourway each is enough for a demo; folders get the full set
 PLAN = [("folder", c) for c in COLOURS] + [
     ("doc", "slate"), ("photo", "rust"), ("movie", "slate"), ("window", "slate"),
+    ("shortcut", "slate"),
 ]
 
 
