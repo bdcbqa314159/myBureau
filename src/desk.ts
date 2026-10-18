@@ -455,6 +455,27 @@ document.querySelectorAll<HTMLElement>(".icon").forEach((icon) => {
   });
 });
 
+/** A link to #something that turns out to be a <dialog> opens it.
+ *
+ *  A dialog is display:none until opened, so the browser's own anchor
+ *  jump lands on an invisible element and nothing visible happens. The
+ *  bandeau's `contact` link was exactly that on every page: the window
+ *  existed, the id matched, a link checker would call it fine — and
+ *  clicking it did nothing at all.
+ *
+ *  Written generally rather than for `contact`, so the next window added
+ *  to the bandeau works without anyone remembering this. */
+document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((link) => {
+  const id = (link.getAttribute("href") ?? "").slice(1);
+  if (id === "") return;                    // href="#" — an icon, handled above
+  const target = document.getElementById(id);
+  if (!(target instanceof HTMLDialogElement)) return;
+  link.addEventListener("click", (e: Event): void => {
+    e.preventDefault();
+    if (!target.open) target.showModal();
+  });
+});
+
 document.querySelectorAll<HTMLButtonElement>("[data-close]").forEach((b) => {
   b.addEventListener("click", (): void => b.closest("dialog")?.close());
 });
