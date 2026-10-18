@@ -127,10 +127,14 @@ a { color: inherit; }
   align-items: baseline; gap: var(--pad);
   padding: var(--pad);
   pointer-events: none;
-  /* plain white over wallpapers, as the proto shows. `difference` was
-     computing to ~1.5:1 over mid-tones and 1.27:1 over the cream pages. */
+  /* Plain white over wallpapers, as the proto shows.
+     The shadow is layered on purpose: a tight dark one draws the edge of
+     each letter, a wide soft one separates the word from whatever is
+     behind it. A single soft shadow — which is what this was — vanishes
+     over a bright sky, and a photographer's wallpaper is as likely to be
+     a bright sky as a dark room. */
   color: #fff;
-  text-shadow: 0 1px 3px rgb(0 0 0 / .45);
+  text-shadow: 0 0 2px rgb(0 0 0 / .8), 0 1px 2px rgb(0 0 0 / .9), 0 2px 16px rgb(0 0 0 / .55);
 }
 .bar > * { pointer-events: auto; min-width: 0; }
 .bar a { text-decoration: none; }
@@ -174,6 +178,17 @@ a { color: inherit; }
    desktop
    ==================================================================== */
 body.desktop { overflow: hidden; }
+
+/* A wallpaper can be a bright sky. Shadows alone cannot carry white text
+   across one, so the bar gets a scrim — a gradient dark enough to seat
+   the wordmark, short enough that the photograph still reads. Only where
+   the bar sits over an image; the cream project pages need none. */
+body.desktop .bar::before, body.gallery .bar::before {
+  content: ""; position: absolute; inset: 0 0 auto 0; height: 190%;
+  background: linear-gradient(rgb(0 0 0 / .42), rgb(0 0 0 / 0));
+  pointer-events: none; z-index: -1;
+}
+.bar { isolation: isolate; }
 
 /* Hidden only while the script decides whether this is an arrival or a
    return. Removed by tidyUp() on the same frame it starts animating. */
@@ -228,7 +243,7 @@ img.will-fade.is-in { opacity: 1; }
   font-family: var(--font-display);
   font-size: var(--f-2); font-weight: var(--w-bold);
   line-height: var(--lh-tight); letter-spacing: var(--tracking-text);
-  text-shadow: 0 1px 3px rgb(0 0 0 / .45);
+  text-shadow: 0 0 2px rgb(0 0 0 / .8), 0 1px 2px rgb(0 0 0 / .95), 0 2px 12px rgb(0 0 0 / .5);
   touch-action: none; user-select: none;
   -webkit-user-drag: none;   /* Safari: stop the native link/image drag */
   transition: scale .22s var(--ease);
@@ -421,8 +436,8 @@ body.gallery { background: #0d0b0a; }
   position: fixed; right: .75rem; bottom: .55rem; z-index: 900;
   font-size: var(--f-1); font-weight: var(--w-light);
   letter-spacing: var(--tracking-text);
-  color: #fff; text-shadow: 0 1px 2px rgb(0 0 0 / .5);
-  opacity: .55;
+  color: #fff; text-shadow: 0 1px 2px rgb(0 0 0 / .9), 0 1px 8px rgb(0 0 0 / .6);
+  opacity: .75;
   transition: opacity .25s var(--ease);
 }
 .credit:hover { opacity: 1; }

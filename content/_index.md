@@ -3,7 +3,7 @@ title = "myBureau"
 template = "index.html"
 
 [extra]
-wallpaper = "img/wall-home.svg"
+wallpaper = "img/wall-home.jpg"
 
 # Folders and files come from the filesystem. Only things that are
 # neither — windows — are listed here.

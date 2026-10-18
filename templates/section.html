@@ -5,7 +5,7 @@
 
 {% block content %}
 
-<main class="desk" style="view-transition-name:vt-{{ section.path | slugify | default(value='home') }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.svg')) }}')">
+<main class="desk" style="view-transition-name:vt-{{ section.path | slugify | default(value='home') }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.jpg')) }}')">
 {% set_global slot = 0 %}
 
   {# FOLDERS — a directory with an _index.md is a bureau of its own. #}
