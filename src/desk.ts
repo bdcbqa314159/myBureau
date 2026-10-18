@@ -117,6 +117,21 @@ async function whenPainted(): Promise<void> {
 
 /** Reveal the bureau: the overlay fades while the icons arrive underneath,
  *  so the two motions overlap instead of queueing. */
+/** Arriving from inside the site is not the same as arriving cold.
+ *
+ *  On a cross-document view transition the browser snapshots the NEW page
+ *  as soon as it can render — and our first paint is an opaque overlay
+ *  covering everything. So the morph animated the old page into a blank
+ *  screen: a cut, then dots, then pictures arriving one by one. The
+ *  transition was working; the loader was hiding it.
+ *
+ *  When a transition is running the old page stays on screen until this
+ *  one is ready, which is the whole point. There is nothing to cover. */
+let arrivedByTransition = false;
+window.addEventListener("pagereveal", (e: Event): void => {
+  if ("viewTransition" in e && e.viewTransition !== null) arrivedByTransition = true;
+});
+
 function reveal(): void {
   fadeInLateArrivals();
   const loader = document.querySelector<HTMLElement>(".loader");
@@ -129,8 +144,9 @@ function reveal(): void {
   loader.classList.add("is-leaving");
   tidyUp();
   keepOnScreen();        // a remembered spot may not fit this window
-  if (calm()) {
-    loader.remove();
+
+  if (arrivedByTransition || calm()) {
+    loader.remove();     // nothing to fade: the old page covered the gap
     return;
   }
   void loader
