@@ -194,6 +194,21 @@ counting as a drag, so tapping still opens things.
 Without JavaScript the grid simply stays a grid — tidy, reachable, not
 draggable.
 
+### Content passing under the bandeau
+
+The bandeau is fixed, so on a page that scrolls everything slides beneath
+it — paragraphs crossing the wordmark, photographs running into the nav.
+
+The scrim that prevents it is the page's **own ground colour** faded to
+nothing. At rest there is only background underneath, so it is invisible;
+it appears only as something rises into it. No scroll listener, no
+measuring, no state — it is self-regulating because it is the same colour
+as whatever it is hiding.
+
+Not on a bureau: there the wallpaper *is* the content and must not be
+veiled. That surface has its own much shorter scrim under the bar, for
+legibility rather than for scrolling.
+
 ### Leaving and coming back
 
 Icons you move are remembered **for the session**, per bureau. Leave a

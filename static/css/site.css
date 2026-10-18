@@ -462,6 +462,36 @@ img.will-fade.is-in { opacity: 1; }
 /* ====================================================================
    project page
    ==================================================================== */
+/* ====================================================================
+   Content passing under the bandeau
+   --------------------------------------------------------------------
+   The bandeau is fixed, so on a page that scrolls everything slides
+   underneath it — paragraphs crossing the wordmark, photographs running
+   into the nav. Noise exactly where the type needs to be read.
+
+   The scrim is the page's OWN ground colour faded to nothing. At rest
+   there is only background beneath it, so it is invisible; it appears
+   only as something rises into it, and fades it out before it reaches
+   the type. No scroll listener, no measuring, no state — the effect is
+   self-regulating because it is the same colour as what it hides.
+
+   Not on a bureau: there the wallpaper IS the content and must not be
+   veiled. That surface has its own, much shorter scrim under the bar.
+   ==================================================================== */
+body.project, body.gallery { --ground: 13 11 10; }
+body.project { --ground: 250 240 224; }
+
+body.project::before, body.gallery::before {
+  content: "";
+  position: fixed; inset: 0 0 auto 0;
+  height: clamp(4.5rem, 10vh, 7.5rem);
+  /* rgb() with a zero alpha rather than `transparent`, which interpolates
+     through black and leaves a grey smear on a light page */
+  background: linear-gradient(rgb(var(--ground)) 34%, rgb(var(--ground) / 0));
+  z-index: 850;                      /* above the content, below the bar */
+  pointer-events: none;
+}
+
 body.project { background: var(--cream); color: var(--ink); overflow-x: hidden; }
 body.project .bar { color: var(--ink); text-shadow: none; }
 .proj { padding-top: clamp(5rem, 9vw, 8rem); }
