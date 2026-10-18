@@ -19,6 +19,7 @@ live = false
 
 author = "Bernardo Cohen"
 author_url = "https://github.com/bdcbqa314159"
+studio = "deLapatadaSoftware"
 
 image_types = ["jpg", "jpeg", "png", "webp", "avif", "gif"]
 

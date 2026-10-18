@@ -442,7 +442,9 @@ body.gallery { background: #0d0b0a; }
   transition: opacity .25s var(--ease);
 }
 .credit:hover { opacity: 1; }
+.credit { display: grid; justify-items: end; gap: .05em; line-height: 1.25; }
 .credit a { text-decoration: none; }
+.credit-studio { font-size: .86em; opacity: .72; letter-spacing: .01em; }
 .credit a:hover { text-decoration: underline; }
 body.project .credit { color: var(--ink); text-shadow: none; }
 
