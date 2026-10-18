@@ -52,6 +52,9 @@
    data-vt="{{ ic_path | slugify }}"
    {%- if ic_kind == "folder" %} data-folder{% endif -%}
    {%- if ic_window %} data-window="{{ ic_window }}"{% endif %}>
-  <img src="{{ ic_pic }}" alt="">
+  {# The SVGs are square. Declaring it means the icon box is the right
+     size before the picture arrives, so nothing reflows under the labels
+     and a measurement taken early is not a measurement taken wrong. #}
+  <img src="{{ ic_pic }}" width="160" height="160" alt="">
   <span>{{ ic_title }}</span>
 </a>
