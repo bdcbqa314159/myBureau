@@ -957,6 +957,7 @@ zola build                # fails on broken templates, links and missing strings
 ```bash
 node tools/desk-check.mjs        # a remembered position survives a resize
 python3 tools/content-check.py   # the content contract against real mistakes
+./tools/ready.sh                 # is this repo ready to be somebody's real site
 ```
 
 `desk-check` runs the real `static/js/desk.js` in a Node vm with a
@@ -1032,6 +1033,85 @@ they live in `_ref/`, which is git-ignored and local only.
 Design source extensions (`.pdf`, `.psd`, `.ai`, `.fig`, …) are ignored
 repo-wide as a backstop, but the rule is the convention, not the
 pattern list: **if a client sent it, it goes in `_ref/`.**
+
+## Handing the site over
+
+The demo stays here, with placeholder content and `live = false`. Her
+site becomes a **separate repository under her own account**, created
+from this one as a template.
+
+```bash
+./tools/ready.sh
+```
+
+Run that in whichever repository is about to go live. It compares what
+`config.toml` claims against what the repository actually is, and prints
+what is left, in order.
+
+### Where a GitHub Pages site lives
+
+Two shapes, and the repository name is what decides:
+
+| repository name | the site is served at |
+|---|---|
+| `hername.github.io` | `https://hername.github.io/` — **the root** |
+| anything else, e.g. `studio-s` | `https://hername.github.io/studio-s/` |
+
+The first is a **user site**: one per account, and the repository name is
+not a choice — it has to be exactly her username followed by
+`.github.io`. The second is a **project site**: any name she likes, but
+the name then appears in the URL.
+
+So "at the root" and "named whatever she wants" are the same thing only
+if her username is the name she wants.
+
+A **custom domain** removes the question. Attached to either shape, the
+site serves at the domain root and the repository name stops mattering
+to the URL. Put the domain in `base_url`, put it again in
+`static/CNAME`, and point the DNS at GitHub. If a domain is coming,
+pick whichever repository name reads best and do not think about this
+table again.
+
+Either way `base_url` has to match. If it does not, nothing errors —
+every link and every image on her published site quietly points at this
+repository's Pages instead. `ready.sh` is mostly there to catch that.
+
+### Creating her repository from this one
+
+Once, here: **Settings → General → Template repository**, ticked. That
+puts a green **Use this template** button on the front page.
+
+Then, from her account:
+
+1. open this repository on github.com
+2. **Use this template → Create a new repository**
+3. owner: her account; repository name: see the table above; **Public**
+   (GitHub Pages needs a paid plan to publish from a private repository)
+4. **Create repository**
+5. **Settings → Collaborators → Add people** — add whoever is doing the
+   switchover, with the **Admin** role, because enabling Pages needs it
+6. **Settings → Pages → Build and deployment → Source: GitHub Actions**
+
+A template is not a fork. There is no "forked from" banner on her
+repository, it can be made private later, and it is hers from the first
+commit. The engine files (`templates/`, `src/`, `static/css/`, `tools/`)
+stay separate from hers (`content/`, `config.toml`), so a later engine
+improvement is a diff applied to those paths — it does not need a shared
+git history.
+
+### The switchover, in order
+
+1. `base_url` → her Pages URL (`./tools/ready.sh` prints the right one)
+2. `python3 tools/placeholders.py --purge`, then her real work into `content/`
+3. her own Web3Forms key into `[extra.contact.real]`
+4. **`live = true` last**
+
+Four after two is the only hard ordering constraint. `live = true` is the
+moment her name goes on the site; if the placeholders are still there it
+publishes stock photographs under her byline, which is the exact thing
+the flag exists to prevent.
+
+---
 
 ## Going live
 
