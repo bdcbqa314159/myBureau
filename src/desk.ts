@@ -9,6 +9,11 @@ const calm = (): boolean =>
 
 let topZ = 10;
 
+/** How many pointers are currently holding something. A layout pass must
+ *  not rewrite the position of an icon someone is in the middle of
+ *  moving — a resize mid-drag used to do exactly that. */
+let holding = 0;
+
 /** Things dragged since their last pointerdown. A drag must never also
  *  count as a click — dropping `about me.txt` somewhere moves it, it does
  *  not open it. */
@@ -146,12 +151,18 @@ function reveal(): void {
   if (loader === null) {
     arrange();
     tidyUp();
+    document.documentElement.classList.remove("booting");
     return;
   }
   // keep it painted while .booting goes away, then take it out entirely
   loader.classList.add("is-leaving");
   arrange();        // decide where everything belongs…
   tidyUp();         // …then animate the gap from where it was left
+
+  // Showing the page is this function's job. It used to be the last line
+  // of tidyUp(), which returns early under reduced motion — so the only
+  // thing uncovering the page was a branch that could be skipped.
+  document.documentElement.classList.remove("booting");
 
   if (arrivedByTransition || calm()) {
     loader.remove();     // nothing to fade: the old page covered the gap
@@ -214,8 +225,6 @@ function tidyUp(): void {
     );
     staggered += 1;
   });
-
-  document.documentElement.classList.remove("booting");
 }
 
 interface Spot { left: string; top: string; x: string; y: string; translate: string }
@@ -359,6 +368,7 @@ function draggable(el: HTMLElement, nests: boolean): void {
           .map((f) => ({ el: f, rect: f.getBoundingClientRect() }))
       : [];
 
+    holding += 1;
     el.style.zIndex = String(++topZ);
     el.setPointerCapture(e.pointerId);
 
@@ -393,6 +403,7 @@ function draggable(el: HTMLElement, nests: boolean): void {
     };
 
     const onUp = (ev: PointerEvent): void => {
+      holding = Math.max(0, holding - 1);
       el.removeEventListener("pointermove", onMove);
       el.releasePointerCapture(ev.pointerId);
       el.classList.remove("dragging", "barred");
@@ -460,6 +471,7 @@ function rememberAuthored(el: HTMLElement): void {
 }
 
 function arrange(): void {
+  if (holding > 0) return;           // not while something is being moved
   const desk = document.querySelector<HTMLElement>(".desk");
   if (desk === null) return;
   const icons = [...desk.querySelectorAll<HTMLElement>(".icon")];
@@ -542,6 +554,13 @@ const relayout = (): void => {
 };
 window.addEventListener("resize", relayout);
 window.addEventListener("orientationchange", relayout);
+
+// The authored position has to be captured BEFORE a drag can happen.
+// arrange() captures it, but arrange() waits for images — so a drag in
+// the first moments set `--x: auto`, and arrange() then recorded `auto`
+// as the position the content file asked for. That icon could never go
+// home again, for the life of the page.
+document.querySelectorAll<HTMLElement>(".desk .icon").forEach(rememberAuthored);
 
 document.querySelectorAll<HTMLElement>(".icon").forEach((el) => draggable(el, true));
 document.querySelectorAll<HTMLElement>(".win").forEach((el) => draggable(el, false));
