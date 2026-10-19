@@ -1,6 +1,12 @@
 // Desktop behaviour: move things freely, refuse to nest them, open windows.
 // ponytail: pointer events and the Web Animations API. No drag library.
 
+/** The active language's strings, written onto <body> by base.html.
+ *  An unknown key shows as the key — visible, and never a blank. */
+const STRINGS: Record<string, string> =
+  JSON.parse(document.body.dataset.i18n ?? "{}") as Record<string, string>;
+const say = (key: string): string => STRINGS[key] ?? key;
+
 const clamp = (v: number, lo: number, hi: number): number =>
   Math.min(Math.max(v, lo), hi);
 
@@ -636,7 +642,7 @@ function label(win: HTMLDialogElement): void {
   if (b === null) return;
   const mini = win.classList.contains("is-mini");
   b.textContent = mini ? "\u2b1c" : "\u2013";          // restore : minimise
-  b.setAttribute("aria-label", mini ? "Agrandir" : "Réduire");
+  b.setAttribute("aria-label", say(mini ? "window_max" : "window_min"));
 }
 
 function grow(win: HTMLDialogElement): void {

@@ -13,6 +13,12 @@
 
 export type Check = { ok: true } | { ok: false; reason: string };
 
+/** `reason` is a TRANSLATION KEY, not a sentence. The words live in
+ *  config.toml under [translations]; the page writes the active
+ *  language's strings into #i18n and say() looks them up. That keeps
+ *  these functions testable in Node, where there is no document and no
+ *  language, and it means a new language never touches this file. */
+
 const OK: Check = { ok: true };
 const no = (reason: string): Check => ({ ok: false, reason });
 
@@ -36,17 +42,17 @@ export const clean = (s: string): string =>
 /** Exactly one address, and nothing that could become a header. */
 export function checkEmail(raw: string): Check {
   const v = raw.trim();
-  if (v === "") return no("Il manque ton adresse mail.");
-  if (v.length > LIMITS.email) return no("Cette adresse est trop longue.");
-  if (NEWLINE.test(v)) return no("Cette adresse n'est pas valide.");
-  if (CONTROL.test(v)) return no("Cette adresse n'est pas valide.");
-  if (/[,;]/.test(v)) return no("Une seule adresse, merci.");
-  if (HEADERISH.test(v)) return no("Cette adresse n'est pas valide.");
+  if (v === "") return no("err_mail_missing");
+  if (v.length > LIMITS.email) return no("err_mail_long");
+  if (NEWLINE.test(v)) return no("err_mail_invalid");
+  if (CONTROL.test(v)) return no("err_mail_invalid");
+  if (/[,;]/.test(v)) return no("err_mail_one");
+  if (HEADERISH.test(v)) return no("err_mail_invalid");
   // Shape, deliberately not RFC 5322. A perfect address regex is a famous
   // trap; one @, something either side, a dot in the domain is enough. The
   // control-character ban above is the part that actually matters.
   if (!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(v)) {
-    return no("Cette adresse n'a pas l'air valide.");
+    return no("err_mail_shape");
   }
   return OK;
 }
@@ -54,23 +60,23 @@ export function checkEmail(raw: string): Check {
 /** The subject becomes a mail header, so it gets the same newline ban. */
 export function checkSubject(raw: string): Check {
   const v = raw.trim();
-  if (v.length > LIMITS.subject) return no("L'objet est trop long.");
+  if (v.length > LIMITS.subject) return no("err_subject_long");
   if (NEWLINE.test(v) || CONTROL.test(v)) {
-    return no("L'objet contient des caracteres interdits.");
+    return no("err_subject_bad");
   }
-  if (HEADERISH.test(v)) return no("L'objet n'est pas valide.");
+  if (HEADERISH.test(v)) return no("err_subject_inv");
   return OK;
 }
 
 /** The body is not a header, so injection matters less and volume more. */
 export function checkMessage(raw: string): Check {
   const v = raw.trim();
-  if (v === "") return no("Il manque ton message.");
-  if (v.length > LIMITS.message) return no("Ce message est trop long.");
-  if (CONTROL.test(v)) return no("Ce message contient des caracteres interdits.");
-  if (HEADERISH.test(v)) return no("Ce message n'est pas valide.");
+  if (v === "") return no("err_msg_missing");
+  if (v.length > LIMITS.message) return no("err_msg_long");
+  if (CONTROL.test(v)) return no("err_msg_bad");
+  if (HEADERISH.test(v)) return no("err_msg_inv");
   const links = v.match(/https?:\/\//gi);
-  if (links !== null && links.length > 6) return no("Trop de liens.");
+  if (links !== null && links.length > 6) return no("err_msg_links");
   return OK;
 }
 
@@ -96,15 +102,24 @@ export const TOO_FAST_MS = 2500;
 // where there is no document.
 // ---------------------------------------------------------------------
 
+/** The active language's strings, written onto <body> by base.html.
+ *  An unknown key shows as the key — visible, and never a blank. */
+const STRINGS: Record<string, string> =
+  typeof document === "undefined"
+    ? {}
+    : (JSON.parse(document.body.dataset.i18n ?? "{}") as Record<string, string>);
+
+export const say = (key: string): string => STRINGS[key] ?? key;
+
 function wire(form: HTMLFormElement): void {
   const opened = Date.now();
-  const say = form.querySelector<HTMLElement>("[data-says]");
+  const slot = form.querySelector<HTMLElement>("[data-says]");
   const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
   const endpoint = form.getAttribute("action") ?? "";
   const key = form.querySelector<HTMLInputElement>('input[name="access_key"]')?.value ?? "";
 
-  const tell = (msg: string): void => {
-    if (say !== null) say.textContent = msg;
+  const tell = (key: string): void => {
+    if (slot !== null) slot.textContent = say(key);
   };
 
   form.addEventListener("submit", (e: Event): void => {
@@ -132,12 +147,12 @@ function wire(form: HTMLFormElement): void {
 
     // No key means no destination. Say so rather than posting into a void.
     if (endpoint === "" || key === "") {
-      tell("Le formulaire n'est pas encore relie.");
+      tell("form_offline");
       return;
     }
 
     if (button !== null) button.disabled = true;   // one click, one mail
-    tell("Envoi...");
+    tell("form_sending");
 
     void fetch(endpoint, {
       method: "POST",
@@ -152,11 +167,11 @@ function wire(form: HTMLFormElement): void {
       .then((r) => {
         // Never echo anything the visitor typed back into the page. A
         // "thanks, you said X" confirmation is a stored-XSS vector for free.
-        tell(r.ok ? "Message envoye. Merci." : "L'envoi a echoue. Reessaie plus tard.");
+        tell(r.ok ? "form_sent" : "form_failed");
         if (!r.ok && button !== null) button.disabled = false;
       })
       .catch(() => {
-        tell("L'envoi a echoue. Reessaie plus tard.");
+        tell("form_failed");
         if (button !== null) button.disabled = false;
       });
   });

@@ -39,6 +39,7 @@ The filesystem is the structure. You should never have to edit a template:
 | forget `x` / `y` | the icon is placed on a free grid slot, never stacked |
 | export `PHOTO.JPG` in capitals | matched the same as lowercase |
 | name two projects the same in different bureaus | kept distinct, no transition clash |
+| add a language to `config.toml` | the bandeau grows an `EN` link, `hreflang` appears, the strings follow — see [Languages](#languages) |
 
 Only things that are **neither** a folder nor a file — the windows — are
 declared by hand, in `config.toml`.
@@ -404,6 +405,108 @@ in the browser, but those moves are not saved — `x`/`y` is the resting layout.
 
 ---
 
+## Languages
+
+The site is French. Adding another one is two edits in `config.toml` and
+one command — no template, no code, no new build step. If adding a
+language ever means editing a template, that is a bug worth reporting.
+
+### Add a language
+
+Say Spanish. In `config.toml`:
+
+```toml
+[languages.es]
+title = "myBureau"
+
+[languages.es.translations]
+```
+
+Then:
+
+```bash
+python3 tools/i18n.py --sync
+```
+
+That writes every missing string into `[languages.es.translations]` and a
+Spanish copy of every page into `content/`, each one still in French and
+marked `# TODO translate`. **The site builds and works from that moment**
+— `/es/` exists, the bandeau carries an `ES` link, every page is
+reachable. Translating is then editing text in place, at whatever pace.
+
+```bash
+python3 tools/i18n.py          # what is still in French
+```
+
+```
+  [es]
+    words  1/30 translated
+             still in fr: nav_contact
+             still in fr: window_close
+    pages  19/19 exist
+```
+
+Nothing is ever overwritten. Run `--sync` as often as you like — a
+translation already made is not up for revision.
+
+### Two kinds of text, two places
+
+| | where | example |
+|---|---|---|
+| words the engine says | `config.toml`, `[translations]` | buttons, errors, `back to` |
+| words she writes | `content/*.md` | titles, project text |
+
+A page in one language is a file next to the original with the language in
+its name: `index.md` → `index.es.md`, `_index.md` → `_index.es.md`.
+Photographs are **not** copied — one file serves every language, so
+translating a page never touches an image.
+
+### What happens when something is missing
+
+| missing | what happens |
+|---|---|
+| a word | **the build fails.** Zola will not guess. `--sync` fills it with the French so it never gets to that point |
+| a page | that page is simply not in that language, and drops off that language's desktop without a word of complaint |
+| a key nothing asks for | `tools/i18n.py` names it, and exits non-zero |
+| a key asked for that nobody wrote | same — and `zola build` fails too, if it is in a template |
+
+The last two are the typos. `python3 tools/i18n.py` runs in CI and in
+`./preview.sh`, so a misspelled key stops the build rather than quietly
+rendering as `err_mail_shap` in a language nobody on the team reads.
+
+Untranslated is not an error — it is a stage of work, and it only prints.
+
+### Remove a language
+
+Delete its two blocks from `config.toml`, then:
+
+```bash
+find content -name '*.es.md' -delete
+```
+
+`--prune` does the same thing for pages whose original has been deleted.
+
+### What the engine does with the language list
+
+Read from the list, never written by hand:
+
+- the `ES` / `EN` / `FR` links in the bandeau — to **the same page** when
+  it has been translated, to that language's desktop when it has not
+- `<html lang>` on every page
+- `<link rel="alternate" hreflang>` for each language, so the two are not
+  read as duplicate pages
+- the strings the browser needs, written onto each page's `<body>` as
+  `data-i18n` — the only way `desk.js` and `contact.js` get words, since
+  they cannot call `trans()`. An attribute rather than a `<script>` block
+  because Tera escapes attribute values, so a string containing
+  `</script>` cannot end the element early
+
+Validation messages are **keys**, not sentences: `checkEmail` returns
+`err_mail_shape`, and the page supplies the words. That is what keeps
+`tools/contact-check.mjs` runnable in Node, where there is no language.
+
+---
+
 ## The contact form
 
 ### Where it sends
@@ -716,11 +819,13 @@ Both watch for changes. Edit anything and the browser reloads.
 ## Checks
 
 ```bash
-npm run check        # tsc --noEmit, strict
-zola build           # fails on broken templates and links
+npm run check             # tsc --noEmit, strict
+npm test                  # the above, plus the contact and language checks
+python3 tools/i18n.py     # every string asked for was written; what is untranslated
+zola build                # fails on broken templates, links and missing strings
 ```
 
-CI runs both on every pull request; `main` deploys to GitHub Pages on merge.
+CI runs all of them on every pull request; `main` deploys to GitHub Pages on merge.
 
 ---
 
@@ -730,6 +835,8 @@ CI runs both on every pull request; `main` deploys to GitHub Pages on merge.
 content/          the site — folders mirror the desktops
 templates/        Tera templates (base, section, index, page, gallery)
 src/desk.ts       drag + window behaviour, the only script
+src/contact.ts    contact form validation (returns translation keys)
+tools/i18n.py     languages: what is missing, and the files to fill in
 static/css/       one stylesheet
 static/img/       wallpapers and generic icons
 _ref/             design references, git-ignored (local only)
@@ -788,7 +895,8 @@ head -2 public/robots.txt              # must allow crawling
 3. the client's own domain in `base_url`, plus a `static/CNAME`
 4. `noindex` gone, `robots.txt` allowing crawlers
 5. the contact form pointed at a real backend
-6. the `site by` credit present — it is a condition of the licence, see LICENSE §4
+6. `python3 tools/i18n.py` clean — nothing half-translated that she did not choose to leave
+7. the `site by` credit present — it is a condition of the licence, see LICENSE §4
 
 ## Placeholders
 

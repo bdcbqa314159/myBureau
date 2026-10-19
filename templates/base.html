@@ -2,7 +2,7 @@
 {% if config.extra.live %}{% set_global id = config.extra.real %}{% set_global contact_key = config.extra.contact.real.access_key %}
 {% else %}{% set_global id = config.extra.demo %}{% set_global contact_key = config.extra.contact.demo.access_key %}{% endif %}
 <!doctype html>
-<html lang="fr">
+<html lang="{{ lang }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -40,11 +40,46 @@
    page anyway. A portfolio must never stay blank because a script died. */
 setTimeout(function(){d.classList.remove("booting")},6000)})(document.documentElement)
 </script>
+{# The same page in another language, when it exists. Zola fills
+   `translations` from content files; where a translation has not been
+   written yet, the language's home stands in rather than nothing. #}
+{%- if page -%}{% set_global here = page.translations %}
+{%- elif section -%}{% set_global here = section.translations %}
+{%- else -%}{% set_global here = [] %}{%- endif %}
+{%- if page %}{% set_global self_url = page.permalink %}
+{%- elif section %}{% set_global self_url = section.permalink %}
+{%- else %}{% set_global self_url = get_url(path="/") %}{% endif -%}
+
+{# config.languages holds the OTHER languages — the one being rendered
+   is not in it — so this page links to itself first. #}
+<link rel="alternate" hreflang="{{ lang }}" href="{{ self_url }}">
+{% for code, _spec in config.languages %}
+{%- set_global other = get_url(path="/", lang=code) -%}
+{%- for t in here %}{% if t.lang == code %}{% set_global other = t.permalink %}{% endif %}{% endfor -%}
+<link rel="alternate" hreflang="{{ code }}" href="{{ other }}">
+{% endfor %}
+<link rel="alternate" hreflang="x-default" href="{{ get_url(path='/') }}">
+
 <link rel="preload" as="font" type="font/woff2" crossorigin
       href="{{ get_url(path='fonts/inter-tight-latin.woff2') }}">
 <link rel="stylesheet" href="{{ get_url(path='css/site.css') }}">
 </head>
-<body class="{% block bodyclass %}{% endblock %}">
+{# TypeScript cannot call trans(), so the strings it needs are written
+   here for the language being rendered and read once at startup — no
+   bundler, no runtime dependency, still one place to translate.
+
+   An ATTRIBUTE, not a <script> block: Tera escapes attribute values, so
+   a string containing "</script>" cannot end the element early. In a
+   script block it could, and would take the rest of the page with it.
+   Not an attack — config.toml is ours — but a typo that silently breaks
+   every page is worth avoiding by construction. #}
+{%- set_global blob = "{" -%}
+{%- for k in config.extra.browser_strings -%}
+  {%- if not loop.first %}{% set_global blob = blob ~ "," %}{% endif -%}
+  {%- set_global blob = blob ~ '"' ~ k ~ '":' ~ (trans(key=k, lang=lang) | json_encode) -%}
+{%- endfor -%}
+{%- set_global blob = blob ~ "}" -%}
+<body class="{% block bodyclass %}{% endblock %}" data-i18n="{{ blob }}">
 
 {# three slots, never two things in one place — see site.css "top bar" #}
 <header class="bar">
@@ -59,7 +94,14 @@ setTimeout(function(){d.classList.remove("booting")},6000)})(document.documentEl
     {% set root = get_section(path="_index.md") %}
     {% for path in root.subsections %}{% set s = get_section(path=path) %}
     <a href="{{ s.permalink }}">{{ s.title }}</a>{% endfor %}
-    {% for item in config.extra.nav_extra %}<a href="{{ item.url }}">{{ item.name }}</a>{% endfor %}
+    {% for item in config.extra.nav_extra %}<a href="{{ item.url }}">{% if item.key %}{{ trans(key=item.key, lang=lang) }}{% else %}{{ item.name }}{% endif %}</a>{% endfor %}
+    {# One link per other language, generated from the language list. The
+       same page when it has been translated, that language's desktop when
+       it has not — so a half-translated site is a shorter site, not a
+       broken one. #}
+    {% for code, spec in config.languages %}
+    <a class="bar-lang" lang="{{ code }}" hreflang="{{ code }}"
+       href="{% set_global other = get_url(path='/', lang=code) %}{% for t in here %}{% if t.lang == code %}{% set_global other = t.permalink %}{% endif %}{% endfor %}{{ other }}">{{ code }}</a>{% endfor %}
   </nav>
 </header>
 
@@ -72,7 +114,7 @@ setTimeout(function(){d.classList.remove("booting")},6000)})(document.documentEl
 {# Every page's bandeau links to #contact, so the window has to exist on
    every page — not only the home desktop where it was first written. #}
 <dialog class="win" id="contact">
-  <div class="win-bar"><span>System message</span><form method="dialog"><button aria-label="close">✕</button></form></div>
+  <div class="win-bar"><span>{{ trans(key='window_system', lang=lang) }}</span><form method="dialog"><button aria-label="{{ trans(key='window_close', lang=lang) }}">✕</button></form></div>
   <div class="win-body">
     <form class="contact-form" action="{{ config.extra.contact.endpoint }}" method="post" novalidate>
 
@@ -83,21 +125,21 @@ setTimeout(function(){d.classList.remove("booting")},6000)})(document.documentEl
          means a bot. Moved off-screen rather than display:none, because
          some bots skip hidden fields and some assistive tech reads them. #}
       <div class="trap" aria-hidden="true">
-        <label for="_trap">Laisse ce champ vide</label>
+        <label for="_trap">{{ trans(key='form_honeypot', lang=lang) }}</label>
         <input id="_trap" name="_trap" type="text" tabindex="-1" autocomplete="off">
       </div>
 
-      <label>mail : <input type="email" name="email" maxlength="254" required autocomplete="email"></label>
-      <label>Object : <input type="text" name="subject" maxlength="150"></label>
-      <label>Message : <textarea name="message" rows="5" maxlength="4000" required></textarea></label>
+      <label>{{ trans(key='form_mail', lang=lang) }}<input type="email" name="email" maxlength="254" required autocomplete="email"></label>
+      <label>{{ trans(key='form_subject', lang=lang) }}<input type="text" name="subject" maxlength="150"></label>
+      <label>{{ trans(key='form_message', lang=lang) }}<textarea name="message" rows="5" maxlength="4000" required></textarea></label>
 
       <p class="says" data-says role="status" aria-live="polite"></p>
 
-      <p class="win-note">Ton adresse, ton message et ton adresse IP sont transmis à Web3Forms, qui les relaie par e-mail et les conserve 30 jours. Rien n'est stocké sur ce site.</p>
+      <p class="win-note">{{ trans(key='form_privacy', lang=lang) }}</p>
 
       <div class="win-buttons">
-        <button type="submit">Ok</button>
-        <button type="button" data-close>Cancel</button>
+        <button type="submit">{{ trans(key='form_send', lang=lang) }}</button>
+        <button type="button" data-close>{{ trans(key='form_cancel', lang=lang) }}</button>
       </div>
     </form>
   </div>

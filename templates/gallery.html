@@ -12,6 +12,13 @@
      right space before the file arrives: without them a masonry of lazy
      images reflows violently as each one lands. #}
   {% for asset in section.assets %}
+    {# A translated section reports its photographs under /<lang>/, but a
+       photograph has no language — one file serves every translation, and
+       it sits next to the default-language page. Strip the prefix or the
+       image pipeline looks for a file that was never there. #}
+    {% if lang != config.default_language %}
+      {% set asset = asset | replace(from="/" ~ lang ~ "/", to="/") %}
+    {% endif %}
     {% set file = asset | split(pat="/") | last %}
     {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" %}
       {% set shape = get_image_metadata(path=asset) %}
