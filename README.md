@@ -384,6 +384,25 @@ For each icon, always in this order:
 3. **a clamp** — nudged back on if it would hang off the desk or hide
    under the bandeau
 
+Step 2 is stored as a **fraction of where the icon was allowed to go**,
+not as a count of pixels. 1180px from the left is the right-hand side of
+a laptop and off the edge of a phone; "nine tenths of the way across" is
+the same place on both. A fraction of the *placeable area* rather than
+of the desk, which is the part that makes corners work — `1` means "as
+far right as it goes" at any size, instead of "past the edge, and then
+clamped back by the icon's own width".
+
+So the clamp is now the exception rather than the mechanism. A position
+restored from a fraction is already inside the bounds by construction,
+and on an ordinary resize the clamp changes nothing at all. It stays as
+a guard for the cases a fraction cannot cover — a landscape phone from a
+desktop is a different enough shape that something may still need
+nudging.
+
+The same fractions go into `sessionStorage`, so coming back to a bureau
+in a window you have since resized animates from where you actually
+left things rather than from somewhere they have never been.
+
 Nothing in that pipeline destroys the position written in the content
 file, so turning a phone sideways and back puts everything exactly where
 it started.
@@ -404,6 +423,11 @@ disappears underneath it.
 Anything out of bounds is nudged back on, on load and on resize. Icons
 that already fit are never touched, so a deliberate arrangement stays
 exactly where it was put.
+
+That is about `x`/`y` from the content file, which are percentages of
+the desk and so cannot account for the icon's own width. A position the
+*visitor* chose is stored differently — see the fractions above — and
+does not need the clamp on an ordinary resize.
 
 ### Move an icon
 
@@ -861,8 +885,18 @@ zola build                # fails on broken templates, links and missing strings
 ```
 
 ```bash
+node tools/desk-check.mjs        # a remembered position survives a resize
 python3 tools/content-check.py   # the content contract against real mistakes
 ```
+
+`desk-check` runs the real `static/js/desk.js` in a Node vm with a
+stubbed document — so it is a smoke test that the script loads at all,
+and then it calls the script's own geometry functions rather than a copy
+of the arithmetic. A copy drifts, and drift in that file is what three
+of the last four pull requests were fixing. It walks every pair of five
+screen sizes, nine drop points each, and checks that a remembered
+position is never left outside the area it is allowed to occupy. Against
+the previous pixel storage, 16 of those 20 pairs fail.
 
 The last one is the interesting one. It copies the whole site into a
 scratch directory ten times, and each time adds one mistake a person

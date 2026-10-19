@@ -25,12 +25,60 @@ let holding = 0;
  *  not open it. */
 const justDragged = new WeakSet<HTMLElement>();
 
-/** Where the VISITOR put things, in pixels relative to the desk.
+/** Where the VISITOR put things — as a FRACTION of where it was allowed
+ *  to go, not as a count of pixels.
+ *
+ *  Pixels do not survive the viewport changing. 1180px from the left is
+ *  the right-hand side of a laptop and off the edge of a phone, so an
+ *  icon placed thoughtfully in a corner arrived at a rotation having
+ *  been shoved somewhere arbitrary by the clamp. The arrangement was not
+ *  preserved, only prevented from breaking.
+ *
+ *  A fraction of the PLACEABLE AREA rather than of the desk, which is
+ *  the part that makes corners work: 1 means "as far right as it goes",
+ *  whatever the screen, instead of "all the way to the edge and then
+ *  clamped back by its own width".
  *
  *  Only their own moves belong here. A position the clamp chose on their
  *  behalf is not an arrangement, and remembering those made every return
  *  to a bureau land somewhere new. */
-const byHand = new WeakMap<HTMLElement, { left: number; top: number }>();
+const byHand = new WeakMap<HTMLElement, { fx: number; fy: number }>();
+
+/** How far down the bandeau reaches. Measured once per pass — it is the
+ *  same for every icon, and it changes between a desktop and a phone,
+ *  where the three slots stack. */
+function barCeiling(): number {
+  const bar = document.querySelector<HTMLElement>(".bar");
+  return bar === null ? 0 : bar.getBoundingClientRect().height + 8;
+}
+
+/** The rectangle an icon's top-left corner may occupy: the desk, less
+ *  its own size, less the bandeau above and a margin below.
+ *
+ *  Writing a position and reading one both go through here, so the two
+ *  ends cannot disagree about what "as far right as it goes" means.
+ *  Every bug in this file so far has been two pieces of code deciding
+ *  the same thing slightly differently. */
+function field(frame: DOMRect, ceiling: number, w: number, h: number):
+  { x0: number; x1: number; y0: number; y1: number } {
+  return {
+    x0: 0,
+    x1: Math.max(0, frame.width - w),
+    y0: ceiling,
+    y1: Math.max(ceiling, frame.height - h - 10),   // never flush to the bottom
+  };
+}
+
+// Declarations rather than consts so tools/desk-check.mjs can reach them
+// after running this script — the test exercises what actually ships
+// instead of a copy of it that can drift.
+function asFraction(v: number, lo: number, hi: number): number {
+  return hi - lo <= 0 ? 0 : clamp((v - lo) / (hi - lo), 0, 1);
+}
+
+function asPixels(f: number, lo: number, hi: number): number {
+  return lo + f * Math.max(0, hi - lo);
+}
 
 // ---------------------------------------------------------------------
 // Leaving a bureau and coming back
@@ -43,12 +91,26 @@ const byHand = new WeakMap<HTMLElement, { left: number; top: number }>();
 
 const DESK_KEY = `bureau:${location.pathname}`;
 
-type Layout = Record<string, { left: number; top: number }>;
+type Layout = Record<string, { fx: number; fy: number }>;
 
 function readLayout(): Layout {
   try {
     const raw = sessionStorage.getItem(DESK_KEY);
-    return raw === null ? {} : (JSON.parse(raw) as Layout);
+    if (raw === null) return {};
+    // Read defensively. An entry written by an older build holds pixels,
+    // not fractions, and reading one as a fraction would animate every
+    // icon by NaN. Anything that is not two finite numbers is dropped,
+    // which also covers a corrupt entry for free.
+    const out: Layout = {};
+    const parsed = JSON.parse(raw) as Record<string, { fx?: unknown; fy?: unknown }>;
+    for (const key of Object.keys(parsed)) {
+      const v = parsed[key];
+      if (typeof v?.fx === "number" && Number.isFinite(v.fx) &&
+          typeof v?.fy === "number" && Number.isFinite(v.fy)) {
+        out[key] = { fx: v.fx, fy: v.fy };
+      }
+    }
+    return out;
   } catch {
     return {};                       // private mode, quota, corrupt entry
   }
@@ -202,6 +264,7 @@ function tidyUp(): void {
   if (quiet) return;                 // already home, and nothing should move
 
   const frame = desk.getBoundingClientRect();
+  const ceiling = barCeiling();
   let staggered = 0;
 
   icons.forEach((el) => {
@@ -218,8 +281,13 @@ function tidyUp(): void {
       return;
     }
 
-    const dx = was.left - (now.left - frame.left);
-    const dy = was.top - (now.top - frame.top);
+    // Where you left it, read back at the size the screen is NOW. Stored
+    // as pixels this was wrong the moment the window changed between
+    // leaving and coming back: the icon would fly in from somewhere it
+    // had never been.
+    const box = field(frame, ceiling, now.width, now.height);
+    const dx = asPixels(was.fx, box.x0, box.x1) - (now.left - frame.left);
+    const dy = asPixels(was.fy, box.y0, box.y1) - (now.top - frame.top);
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
 
     el.animate(
@@ -423,7 +491,11 @@ function draggable(el: HTMLElement, nests: boolean): void {
         if (desk !== null) {
           const f = desk.getBoundingClientRect();
           const r = el.getBoundingClientRect();
-          byHand.set(el, { left: r.left - f.left, top: r.top - f.top });
+          const box = field(f, barCeiling(), r.width, r.height);
+          byHand.set(el, {
+            fx: asFraction(r.left - f.left, box.x0, box.x1),
+            fy: asFraction(r.top - f.top, box.y0, box.y1),
+          });
         }
         saveLayout();
       }
@@ -520,18 +592,22 @@ function arrange(): void {
   }
 
   // --- 2 and 3. the visitor's choice, then the clamp -----------------
-  const bar = document.querySelector<HTMLElement>(".bar");
-  const ceiling = bar === null ? 0 : bar.getBoundingClientRect().height + 8;
-  const floor = 10;                  // never flush against the bottom edge
+  const ceiling = barCeiling();
   const taken: { left: number; top: number; w: number; h: number }[] = [];
 
   icons.forEach((el, i) => {
     const b = base[i];
     if (b === undefined) return;
     const mine = byHand.get(el);
-    let left = clamp(mine?.left ?? b.left, 0, Math.max(0, frame.width - b.w));
-    let top = clamp(mine?.top ?? b.top, ceiling,
-                    Math.max(ceiling, frame.height - b.h - floor));
+    const box = field(frame, ceiling, b.w, b.h);
+    // The visitor's fraction read back at THIS size, or the base layout.
+    // The clamp stays, but it is now the exception rather than the
+    // mechanism: a fraction is already inside the field by construction,
+    // so on an ordinary resize it changes nothing.
+    let left = clamp(mine === undefined ? b.left : asPixels(mine.fx, box.x0, box.x1),
+                     box.x0, box.x1);
+    let top = clamp(mine === undefined ? b.top : asPixels(mine.fy, box.y0, box.y1),
+                    box.y0, box.y1);
 
     // Two icons hanging off the same edge clamp to the same place and
     // end up stacked. Walk one clear of whatever is already there.
