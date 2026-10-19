@@ -59,10 +59,17 @@ _PROJECTS = [
     "da/confidence-glow", "da/maison-cosette/jojo",
     "da/maison-cosette/lookbook",
 ]
+# A seed draws whatever it draws. Where the draw did not suit the page
+# it sits on, the seed is chosen by hand here instead.
+RESEEDED = {
+    "content/graphic-design/atelier-mirabelle/terrasses/01.jpg": "terrasses-01",
+}
+
 for _p in _PROJECTS:
     _name = _p.replace("/", "-")
     for _n in (1, 2):
-        PLAN.append((f"content/{_p}/{_n:02d}.jpg", f"{_name}-{_n}", 1800, 1200))
+        _rel = f"content/{_p}/{_n:02d}.jpg"
+        PLAN.append((_rel, RESEEDED.get(_rel, f"{_name}-{_n}"), 1800, 1200))
 
 
 def fetch(path: pathlib.Path, url: str) -> int:
