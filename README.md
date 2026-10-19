@@ -11,18 +11,88 @@ Design and creative assets belong to the client. See [NOTICE](NOTICE).
 
 ---
 
+## For the client
+
+**[GUIDE.fr.md](GUIDE.fr.md)** — in French, written for a Mac with
+nothing installed and a GitHub account. Homebrew, GitHub Desktop, then
+double-click `preview.command`. No SSH keys, no Node, and exactly one
+command typed in a terminal in the whole document.
+
+Every snippet in it was run verbatim against a scratch copy of the site
+and checked in the built HTML, accented folder names included.
+
+### What it costs her, counted
+
+| | steps |
+|---|---|
+| first time, on a Mac with nothing | **3** — Homebrew, GitHub Desktop, double-click |
+| see the site | 1 — double-click `preview.command` |
+| add a project | 2 — a folder with an `index.md`, then the images |
+| add a bureau | 1 — a folder with an `_index.md` |
+| write a text | 1 — type under the `+++` |
+| position an icon | 1, optional — `x`/`y`, or leave it to the grid |
+| describe a photo | 1, optional — one line per photo |
+| add a language | 2 config blocks, one command |
+| publish | 2 clicks — Commit, Push |
+| undo everything | 1 — Discard all changes |
+
+The first row used to be eight, and two of those eight — installing Node
+from a web page, and generating an SSH key — are exactly where someone
+who does not do this for a living stops.
+
+### Why the compiled JS is in the repo
+
+`static/js/*.js` is committed, which is unusual and deliberate. It is the
+difference between her needing Node, npm and a build step to look at her
+own site, and her needing none of them: 35 KB in git against 23 MB of
+`node_modules` and two more things to install.
+
+`tools/js-is-current.sh` runs `tsc` and fails if the committed output
+differs from `src/`. It runs in CI, which is where drift would otherwise
+arrive unnoticed. Source maps stay ignored.
+
+### Where a typo fails silently
+
+Found by trying them, one at a time, on a copy of the site — not by
+reading the templates. Each one **builds fine** and then does nothing:
+
+| the mistake | what happens | now |
+|---|---|---|
+| `icon =` names a file that is not there | broken image on the desk | named by `tools/look.py` |
+| a `url` with no `https://` | points inside the site, 404 | named |
+| a `.tiff` or `.psd` in a project folder | the page has no images | named |
+| a `wallpaper` on the gallery | ignored, it is a dark room | named |
+| a project folder with no images and no text | an empty page | named |
+
+`title` misspelt as `titel` fails the build outright, which is correct.
+
+`tools/look.py` runs inside `./preview.sh`, so she sees these before
+anyone else does. It warns and exits 0 — the site still works, it is
+just not doing what the content file asked for.
+
+---
+
 ## Previewing the site
 
 ```bash
-./preview.sh
+./preview.sh          # or double-click preview.command in Finder
 ```
 
-That is the whole thing. It installs what is missing, builds, opens your
-browser, and reloads the page whenever you change a file. Press `Ctrl-C`
-to stop.
+That is the whole thing. It needs **Zola and nothing else** — the
+compiled JavaScript is committed, so there is no Node, no npm and no
+build step in this path. It offers to install Zola on first run, reads
+over the content and says what will not work, builds once so a mistake
+is reported rather than silently served, then opens your browser and
+reloads the page whenever you change a file. `Ctrl-C` to stop.
 
-If it asks you to install Homebrew or Node first, do that once and run it
-again.
+If it asks for Homebrew, paste the line it prints, then run it again.
+
+Working on the TypeScript or the tools is the other path, and that one
+does want Node:
+
+```bash
+npm install && npm test
+```
 
 ## What the site works out for itself
 

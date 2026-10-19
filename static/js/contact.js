@@ -1,0 +1,168 @@
+// Contact form: validation and bot defences.
+//
+// READ THIS BEFORE TRUSTING ANY OF IT.
+//
+// Every check here runs in the visitor's browser. An attacker does not use
+// the form — they POST straight at the endpoint with curl, and none of
+// this executes. This is the sign on the door. The lock is whatever
+// validates on the receiving side.
+//
+// What it is genuinely for: catching honest mistakes, telling the sender
+// why instead of failing silently, and costing a lazy bot more than it
+// wants to spend. Worth having. Not a defence.
+/** `reason` is a TRANSLATION KEY, not a sentence. The words live in
+ *  config.toml under [translations]; the page writes the active
+ *  language's strings into #i18n and say() looks them up. That keeps
+ *  these functions testable in Node, where there is no document and no
+ *  language, and it means a new language never touches this file. */
+const OK = { ok: true };
+const no = (reason) => ({ ok: false, reason });
+/** Control characters, except tab and newline which are legal in a body. */
+const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/;
+const NEWLINE = /[\r\n]/;
+/** The shape that turns a contact form into a spam relay: a newline in a
+ *  field that lands in a mail header lets an attacker append their own —
+ *  "Bcc: <five thousand addresses>" — and the mail goes out in her name. */
+const HEADERISH = /(^|[\r\n])\s*(bcc|cc|to|from|reply-to|content-type|content-transfer-encoding|mime-version|x-mailer)\s*:/i;
+export const LIMITS = { email: 254, subject: 150, message: 4000 };
+/** Strip control characters. Never a substitute for rejecting — only to
+ *  tidy what has already passed. */
+export const clean = (s) => s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "");
+/** Exactly one address, and nothing that could become a header. */
+export function checkEmail(raw) {
+    const v = raw.trim();
+    if (v === "")
+        return no("err_mail_missing");
+    if (v.length > LIMITS.email)
+        return no("err_mail_long");
+    if (NEWLINE.test(v))
+        return no("err_mail_invalid");
+    if (CONTROL.test(v))
+        return no("err_mail_invalid");
+    if (/[,;]/.test(v))
+        return no("err_mail_one");
+    if (HEADERISH.test(v))
+        return no("err_mail_invalid");
+    // Shape, deliberately not RFC 5322. A perfect address regex is a famous
+    // trap; one @, something either side, a dot in the domain is enough. The
+    // control-character ban above is the part that actually matters.
+    if (!/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(v)) {
+        return no("err_mail_shape");
+    }
+    return OK;
+}
+/** The subject becomes a mail header, so it gets the same newline ban. */
+export function checkSubject(raw) {
+    const v = raw.trim();
+    if (v.length > LIMITS.subject)
+        return no("err_subject_long");
+    if (NEWLINE.test(v) || CONTROL.test(v)) {
+        return no("err_subject_bad");
+    }
+    if (HEADERISH.test(v))
+        return no("err_subject_inv");
+    return OK;
+}
+/** The body is not a header, so injection matters less and volume more. */
+export function checkMessage(raw) {
+    const v = raw.trim();
+    if (v === "")
+        return no("err_msg_missing");
+    if (v.length > LIMITS.message)
+        return no("err_msg_long");
+    if (CONTROL.test(v))
+        return no("err_msg_bad");
+    if (HEADERISH.test(v))
+        return no("err_msg_inv");
+    const links = v.match(/https?:\/\//gi);
+    if (links !== null && links.length > 6)
+        return no("err_msg_links");
+    return OK;
+}
+export function checkAll(s) {
+    const email = checkEmail(s.email);
+    if (!email.ok)
+        return email;
+    const subject = checkSubject(s.subject);
+    if (!subject.ok)
+        return subject;
+    return checkMessage(s.message);
+}
+/** Nobody writes an email in under two and a half seconds. Plenty of bots do. */
+export const TOO_FAST_MS = 2500;
+// ---------------------------------------------------------------------
+// Wiring. Guarded so the checks above can be imported and tested in Node,
+// where there is no document.
+// ---------------------------------------------------------------------
+/** The active language's strings, written onto <body> by base.html.
+ *  An unknown key shows as the key — visible, and never a blank. */
+const STRINGS = typeof document === "undefined"
+    ? {}
+    : JSON.parse(document.body.dataset.i18n ?? "{}");
+export const say = (key) => STRINGS[key] ?? key;
+function wire(form) {
+    const opened = Date.now();
+    const slot = form.querySelector("[data-says]");
+    const button = form.querySelector('button[type="submit"]');
+    const endpoint = form.getAttribute("action") ?? "";
+    const key = form.querySelector('input[name="access_key"]')?.value ?? "";
+    const tell = (key) => {
+        if (slot !== null)
+            slot.textContent = say(key);
+    };
+    form.addEventListener("submit", (e) => {
+        e.preventDefault();
+        // A field no human can see and no screen reader reaches. Filled in
+        // means a bot. Say nothing — an error teaches it what tripped it.
+        const trap = form.querySelector('input[name="_trap"]');
+        if (trap !== null && trap.value !== "")
+            return;
+        if (Date.now() - opened < TOO_FAST_MS)
+            return;
+        const data = new FormData(form);
+        const submission = {
+            email: String(data.get("email") ?? ""),
+            subject: String(data.get("subject") ?? ""),
+            message: String(data.get("message") ?? ""),
+        };
+        const verdict = checkAll(submission);
+        if (!verdict.ok) {
+            tell(verdict.reason);
+            return;
+        }
+        // No key means no destination. Say so rather than posting into a void.
+        if (endpoint === "" || key === "") {
+            tell("form_offline");
+            return;
+        }
+        if (button !== null)
+            button.disabled = true; // one click, one mail
+        tell("form_sending");
+        void fetch(endpoint, {
+            method: "POST",
+            headers: { Accept: "application/json" },
+            body: new URLSearchParams({
+                access_key: key,
+                email: clean(submission.email.trim()),
+                subject: clean(submission.subject.trim()),
+                message: clean(submission.message.trim()),
+            }),
+        })
+            .then((r) => {
+            // Never echo anything the visitor typed back into the page. A
+            // "thanks, you said X" confirmation is a stored-XSS vector for free.
+            tell(r.ok ? "form_sent" : "form_failed");
+            if (!r.ok && button !== null)
+                button.disabled = false;
+        })
+            .catch(() => {
+            tell("form_failed");
+            if (button !== null)
+                button.disabled = false;
+        });
+    });
+}
+if (typeof document !== "undefined") {
+    document.querySelectorAll(".contact-form").forEach(wire);
+}
+//# sourceMappingURL=contact.js.map
