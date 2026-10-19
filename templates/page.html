@@ -13,13 +13,25 @@
       {# the first picture is the page; everything below it can arrive later.
          Resized at build time, with the original proportions declared so
          nothing shifts as each one lands. #}
-      {% set shape = get_image_metadata(path=asset) %}
+{# Alt text, when there is any. A photograph in a portfolio is the
+         content, not decoration, so alt="" tells a screen-reader user
+         nothing was there — but inventing a description for someone
+         else's photograph is worse than silence. So: an optional map in
+         the page's front matter, keyed by file name, empty when absent.
+
+             [extra.alt]
+             "01.jpg" = "Deux silhouettes sur une plage, au crepuscule."
+
+         It lives in the content file, so it is already per-language. #}
+      {% set alt = "" %}
+      {% if page.extra.alt and page.extra.alt[file] %}{% set alt = page.extra.alt[file] %}{% endif %}
+            {% set shape = get_image_metadata(path=asset) %}
       {% set one = resize_image(path=asset, width=900, op="fit_width", format="webp", quality=78) %}
       {% set two = resize_image(path=asset, width=1800, op="fit_width", format="webp", quality=78) %}
       <figure class="proj-fig"><img src="{{ one.url }}"
         srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
         sizes="100vw"
-        width="{{ shape.width }}" height="{{ shape.height }}" alt="" decoding="async"
+        width="{{ shape.width }}" height="{{ shape.height }}" alt="{{ alt }}" decoding="async"
         {% if loop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}></figure>
     {% endif %}
   {% endfor %}

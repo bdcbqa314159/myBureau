@@ -29,6 +29,7 @@ jobs:
         with:
           tool: zola@0.23.6
       - run: zola build
+      - run: python3 tools/content-check.py  # the contract holds against real mistakes
 
       # only the real deploy publishes an artifact — a PR build that
       # uploaded one would contend with an in-flight deploy

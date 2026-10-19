@@ -578,7 +578,13 @@ document.querySelectorAll<HTMLElement>(".win").forEach((el) => draggable(el, fal
  *  ordering question entirely. */
 document.querySelectorAll<HTMLElement>(".icon").forEach((icon) => {
   icon.addEventListener("click", (e: Event): void => {
-    if (justDragged.has(icon)) {
+    // `detail` is the click count, and it is 0 when the activation came
+    // from the keyboard. A drag that ends in pointercancel leaves the
+    // flag set with no click to clear it; the next pointerdown clears it,
+    // but Enter is not a pointerdown — so without this test the first
+    // Enter after an interrupted drag did nothing at all.
+    const byPointer = !(e instanceof MouseEvent) || e.detail !== 0;
+    if (byPointer && justDragged.has(icon)) {
       e.preventDefault();
       e.stopImmediatePropagation();
       justDragged.delete(icon);
@@ -634,6 +640,13 @@ function shrink(win: HTMLDialogElement): void {
   win.classList.add("is-mini");
   win.close();                       // leaves the top layer, stops being modal
   win.show();                        // same element, same video, still playing
+
+  // close() hands focus back to whatever opened the window, which for a
+  // keyboard user is the icon out on the desk — so the button they just
+  // pressed is suddenly several tabs away, and the way to restore the
+  // film is somewhere behind them. Take it back: the button is still
+  // there, it just means the opposite thing now.
+  win.querySelector<HTMLButtonElement>("[data-mini]")?.focus();
 }
 
 /** The one button says what pressing it will do. */
@@ -677,9 +690,13 @@ document.querySelectorAll<HTMLDialogElement>(".win-film").forEach((win) => {
   // actually lands — on the dialog, because of that same pointer capture.
   win.addEventListener("click", (e: Event): void => {
     if (!win.classList.contains("is-mini")) return;
-    if (justDragged.has(win)) { justDragged.delete(win); return; }
+    if (!(e instanceof MouseEvent) || e.detail !== 0) {
+      if (justDragged.has(win)) { justDragged.delete(win); return; }
+    }
     const t = e.target;
-    if (t instanceof Element && t.closest("button, video") !== null) return;
+    // Same list the drag guard uses: anything that is itself a control
+    // does its own thing, and does not also un-minimise the window.
+    if (t instanceof Element && t.closest("button, a[href], video") !== null) return;
     grow(win);
     label(win);
   });

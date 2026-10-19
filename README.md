@@ -351,6 +351,18 @@ them up in filename order. Name them `01.jpg`, `02.jpg` … to control order.
 
 ### Change a wallpaper
 
+The wallpaper goes through the same resize pipeline as every other
+photograph — two WebP sizes, 2000px and 1280px, the smaller one served
+on phones. Drop in a 6 MB camera JPEG and the visitor still gets about
+80 KB. Measured on the current placeholders: 145 KB → 76 KB on a
+desktop, 36 KB on a phone.
+
+A wallpaper declared on the `pellicules` gallery does nothing — that
+page is a deliberate dark room (`body.gallery`), not a desk. The content
+check asserts a declared wallpaper actually renders, so if that ever
+silently stops being true, it fails rather than going quiet.
+
+
 Replace the file in `static/img/`, or point a section at a different one:
 
 ```toml
@@ -397,6 +409,29 @@ exactly where it was put.
 
 Edit `x` / `y` in that project's `index.md`. Visitors can drag icons around
 in the browser, but those moves are not saved — `x`/`y` is the resting layout.
+
+### Describing a photograph
+
+Every image ships with `alt=""`, which tells a screen reader there is
+nothing there. For an icon that is right — the name beside it is the
+link text. For a photograph in a portfolio it is wrong, and inventing a
+description for someone else's photograph is worse than silence.
+
+So there is a place to put one, and it is empty until she fills it:
+
+```toml
++++
+title = "theodora.jpeg"
+
+[extra.alt]
+"01.jpg" = "Deux silhouettes sur une plage, au crépuscule."
++++
+```
+
+Keyed by file name, in the page's own front matter — which means it is
+already per-language, since each language has its own content file. An
+image with no entry keeps `alt=""`. Works the same on a project page and
+in the `pellicules` gallery.
 
 ### Supported image types
 
@@ -825,6 +860,28 @@ python3 tools/i18n.py     # every string asked for was written; what is untransl
 zola build                # fails on broken templates, links and missing strings
 ```
 
+```bash
+python3 tools/content-check.py   # the content contract against real mistakes
+```
+
+The last one is the interesting one. It copies the whole site into a
+scratch directory ten times, and each time adds one mistake a person
+actually makes — a project with no icon, `PHOTO.JPG` in capitals, the
+same name in two bureaus, three folders with no `x`/`y`, an apostrophe in
+a folder name, a page added in French only, a bureau that declares a
+wallpaper, alt text in front matter — then builds and reads the HTML.
+
+"It builds" is not the test. A build can succeed and still have lost the
+icon, stacked two folders on one pixel, or given two pages the same
+`view-transition-name` so the morph silently dies. Each case says what it
+expects to **see**.
+
+### Opening a built page from disk
+
+You cannot, any more — the Content-Security-Policy means a `file://`
+page loads with no CSS and no script. Use `./preview.sh`. (The policy is
+explained where it is written, at the top of `templates/base.html`.)
+
 CI runs all of them on every pull request; `main` deploys to GitHub Pages on merge.
 
 ---
@@ -844,10 +901,23 @@ _ref/             design references, git-ignored (local only)
 
 ## Stack
 
-Zola (Rust) builds static HTML. TypeScript compiles to ~3 KB of plain
-JS for dragging and windows. Transitions are native CSS — View Transitions
-and scroll-driven animation. No frontend framework, no bundler, no runtime
+Zola (Rust) builds static HTML. TypeScript compiles to plain JS for
+dragging and windows — 28 KB raw, 9 KB over the wire, plus 7 KB raw for
+the contact form. Transitions are native CSS — View Transitions and
+scroll-driven animation. No frontend framework, no bundler, no runtime
 dependencies.
+
+What a visitor downloads, measured, not estimated:
+
+| | shell | wallpaper | images |
+|---|---|---|---|
+| a bureau (desktop) | 98 KB | 149 KB | icons, ~3 KB |
+| a bureau (phone) | 98 KB | 76 KB | icons, ~3 KB |
+| the gallery | 98 KB | — | 537 KB, all lazy |
+| a project page | 98 KB | — | 134 KB, first one eager |
+
+The shell is CSS + JS + one font. Wallpapers go through the same resize
+pipeline as the photographs, at two sizes.
 
 ## Client material
 

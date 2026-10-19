@@ -70,7 +70,6 @@
 
   /* ---- LEADING ---- */
   --lh-tight: 1.08;
-  --lh-head:  1.15;
   --lh-text:  1.45;
 }
 
@@ -326,6 +325,11 @@ img.will-fade.is-in { opacity: 1; }
   position: relative; height: 100dvh;
   background: var(--wallpaper) center / cover no-repeat;
 }
+/* A phone has no use for a 2000px wallpaper, and on a slow connection
+   that difference is most of the wait before the desk appears. */
+@media (max-width: 40rem) {
+  .desk { background-image: var(--wallpaper-narrow, var(--wallpaper)); }
+}
 
 .icon {
   position: absolute; left: var(--x); top: var(--y);
@@ -357,7 +361,19 @@ img.will-fade.is-in { opacity: 1; }
 }
 .icon:hover, .icon:focus-visible { scale: 1.045; }
 .icon:hover { filter: drop-shadow(0 6px 16px rgb(0 0 0 / .5)); }
-.icon:focus-visible { outline: 2px solid #fff; outline-offset: .4rem; border-radius: 2px; }
+/* The wallpaper reaches pure white — measured rgb(255,255,255) in the
+   clouds on the home desk — so a white ring alone is 1.00:1 there and
+   the keyboard user simply cannot see where they are. The labels survive
+   because of their three-layer shadow; an outline has no such thing, so
+   it carries its own dark ring. White against the dark ring and the dark
+   ring against anything underneath: whichever the wallpaper is doing,
+   one of the two edges is visible. */
+.icon:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: .4rem;
+  border-radius: 2px;
+  box-shadow: 0 0 0 .5rem rgb(0 0 0 / .72);
+}
 
 .icon.dragging {
   scale: 1.08; rotate: -1.4deg; transition: none;
@@ -646,3 +662,18 @@ input, textarea { cursor: text; }
 }
 .bar-lang:hover,
 .bar-lang:focus-visible { opacity: 1; }
+/* Changing opacity is not a focus indicator — nothing about .75 -> 1
+   tells a keyboard user this is the thing that will activate. It gets
+   the same underline the rest of the bandeau has. */
+.bar-lang::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -.15em;
+  height: 1px; background: currentColor;
+  scale: 0 1; transform-origin: left; transition: scale .28s var(--ease);
+}
+.bar-lang { position: relative; }
+.bar-lang:hover::after, .bar-lang:focus-visible::after { scale: 1 1; }
+
+/* ---- 404 ----------------------------------------------------------- */
+/* It borrows the project page's cream surface; it only needs to be
+   legible and to offer the way back. */
+.notfound .proj-intro { min-height: 60vh; display: grid; align-content: center; }

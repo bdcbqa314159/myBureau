@@ -8,6 +8,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ id.title }}{% endblock %}</title>
 {% if not config.extra.live %}<meta name="robots" content="noindex, nofollow">{% endif %}
+
+{# Content-Security-Policy. GitHub Pages serves no headers, so this is a
+   meta tag, which means frame-ancestors and sandbox are ignored — those
+   two only work as a real header.
+
+   BE CLEAR ABOUT WHAT THIS BUYS. script-src carries 'unsafe-inline',
+   because two inline scripts are load-bearing: the failsafe that un-hides
+   the page if desk.js dies, which must run before first paint, and the
+   speculation rules. Hashing them would work until someone edited one
+   and broke every page silently. So this is NOT an anti-XSS measure, and
+   the site does not need one — nothing a visitor types is ever rendered
+   back into a page (see the comment in contact.ts).
+
+   What it does buy, and the reason it is here: connect-src names the one
+   host anything on this site may send data to. If a script ever did get
+   in, it could not post what it found anywhere. base-uri and object-src
+   close two cheap hijacks for nothing.
+
+   ONE CONSEQUENCE: opening a built page straight off disk no longer
+   works. Under file:// every origin is opaque, so 'self' matches nothing
+   and the page loads with no CSS and no script at all. That is not a
+   problem on the real site or under ./preview.sh, both of which serve
+   over a real origin — but if a local page ever renders as naked HTML,
+   this is why, and the answer is to serve it rather than open it. #}
+<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  img-src 'self' data:;
+  style-src 'self' 'unsafe-inline';
+  script-src 'self' 'unsafe-inline';
+  connect-src 'self' {{ config.extra.contact.endpoint }};
+  form-action 'self' {{ config.extra.contact.endpoint }};
+  base-uri 'none';
+  object-src 'none'">
 {# Set before first paint. `js` stays for the life of the page; `booting`
    is removed the moment the page is revealed. Added by script, so a
    browser without JS never hides anything. #}
