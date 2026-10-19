@@ -22,7 +22,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: npx tsc
+      - run: ./tools/js-is-current.sh     # the committed JS matches src/
       - run: node tools/contact-check.mjs    # contact form rejects what it must
       - run: node tools/desk-check.mjs       # a remembered position survives a resize
       - run: python3 tools/i18n.py           # no string asked for that nobody wrote

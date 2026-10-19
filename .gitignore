@@ -12,8 +12,8 @@
 # public/. Generated, never committed — `zola build` recreates them.
 /static/processed_images/
 
-# compiled from src/*.ts — CI rebuilds it
-/static/js/*.js
+# Source maps are a developer's convenience. The .js files themselves
+# ARE committed — see "Why the compiled JS is in the repo" in README.
 /static/js/*.js.map
 
 # npm packages — restored by `npm ci` from package-lock.json
