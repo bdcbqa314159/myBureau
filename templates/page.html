@@ -28,6 +28,6 @@
      Linking the path directly produced /da/_index.md, a 404 on every
      project page in the site. #}
   {% set home = get_section(path=page.ancestors | last) %}
-  <a class="proj-back" href="{{ home.permalink }}">← {{ home.title }}</a>
+  <a class="proj-back" href="{{ home.permalink }}">← {{ trans(key='back_to', lang=lang) }} {{ home.title }}</a>
 </main>
 {% endblock %}

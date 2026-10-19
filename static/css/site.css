@@ -212,7 +212,10 @@ a { color: inherit; }
   .bar-mid.is-wordmark { font-size: var(--f-4); }
   .bar-mid.is-page { opacity: .85; }
   .bar-mid.is-wordmark { font-size: var(--f-4); }
-  .bar-nav { gap: .5rem; font-size: var(--f-1); }
+  /* A language link makes the nav longer, and a bureau named in full
+     ("art direction", not "DA") longer still. nowrap would push it off
+     the right edge, so on a phone it wraps onto a second line instead. */
+  .bar-nav { gap: .5rem; font-size: var(--f-1); flex-wrap: wrap; white-space: normal; }
 
   /* The desk starts as a grid, because percentage positions composed for
      a wide screen collide at 390px. Without JavaScript it stays one — a
@@ -631,3 +634,15 @@ a, button, summary, [role="button"] {
 
 /* text entry keeps the system I-beam — never fight a caret */
 input, textarea { cursor: text; }
+
+/* ---- language switcher ------------------------------------------- */
+/* Two letters, the same weight as the rest of the bandeau. It sits at
+   the end of the nav because it is a setting, not a place. */
+.bar-lang {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.82em;
+  opacity: 0.75;
+}
+.bar-lang:hover,
+.bar-lang:focus-visible { opacity: 1; }

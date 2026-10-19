@@ -24,6 +24,7 @@ jobs:
       - run: npm ci
       - run: npx tsc
       - run: node tools/contact-check.mjs    # contact form rejects what it must
+      - run: python3 tools/i18n.py           # no string asked for that nobody wrote
       - uses: taiki-e/install-action@v2
         with:
           tool: zola@0.23.6

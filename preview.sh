@@ -44,6 +44,21 @@ pages=$(find content -name 'index.md' | wc -l | tr -d ' ')
 photos=$(find content -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' -o -iname '*.webp' \) ! -iname 'icon.*' | wc -l | tr -d ' ')
 say "Found $bureaus bureaus, $pages projects, $photos images."
 
+# Languages. Untranslated is fine — this says what is left, and the
+# command that fills it in, rather than a sentence about it.
+langs=$(grep -cE '^\[languages\.[A-Za-z0-9_-]+\]' config.toml || true)
+if [ "$langs" -gt 0 ]; then
+  if ! python3 tools/i18n.py >/tmp/mybureau-i18n.txt 2>&1; then
+    cat /tmp/mybureau-i18n.txt
+    die "A string is asked for that nobody wrote. Add it to [translations] in config.toml."
+  fi
+  gaps=$(grep -c 'absent from\|still in\|MISSING\|no longer in' /tmp/mybureau-i18n.txt || true)
+  if [ "$gaps" -gt 0 ]; then
+    step "$gaps thing(s) not translated yet. To see them:   python3 tools/i18n.py"
+    step "To create the missing files:                      python3 tools/i18n.py --sync"
+  fi
+fi
+
 PORT=1111
 while lsof -i :"$PORT" >/dev/null 2>&1; do PORT=$((PORT + 1)); done
 

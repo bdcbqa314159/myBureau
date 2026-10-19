@@ -4,8 +4,15 @@
 
 {% block windows %}
 
+{# The title bar says what the visitor clicked, so it is taken from the
+   item rather than written twice — which also makes it per-language,
+   since the items live in the content file. #}
+{% set_global about_name = "about me.txt" %}
+{% for item in section.extra.items | default(value=[]) %}
+  {% if item.window == "about" %}{% set_global about_name = item.name %}{% endif %}
+{% endfor %}
 <dialog class="win" id="about">
-  <div class="win-bar"><span>about me.txt</span><form method="dialog"><button aria-label="close">✕</button></form></div>
+  <div class="win-bar"><span>{{ about_name }}</span><form method="dialog"><button aria-label="{{ trans(key='window_close', lang=lang) }}">✕</button></form></div>
   <div class="win-body">{{ section.content | safe }}</div>
 </dialog>
 {% endblock %}

@@ -1,3 +1,4 @@
+default_language = "fr"
 base_url = "https://bdcbqa314159.github.io/myBureau"
 title = "myBureau"
 compile_sass = false
@@ -29,9 +30,20 @@ image_types = ["jpg", "jpeg", "png", "webp", "avif", "gif"]
 video_types = ["mp4", "webm", "mov", "m4v"]
 
 # Top-level bureaus come from the filesystem. Only things that are not
-# places belong here.
+# places belong here. `key` names a string in [translations]; `name`
+# instead of `key` puts the same word in every language.
 nav_extra = [
-  { name = "contact", url = "#contact" },
+  { key = "nav_contact", url = "#contact" },
+]
+
+# The strings the browser needs, written into each page as JSON for the
+# language being rendered. Everything else is resolved while building.
+browser_strings = [
+  "window_min", "window_max", "form_sending", "form_sent", "form_failed",
+  "form_offline", "err_mail_missing", "err_mail_long", "err_mail_invalid",
+  "err_mail_one", "err_mail_shape", "err_subject_long", "err_subject_bad",
+  "err_subject_inv", "err_msg_missing", "err_msg_long", "err_msg_bad",
+  "err_msg_inv", "err_msg_links",
 ]
 
 # ---- whose site this is. `live` picks one. ----
@@ -71,3 +83,86 @@ access_key = "fe39bfbb-f3bb-462f-ba55-136c9535b226"
 [extra.contact.real]
 # STUDIO S. Receives once live = true. Registered by her, to her address.
 access_key = ""
+
+# ======================================================================
+# LANGUAGES
+# ----------------------------------------------------------------------
+# Adding one is a block like the English one below, and nothing else.
+# No template is edited, no code changes, no build step is added. The
+# switcher, the lang attribute, the hreflang links and the fallback
+# chain all read this list.
+#
+# Then:   python3 tools/i18n.py --check     what is still untranslated
+#         python3 tools/i18n.py --sync      create the missing files
+#
+# Anything not translated falls back to the default language rather than
+# breaking, because a site is half-translated for a while and that has
+# to look deliberate.
+# ======================================================================
+
+[translations]
+nav_contact    = "contact"
+back_to        = "retour à"
+window_system  = "System message"
+window_close   = "Fermer"
+window_min     = "Réduire"
+window_max     = "Agrandir"
+form_honeypot  = "Laisse ce champ vide"
+form_mail      = "mail :"
+form_subject   = "Objet :"
+form_message   = "Message :"
+form_send      = "Ok"
+form_cancel    = "Cancel"
+form_sending   = "Envoi..."
+form_sent      = "Message envoye. Merci."
+form_failed    = "L'envoi a echoue. Reessaie plus tard."
+form_offline   = "Le formulaire n'est pas encore relie."
+form_privacy   = "Ton adresse, ton message et ton adresse IP sont transmis a Web3Forms, qui les relaie par e-mail et les conserve 30 jours. Rien n'est stocke sur ce site."
+err_mail_missing = "Il manque ton adresse mail."
+err_mail_long    = "Cette adresse est trop longue."
+err_mail_invalid = "Cette adresse n'est pas valide."
+err_mail_one     = "Une seule adresse, merci."
+err_mail_shape   = "Cette adresse n'a pas l'air valide."
+err_subject_long = "L'objet est trop long."
+err_subject_bad  = "L'objet contient des caracteres interdits."
+err_subject_inv  = "L'objet n'est pas valide."
+err_msg_missing  = "Il manque ton message."
+err_msg_long     = "Ce message est trop long."
+err_msg_bad      = "Ce message contient des caracteres interdits."
+err_msg_inv      = "Ce message n'est pas valide."
+err_msg_links    = "Trop de liens."
+
+[languages.en]
+title = "myBureau"
+
+[languages.en.translations]
+nav_contact    = "contact"
+back_to        = "back to"
+window_system  = "System message"
+window_close   = "Close"
+window_min     = "Minimise"
+window_max     = "Expand"
+form_honeypot  = "Leave this field empty"
+form_mail      = "mail :"
+form_subject   = "Subject :"
+form_message   = "Message :"
+form_send      = "Ok"
+form_cancel    = "Cancel"
+form_sending   = "Sending..."
+form_sent      = "Message sent. Thank you."
+form_failed    = "That did not send. Try again later."
+form_offline   = "The form is not connected yet."
+form_privacy   = "Your address, your message and your IP address are passed to Web3Forms, which relays them by e-mail and keeps them for 30 days. Nothing is stored on this site."
+err_mail_missing = "Your e-mail address is missing."
+err_mail_long    = "That address is too long."
+err_mail_invalid = "That address is not valid."
+err_mail_one     = "One address only, please."
+err_mail_shape   = "That does not look like an address."
+err_subject_long = "The subject is too long."
+err_subject_bad  = "The subject contains forbidden characters."
+err_subject_inv  = "The subject is not valid."
+err_msg_missing  = "Your message is missing."
+err_msg_long     = "That message is too long."
+err_msg_bad      = "That message contains forbidden characters."
+err_msg_inv      = "That message is not valid."
+err_msg_links    = "Too many links."
