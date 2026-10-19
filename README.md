@@ -1099,6 +1099,40 @@ stay separate from hers (`content/`, `config.toml`), so a later engine
 improvement is a diff applied to those paths — it does not need a shared
 git history.
 
+### Turning an existing repository into a user site
+
+Nothing in GitHub asks whether a site is a user site or a project site —
+it reads the repository's **name** and works the URL out. So changing
+your mind later is a rename, and nothing else:
+
+1. **Check the name is free.** One user site per account, so if a
+   repository called `hername.github.io` already exists — an old
+   experiment, usually — that name is taken. Rename or delete it first.
+2. **Settings → General → Repository name** → `hername.github.io` →
+   **Rename**. The site moves to the root within a minute or two.
+3. **Settings → Pages** — confirm *Your site is live at
+   `https://hername.github.io/`*. That line is the ground truth, not
+   this README.
+4. **`base_url` in `config.toml`** → `https://hername.github.io`, with
+   no path after it. Commit and push.
+5. `./tools/ready.sh` to confirm.
+
+Step 4 is the one that is easy to forget, and forgetting it does not
+break loudly: the pages still load, with every link and image pointing
+at a path that no longer exists.
+
+Between the rename and the push there are a few minutes where the site
+is wrong. On a site nobody has bookmarked yet this does not matter —
+but it is why the rename belongs before the launch, not after it.
+
+> **Renaming does not change the local clone.** GitHub keeps serving the
+> old address by redirect, so GitHub Desktop carries on pushing and
+> nothing announces that the name has moved. `ready.sh` asks GitHub what
+> the repository is called now and says so — but only if the `gh`
+> command is installed. Without it, it can only trust the old name. The
+> repair it prints is one line:
+> `git remote set-url origin git@github.com:owner/newname.git`
+
 ### The switchover, in order
 
 1. `base_url` → her Pages URL (`./tools/ready.sh` prints the right one)

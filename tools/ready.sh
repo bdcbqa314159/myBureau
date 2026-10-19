@@ -33,6 +33,25 @@ if [ -z "$REMOTE" ]; then
 else
   # git@github.com:owner/repo.git  or  https://github.com/owner/repo.git
   slug=$(printf '%s' "$REMOTE" | sed -E 's#^.*github\.com[:/]##; s#\.git$##')
+
+  # RENAMING A REPOSITORY DOES NOT CHANGE THE LOCAL REMOTE. GitHub keeps
+  # serving the old address by redirect, so pushing carries on working
+  # and nothing announces that the name has moved — which would make
+  # this check confidently compare against a name that no longer exists.
+  # So ask GitHub what the repository is called now, when we can.
+  truth=""
+  if command -v gh >/dev/null 2>&1; then
+    truth=$(gh api "repos/$slug" --jq .full_name 2>/dev/null || true)
+  fi
+  if [ -n "$truth" ] && [ "$truth" != "$slug" ]; then
+    printf '  note  this repository has been renamed since it was cloned\n'
+    printf '          the remote still says  %s\n' "$slug"
+    printf '          GitHub now calls it    %s\n' "$truth"
+    printf '          harmless — pushing still works — but tidy it with:\n'
+    printf '          git remote set-url origin git@github.com:%s.git\n\n' "$truth"
+    slug="$truth"
+  fi
+
   owner=${slug%%/*}
   repo=${slug##*/}
 
@@ -45,6 +64,17 @@ else
   else
     expected="https://$(printf '%s' "$owner" | tr '[:upper:]' '[:lower:]').github.io/$repo"
     kind="project site — serves under /$repo"
+  fi
+
+  # If Pages is already switched on, its own URL beats anything derived
+  # from the name — it accounts for a custom domain already attached and
+  # for anything about Pages we have guessed wrong.
+  if command -v gh >/dev/null 2>&1; then
+    live_url=$(gh api "repos/$slug/pages" --jq .html_url 2>/dev/null || true)
+    if [ -n "$live_url" ]; then
+      expected="${live_url%/}"
+      kind="GitHub Pages says so"
+    fi
   fi
 
   if [ "${BASE%/}" = "${expected%/}" ]; then
