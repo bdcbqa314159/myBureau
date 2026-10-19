@@ -6,7 +6,7 @@
     "build": "tsc",
     "watch": "tsc --watch --preserveWatchOutput",
     "check": "tsc --noEmit",
-    "test": "tsc && node tools/contact-check.mjs && python3 tools/i18n.py"
+    "test": "tsc && node tools/contact-check.mjs && python3 tools/i18n.py && python3 tools/content-check.py"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

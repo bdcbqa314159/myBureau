@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}404 — {{ id.title }}{% endblock %}
+{% block bodyclass %}project notfound{% endblock %}
+{% block bar_mid %}<span class="bar-mid is-page">404</span>{% endblock %}
+
+{# Zola's built-in 404 is a bare page with no <html lang>, no bandeau and
+   no way back — the only page on the site that was not the site. It
+   cannot know which language the visitor wanted, so it speaks the
+   default one and offers the way home. #}
+{% block content %}
+<main class="proj notfound">
+  <div class="proj-intro">
+    <p>{{ trans(key='lost_title', lang=lang) }}</p>
+    <p><a href="{{ get_url(path='/') }}">← {{ trans(key='lost_back', lang=lang) }}</a></p>
+  </div>
+</main>
+{% endblock %}

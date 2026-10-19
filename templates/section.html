@@ -5,7 +5,25 @@
 
 {% block content %}
 
-<main class="desk" style="view-transition-name:vt-{{ section.path | slugify | default(value='home') }}; --wallpaper:url('{{ get_url(path=section.extra.wallpaper | default(value='img/wall-home.jpg')) }}')">
+{# The wallpaper is the largest thing on the page and the one the
+   loader waits for, so it goes through the same pipeline as every other
+   photograph rather than being served at whatever size it arrived in.
+   Two sizes: a phone has no use for 2000px, and on a slow connection
+   that difference is most of the wait.
+
+   `slugify` turns "/" into "" rather than null, so `default` never fires
+   on the home desk — hence the explicit test. Without it the home desk
+   is named `vt-` in every language, and two desks that should morph
+   into each other carry different names. #}
+{%- set wall_path = section.extra.wallpaper | default(value='img/wall-home.jpg') -%}
+{%- set wall_wide = resize_image(path=wall_path, width=2000, op="fit_width", format="webp", quality=72) -%}
+{%- set wall_narrow = resize_image(path=wall_path, width=1280, op="fit_width", format="webp", quality=72) -%}
+{%- set here = section.path | slugify -%}
+{%- if here == "" %}{% set here = "home" %}{% endif -%}
+<main class="desk"
+      style="view-transition-name:vt-{{ here }};
+             --wallpaper:url('{{ wall_wide.url }}');
+             --wallpaper-narrow:url('{{ wall_narrow.url }}')">
 {% set_global slot = 0 %}
 
   {# FOLDERS — a directory with an _index.md is a bureau of its own. #}

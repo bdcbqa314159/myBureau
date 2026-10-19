@@ -30,10 +30,11 @@ PICSUM = "https://picsum.photos/seed/{seed}/{w}/{h}"
 PLAN: list[tuple[str, str, int, int]] = [
     # ---- wallpapers: the largest surface, and the one that decides
     #      whether white text and the icons survive a real photograph ----
+    # no wallpaper for pellicules: body.gallery is a deliberate dark room,
+    # so one declared there would be fetched, shipped and never rendered
     ("static/img/wall-home.jpg",       "bureau-home",   2000, 1125),
     ("static/img/wall-da.jpg",         "bureau-da",     2000, 1125),
     ("static/img/wall-graphic.jpg",    "bureau-gd",     2000, 1125),
-    ("static/img/wall-pellicules.jpg", "bureau-film",   2000, 1125),
 ]
 
 # ---- pellicules: varied proportions, because that is what makes a
