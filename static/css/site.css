@@ -488,7 +488,7 @@ img.will-fade.is-in { opacity: 1; }
    without this it opens UNDER the bandeau and the dock at 900.
    ==================================================================== */
 .win-folder {
-  width: min(32rem, 86vw);
+  width: min(40rem, 90vw);
   z-index: 1000;
   /* Solid is the floor. The translucent version is layered on below,
      behind @supports, so a browser without backdrop-filter gets a window

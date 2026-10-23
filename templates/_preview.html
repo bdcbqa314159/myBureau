@@ -11,7 +11,25 @@
 
     Her page still exists and the icon still links to it, which is what
     happens with no JavaScript and what the ⬜ in the title bar does.
+
+    THIS FILE DECIDES WHETHER THERE IS A WINDOW AT ALL, the way _film.html
+    does. section.html includes it for every project and it emits nothing
+    when there is nothing to show — a folder with a video in it is a film,
+    a folder with no picture in it has nothing to preview, and a project
+    that says `opens = "page"` has asked to be read at full width.
+    One place to change the rule instead of a condition at each call.
 -#}
+{% set_global pv_clip = "" %}
+{% set_global pv_still = false %}
+{% for a in fp.assets %}
+  {% set leaf = a | split(pat="/") | last %}
+  {% if leaf | split(pat=".") | last | lower in config.extra.video_types %}
+    {% set_global pv_clip = a %}
+  {% elif leaf | split(pat=".") | last | lower in config.extra.image_types and leaf | split(pat=".") | first != "icon" %}
+    {% set_global pv_still = true %}
+  {% endif %}
+{% endfor %}
+{% if pv_clip == "" and pv_still and fp.extra.opens != "page" %}
 <dialog class="win win-preview" id="preview-{{ fp.path | slugify }}">
   <div class="win-bar">
     <span>{{ fp.title }}</span>
@@ -39,3 +57,4 @@
     {% if fp.content %}<div class="preview-note">{{ fp.content | safe }}</div>{% endif %}
   </div>
 </dialog>
+{% endif %}

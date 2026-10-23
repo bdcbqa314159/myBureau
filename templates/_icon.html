@@ -7,8 +7,8 @@
                 generic folder or file picture when there is none
       position  ic_x / ic_y when declared, otherwise a slot on a loose
                 grid, so undeclared icons never stack on each other
-      ic_opens  `opens` from the front matter, when she has overridden
-                what the extension would have decided
+      ic_opens  `opens = "page"` from the front matter, for a project
+                that should skip the preview and go straight to its page
       ic_flow   set inside a folder window, where the icons are a list
                 and the desk's percentages mean nothing. The style
                 attribute is still written and CSS ignores it — one
@@ -17,44 +17,47 @@
                 "calendar" in different bureaus must not collide
 -#}
 {#- WHAT THIS ICON DOES, decided here so it cannot disagree with what the
-    icon LOOKS like. A desktop works this way: the extension on the name
-    is the whole of it.
+    icon LOOKS like.
 
-      .mov .mp4 …   a film window, on the desk
-      .jpg .png …   a preview window, on the desk
-      anything else a page of its own — .pdf, .txt, no extension at all
+      a video in the folder   the film window, on the desk
+      anything else           a PREVIEW window, on the desk
 
-    A folder holding a video is a film whatever its title says, because
-    the video is the fact and the title is a label.
+    One rule. A click SHOWS you the thing — it does not take you
+    somewhere — and the ⬜ in the window's title bar is the deliberate
+    second step to the project's own page. That is what a desktop does
+    when you press space, and it is what the brief asks for by name.
 
-    OVERRIDE with `opens` in the front matter when the extension is not
-    what she means. `grocery list.png` is the reason that exists: it is
-    named like a picture and it is a whole project with a page.
+    Two things fall out of it rather than being special cases:
 
-        [extra]
-        opens = "page"      # or "preview"
+      - a folder with no picture in it has nothing to preview, so it
+        navigates. A window showing nothing is worse than the page.
+      - `opens = "page"` in the front matter skips the preview for a
+        project that only makes sense at full width.
 
-    The DIALOGS are rendered by section.html, which has to reach the same
-    conclusion as this file — there are no macros in this engine to share
-    the rule. They are checked against each other: "no data-window without
-    a dialog" is an expectation in tools/content-check.py, run on every
-    case, because an icon wired to a window nobody built is a click that
-    does nothing at all.                                              -#}
+    The EXTENSION she types no longer decides this — only what the icon
+    looks like, further down. A name is a label; what is in the folder is
+    the fact.
+
+    _preview.html reaches the same conclusion about the same folder, and
+    renders the dialog this points at. There are no macros in this engine
+    to share the rule, so the two are checked against each other instead:
+    "no data-window without a dialog" is asserted on every case in
+    tools/content-check.py.                                           -#}
 {%- if ic_kind == "file" and ic_window == "" -%}
   {%- set_global ic_clip = "" -%}
+  {%- set_global ic_still = false -%}
   {%- for a in ic_assets -%}
-    {%- if a | split(pat=".") | last | lower in config.extra.video_types -%}
+    {%- set leaf = a | split(pat="/") | last -%}
+    {%- if leaf | split(pat=".") | last | lower in config.extra.video_types -%}
       {%- set_global ic_clip = a -%}
+    {%- elif leaf | split(pat=".") | last | lower in config.extra.image_types
+             and leaf | split(pat=".") | first != "icon" -%}
+      {%- set_global ic_still = true -%}
     {%- endif -%}
   {%- endfor -%}
-  {%- set how = ic_opens | default(value="") -%}
   {%- if ic_clip != "" -%}
     {%- set_global ic_window = "film-" ~ (ic_path | slugify) -%}
-  {%- elif how == "preview" -%}
-    {%- set_global ic_window = "preview-" ~ (ic_path | slugify) -%}
-  {%- elif how == "page" -%}
-    {%- set_global ic_window = "" -%}
-  {%- elif ic_title | split(pat=".") | last | lower in config.extra.image_types -%}
+  {%- elif ic_still and ic_opens != "page" -%}
     {%- set_global ic_window = "preview-" ~ (ic_path | slugify) -%}
   {%- endif -%}
 {%- endif -%}

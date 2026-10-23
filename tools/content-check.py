@@ -353,34 +353,36 @@ def case_three_deep(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
-def case_opens_by_extension(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """The name she types decides what the thing does.
+def case_what_a_file_does(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """One rule: a click shows you the thing.
 
-    A picture previews on the desk, anything else gets its page, and
-    `opens` in the front matter overrides both — which is how
-    `grocery list.png`, named like a picture and built like a project,
-    keeps the page the prototype gives it.
+    Whatever she called it, a project with a picture in it previews on the
+    desk. The exceptions are the two that cannot work: a folder with a
+    video is a film, and a folder with nothing to show has nothing to
+    preview. `opens = "page"` is the one way to ask for the page instead.
     """
     base = d / "content" / "da"
-    for name, title, extra in (
-        ("une-image", "une image.png", ""),
-        ("un-dossier-pdf", "un dossier.pdf", ""),
-        ("sans-extension", "sans extension", ""),
-        ("image-mais-projet", "image mais projet.png", 'opens = "page"\n'),
-        ("pdf-mais-image", "pdf mais image.pdf", 'opens = "preview"\n'),
+    for name, title, extra, files in (
+        ("une-image", "une image.png", "", ("01.jpg",)),
+        ("un-dossier-pdf", "un dossier.pdf", "", ("01.jpg",)),
+        ("sans-extension", "sans extension", "", ("01.jpg",)),
+        ("plein-ecran", "plein ecran.png", 'opens = "page"\n', ("01.jpg",)),
+        ("rien-a-voir", "rien a voir.txt", "", ()),
+        ("un-clip", "un clip.png", "", ("01.jpg", "clip.mp4")),
     ):
         q = base / name
         q.mkdir()
-        front = FRONT.format(title=title, extra=("[extra]\n" + extra) if extra else "")
-        (q / "index.md").write_text(front)
+        (q / "index.md").write_text(
+            FRONT.format(title=title, extra=("[extra]\n" + extra) if extra else ""))
+        for f in files:
+            (q / f).write_bytes(
+                b"\x00\x00\x00\x18ftypmp42" if f.endswith(".mp4")
+                else (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes())
     ok, log = build(d)
     h = page(d, "da/index.html")
     desk = re.search(r'<main class="desk".*?</main>', h, re.S)
     body = desk.group(0) if desk else ""
 
-    # data-vt and data-window are both ATTRIBUTES of the same <a>, so the
-    # icon has to be found by reading its attributes, not by looking for
-    # the slug somewhere after the tag.
     found: dict[str, str] = {}
     for m in re.finditer(r'<a class="icon[^"]*"([^>]*)>', body):
         attrs = m.group(1)
@@ -390,19 +392,18 @@ def case_opens_by_extension(d: pathlib.Path) -> list[tuple[str, bool]]:
         w = re.search(r'data-window="([^"]+)"', attrs)
         found[vt.group(1)] = w.group(1).split("-")[0] if w else "page"
 
-    def opens(slug: str) -> str:
-        return found.get(slug, "missing")
-
     return [
         ("builds", ok),
-        ("a .png previews on the desk", opens("da-une-image") == "preview"),
-        ("a .pdf goes to its own page", opens("da-un-dossier-pdf") == "page"),
-        ("no extension goes to its own page", opens("da-sans-extension") == "page"),
-        ('opens = "page" overrides a picture name',
-         opens("da-image-mais-projet") == "page"),
-        ('opens = "preview" overrides the other way',
-         opens("da-pdf-mais-image") == "preview"),
-        ("every preview it promised was built", dangling(h) == []),
+        ("a .png previews", found.get("da-une-image") == "preview"),
+        ("a .pdf previews too — the name does not decide this",
+         found.get("da-un-dossier-pdf") == "preview"),
+        ("no extension previews as well", found.get("da-sans-extension") == "preview"),
+        ('opens = "page" goes straight to the page',
+         found.get("da-plein-ecran") == "page"),
+        ("a project with nothing to show navigates rather than opening an empty window",
+         found.get("da-rien-a-voir") == "page"),
+        ("a folder with a video is still a film", found.get("da-un-clip") == "film"),
+        ("every window promised was built", dangling(h) == []),
     ]
 
 
@@ -449,7 +450,7 @@ CASES = [
     ("a bureau on the home desk goes to its own page", case_top_level_navigates),
     ("a folder inside a bureau opens as a window", case_second_level_window),
     ("a folder three levels down", case_three_deep),
-    ("the name decides what a file does", case_opens_by_extension),
+    ("what a file does when you click it", case_what_a_file_does),
     ("a film opened from inside a folder window", case_film_in_a_folder),
 ]
 
