@@ -26,17 +26,31 @@
              --wallpaper-narrow:url('{{ wall_narrow.url }}')">
 {% set_global slot = 0 %}
 
-  {# FOLDERS — a directory with an _index.md is a bureau of its own, and
-     clicking it OPENS A WINDOW here rather than replacing the screen.
-     The desk stays where it is, which is the whole point of a desk.
+  {# FOLDERS — a directory with an _index.md is a bureau of its own.
+     What clicking one does depends on WHERE it is, and the brief is
+     explicit about both halves:
 
-     The window is rendered further down. A folder only gets one if it has
-     something in it: an empty folder, and a gallery — which holds
-     photographs rather than icons — keep navigating to their own page,
-     because a window listing nothing is worse than the page.
+       on the HOME desk      it opens a new page, a new desk, with its
+                             own wallpaper. "les dossiers comme DA ouvre
+                             une nouvelle page, comme un nouveau bureau."
+                             These are the same four places the bandeau
+                             reaches, and they have to agree with it.
 
-     `href` is untouched either way. Without JavaScript every one of
-     these is still a link to a working desk. #}
+       anywhere else         it opens a WINDOW on the desk it sits on.
+                             The desk stays, several can be open, and
+                             nothing is navigated.
+
+     One level of windows per desk, which is the whole rule. A folder
+     inside a window has no window of its own and navigates to its desk —
+     so there is no depth to run out of, and no icon wired to a dialog
+     that was never rendered.
+
+     A gallery and an empty folder navigate wherever they are: a window
+     listing photographs, or listing nothing, is worse than the page.
+
+     `href` is untouched in every case. With no JavaScript every one of
+     these is a plain link to a working desk. #}
+  {% set top = section.ancestors | length == 0 %}
   {% for p in section.subsections %}
     {% set sub = get_section(path=p) %}
     {% set_global ic_title = sub.title %}{% set_global ic_href = sub.permalink %}
@@ -44,29 +58,25 @@
     {% set_global ic_declared = sub.extra.icon %}{% set_global ic_x = sub.extra.x %}{% set_global ic_y = sub.extra.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "folder" %}
     {% set_global ic_flow = false %}
-    {% if sub.pages | length > 0 or sub.subsections | length > 0 %}
+    {% set_global ic_opens = "" %}
+    {% if not top and (sub.pages | length > 0 or sub.subsections | length > 0) %}
       {% set_global ic_window = "folder-" ~ (sub.path | slugify) %}
     {% else %}{% set_global ic_window = "" %}{% endif %}
     {% include "_icon.html" %}
     {% if not sub.extra.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
 
-  {# FILES — a directory with an index.md is a project, and opens a page…
-     …unless it holds a video, in which case it opens a window right here:
-     the film beside the text that explains it. The page still exists, so
-     without JavaScript the icon simply navigates to it. #}
+  {# FILES — a directory with an index.md is a project. A film opens as a
+     film, a picture opens as a preview, and everything else gets its own
+     page. _icon.html decides which, from the name she typed, so that what
+     an icon looks like and what it does can never disagree. #}
   {% for p in section.pages %}
-    {% set_global clip = "" %}
-    {% for a in p.assets %}
-      {% if a | split(pat=".") | last | lower in config.extra.video_types %}{% set_global clip = a %}{% endif %}
-    {% endfor %}
     {% set_global ic_title = p.title %}{% set_global ic_href = p.permalink %}
     {% set_global ic_path = p.path %}{% set_global ic_assets = p.assets %}
     {% set_global ic_declared = p.extra.icon %}{% set_global ic_x = p.extra.x %}{% set_global ic_y = p.extra.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}
-    {% set_global ic_flow = false %}
-    {% if clip %}{% set_global ic_window = "film-" ~ (p.path | slugify) %}
-    {% else %}{% set_global ic_window = "" %}{% endif %}
+    {% set_global ic_flow = false %}{% set_global ic_window = "" %}
+    {% set_global ic_opens = p.extra.opens | default(value="") %}
     {% include "_icon.html" %}
     {% if not p.extra.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
@@ -79,6 +89,7 @@
     {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}
     {% set_global ic_flow = false %}
     {% set_global ic_window = item.window | default(value="") %}
+    {% set_global ic_opens = "" %}
     {% include "_icon.html" %}
     {% if not item.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
@@ -87,49 +98,49 @@
 {# ------------------------------------------------------------------
    The windows.
 
-   TWO LEVELS, WRITTEN OUT. Zola 0.23's engine has no macros, so nothing
-   here can call itself and a tree cannot be walked. Two levels covers
-   this site with a level to spare — the deepest folder in it sits at
-   depth 2 and holds only projects — and a folder deeper than that does
-   not break: `fw_depth` stops handing out windows at the bottom, so its
-   icon keeps its href and navigates to its own desk. A working outcome
-   rather than an icon that does nothing.
+   ONE LEVEL. A desk renders a window for each folder sitting on it, and
+   the film or preview dialogs for every project those windows can show —
+   this desk's own, and each of those folders'. Nothing deeper, because
+   a folder inside a window navigates rather than opening another window.
 
-   The FILMS have to be here too, for every folder a window can reach.
-   A film icon inside the `da` window points at `film-da-junes-cry`, and
-   that dialog has to exist on THIS page or the click does nothing at
-   all — the kind of failure that builds perfectly.
+   That is also what keeps this honest. A window has to exist on the page
+   whose icon points at it, or the click does nothing at all and the build
+   is perfectly happy. _icon.html decides what an icon opens; these loops
+   decide what gets built; the two have to agree, and there are no macros
+   in this engine to share the rule between them. So they are checked
+   against each other instead: "no data-window without a dialog" is
+   asserted on every case in tools/content-check.py.
    ------------------------------------------------------------------ #}
 
-{# this desk's own films #}
+{# this desk's own projects #}
 {% for p in section.pages %}
   {% set_global ff = p %}{% include "_film.html" %}
+  {% set_global fp = p %}
+  {% set_global shows = p.extra.opens | default(value="") %}
+  {% if shows == "preview" or (shows != "page" and p.title | split(pat=".") | last | lower in config.extra.image_types) %}
+    {% include "_preview.html" %}
+  {% endif %}
 {% endfor %}
 
-{% for p in section.subsections %}
-  {% set one = get_section(path=p) %}
-
-  {# depth 1 — a folder on this desk #}
-  {% if one.pages | length > 0 or one.subsections | length > 0 %}
-    {% set_global fw = one %}{% set_global fw_depth = 1 %}
-    {% include "_folder.html" %}
-  {% endif %}
-  {% for q in one.pages %}
-    {% set_global ff = q %}{% include "_film.html" %}
-  {% endfor %}
-
-  {# depth 2 — a folder inside that one #}
-  {% for r in one.subsections %}
-    {% set two = get_section(path=r) %}
-    {% if two.pages | length > 0 or two.subsections | length > 0 %}
-      {% set_global fw = two %}{% set_global fw_depth = 2 %}
-      {% include "_folder.html" %}
+{# a window for each folder on this desk, and everything inside it that
+   opens rather than navigates — but not on the home desk, where folders
+   are places you go to #}
+{% if section.ancestors | length > 0 %}
+  {% for q in section.subsections %}
+    {% set one = get_section(path=q) %}
+    {% if one.pages | length > 0 or one.subsections | length > 0 %}
+      {% set_global fw = one %}{% include "_folder.html" %}
     {% endif %}
-    {% for q in two.pages %}
-      {% set_global ff = q %}{% include "_film.html" %}
+    {% for r in one.pages %}
+      {% set_global ff = r %}{% include "_film.html" %}
+      {% set_global fp = r %}
+      {% set_global shows = r.extra.opens | default(value="") %}
+      {% if shows == "preview" or (shows != "page" and r.title | split(pat=".") | last | lower in config.extra.image_types) %}
+        {% include "_preview.html" %}
+      {% endif %}
     {% endfor %}
   {% endfor %}
-{% endfor %}
+{% endif %}
 
 {% block windows %}{% endblock %}
 {% endblock %}

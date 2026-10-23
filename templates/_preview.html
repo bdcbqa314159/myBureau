@@ -1,0 +1,41 @@
+{#- A picture, previewed on the desk rather than given a page.
+
+    Expects `fp` — the page — set with set_global before the include.
+
+    This is the one the brief asks for by name: "About me.txt s'ouvre en
+    s'agrandissant simplement comme quand on appuie sur espace sur notre
+    mac". Space on a Mac does not take you anywhere; it shows you the
+    thing, and you press it again to put it back. So this window is modal
+    — Escape closes it, the desk is still there behind it, and nothing
+    was navigated.
+
+    Her page still exists and the icon still links to it, which is what
+    happens with no JavaScript and what the ⬜ in the title bar does.
+-#}
+<dialog class="win win-preview" id="preview-{{ fp.path | slugify }}">
+  <div class="win-bar">
+    <span>{{ fp.title }}</span>
+    <div class="win-controls">
+      <a class="win-expand" href="{{ fp.permalink }}"
+         aria-label="{{ trans(key='window_page', lang=lang) }}"
+         title="{{ trans(key='window_page', lang=lang) }}">&#x2b1c;</a>
+      <form method="dialog"><button aria-label="{{ trans(key='window_close', lang=lang) }}">&#x2715;</button></form>
+    </div>
+  </div>
+  <div class="win-body preview-body">
+    {% for asset in fp.assets %}
+      {% set file = asset | split(pat="/") | last %}
+      {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" %}
+        {% set alt = "" %}
+        {% if fp.extra.alt and fp.extra.alt[file] %}{% set alt = fp.extra.alt[file] %}{% endif %}
+        {% set shape = get_image_metadata(path=asset) %}
+        {#- A preview is one screen, not a page: 1100px covers it on a
+            large display and is a fraction of what the page loads. -#}
+        {% set shown = resize_image(path=asset, width=1100, op="fit_width", format="webp", quality=78) %}
+        <img src="{{ shown.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
+             alt="{{ alt }}" loading="lazy" decoding="async">
+      {% endif %}
+    {% endfor %}
+    {% if fp.content %}<div class="preview-note">{{ fp.content | safe }}</div>{% endif %}
+  </div>
+</dialog>

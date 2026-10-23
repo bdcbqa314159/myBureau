@@ -249,41 +249,76 @@ def dangling(h: str) -> list[str]:
     return [w for w in re.findall(r'data-window="([^"]+)"', h) if w not in have]
 
 
-def case_folder_window(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """A new bureau with a project in it opens as a window on the desk."""
+def case_top_level_navigates(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A bureau on the HOME desk goes to its own page with its own wallpaper.
+
+    The brief is explicit: "les dossiers comme DA ouvre une nouvelle page,
+    comme un nouveau bureau". The home desk is also the one place the
+    bandeau reaches, and the two have to agree.
+    """
     p = d / "content" / "scenographie"
     p.mkdir()
     (p / "_index.md").write_text(FRONT.format(
         title="scenographie", extra='template = "section.html"\n'))
     q = p / "les-planches"
     q.mkdir()
-    (q / "index.md").write_text(FRONT.format(title="les planches.jpg", extra=""))
+    (q / "index.md").write_text(FRONT.format(title="les planches.pdf", extra=""))
     ok, log = build(d)
     h = page(d, "index.html")
-    win = re.search(r'<dialog class="win win-folder" id="folder-scenographie">.*?</dialog>',
-                    h, re.S)
+    desk = re.search(r'<main class="desk".*?</main>', h, re.S)
     return [
         ("builds", ok),
-        ("the folder has a window on the home desk", bool(win)),
-        ("the folder icon opens it",
-         'data-window="folder-scenographie"' in h),
-        ("the project inside is in the window",
-         bool(win) and "les planches.jpg" in win.group(0)),
-        ("the project inside flows rather than being pinned to the desk",
-         bool(win) and "icon is-flow" in win.group(0)),
-        ("the folder is still a link, so it works without JavaScript",
+        ("it is on the home desk", bool(desk) and "scenographie" in desk.group(0)),
+        ("it navigates rather than opening a window",
+         'data-window="folder-scenographie"' not in h),
+        ("no folder window is built for it on the home desk",
+         'id="folder-scenographie"' not in h),
+        ("it is a link to its own desk",
          bool(re.search(r'<a class="icon"[^>]*href="[^"]*scenographie/"', h))),
+        ("that desk exists and shows what is in it",
+         "les planches.pdf" in page(d, "scenographie/index.html")),
         ("nothing on the home desk points at a window that is not there",
          dangling(h) == []),
     ]
 
 
-def case_three_deep(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """A folder three levels down — deeper than the windows are rendered.
+def case_second_level_window(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A folder INSIDE a bureau opens as a window on that bureau's desk."""
+    p = d / "content" / "graphic-design" / "sous-dossier"
+    p.mkdir()
+    (p / "_index.md").write_text(FRONT.format(
+        title="sous dossier", extra='template = "section.html"\n'))
+    q = p / "une-chose"
+    q.mkdir()
+    (q / "index.md").write_text(FRONT.format(title="une chose.pdf", extra=""))
+    ok, log = build(d)
+    h = page(d, "graphic-design/index.html")
+    win = re.search(
+        r'<dialog class="win win-folder" id="folder-graphic-design-sous-dossier">.*?</dialog>',
+        h, re.S)
+    return [
+        ("builds", ok),
+        ("the window is on the bureau's desk", bool(win)),
+        ("the folder icon opens it",
+         'data-window="folder-graphic-design-sous-dossier"' in h),
+        ("what is inside is in the window",
+         bool(win) and "une chose.pdf" in win.group(0)),
+        ("the contents flow rather than being pinned to the desk",
+         bool(win) and "icon is-flow" in win.group(0)),
+        ("the folder is still a link, so it works without JavaScript",
+         bool(re.search(r'href="[^"]*graphic-design/sous-dossier/"', h))),
+        ("the home desk is untouched by it",
+         'id="folder-graphic-design-sous-dossier"' not in page(d, "index.html")),
+        ("no dangling window reference", dangling(h) == []),
+    ]
 
-    The windows are written out to two levels because the template engine
-    has no recursion. The third level must then NAVIGATE, not render an
-    icon wired to a dialog nobody made.
+
+def case_three_deep(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A folder inside a window navigates — one level of windows per desk.
+
+    There is no recursion in this template engine, so there has to be a
+    floor. The floor must NAVIGATE rather than leave an icon wired to a
+    dialog nobody built.
     """
     p = d / "content" / "un"
     p.mkdir()
@@ -299,46 +334,104 @@ def case_three_deep(d: pathlib.Path) -> list[tuple[str, bool]]:
         title="trois", extra='template = "section.html"\n'))
     s = r / "projet"
     s.mkdir()
-    (s / "index.md").write_text(FRONT.format(title="projet.jpg", extra=""))
+    (s / "index.md").write_text(FRONT.format(title="projet.pdf", extra=""))
     ok, log = build(d)
-    home = page(d, "index.html")
+    un = page(d, "un/index.html")
     deux = re.search(r'<dialog class="win win-folder" id="folder-un-deux">.*?</dialog>',
-                     home, re.S)
+                     un, re.S)
+    every = list((d / "public").rglob("*.html"))
     return [
         ("builds", ok),
-        ("the home desk has no dangling window reference", dangling(home) == []),
-        ("depth 2 still gets a window", bool(deux)),
-        ("depth 3 inside it is a link and not a dead icon",
+        ("a folder on a bureau's desk gets a window", bool(deux)),
+        ("a folder inside that window navigates instead",
          bool(deux) and 'data-window="folder-un-deux-trois"' not in deux.group(0)
                      and "un/deux/trois/" in deux.group(0)),
         ("the deepest bureau is still reachable as its own desk",
-         "projet.jpg" in page(d, "un/deux/trois/index.html")),
-        ("and that desk has no dangling reference either",
-         dangling(page(d, "un/deux/trois/index.html")) == []),
+         "projet.pdf" in page(d, "un/deux/trois/index.html")),
+        ("no page anywhere has a dangling window reference",
+         all(dangling(f.read_text(encoding="utf-8")) == [] for f in every)),
+    ]
+
+
+def case_opens_by_extension(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """The name she types decides what the thing does.
+
+    A picture previews on the desk, anything else gets its page, and
+    `opens` in the front matter overrides both — which is how
+    `grocery list.png`, named like a picture and built like a project,
+    keeps the page the prototype gives it.
+    """
+    base = d / "content" / "da"
+    for name, title, extra in (
+        ("une-image", "une image.png", ""),
+        ("un-dossier-pdf", "un dossier.pdf", ""),
+        ("sans-extension", "sans extension", ""),
+        ("image-mais-projet", "image mais projet.png", 'opens = "page"\n'),
+        ("pdf-mais-image", "pdf mais image.pdf", 'opens = "preview"\n'),
+    ):
+        q = base / name
+        q.mkdir()
+        front = FRONT.format(title=title, extra=("[extra]\n" + extra) if extra else "")
+        (q / "index.md").write_text(front)
+    ok, log = build(d)
+    h = page(d, "da/index.html")
+    desk = re.search(r'<main class="desk".*?</main>', h, re.S)
+    body = desk.group(0) if desk else ""
+
+    # data-vt and data-window are both ATTRIBUTES of the same <a>, so the
+    # icon has to be found by reading its attributes, not by looking for
+    # the slug somewhere after the tag.
+    found: dict[str, str] = {}
+    for m in re.finditer(r'<a class="icon[^"]*"([^>]*)>', body):
+        attrs = m.group(1)
+        vt = re.search(r'data-vt="([^"]+)"', attrs)
+        if vt is None:
+            continue
+        w = re.search(r'data-window="([^"]+)"', attrs)
+        found[vt.group(1)] = w.group(1).split("-")[0] if w else "page"
+
+    def opens(slug: str) -> str:
+        return found.get(slug, "missing")
+
+    return [
+        ("builds", ok),
+        ("a .png previews on the desk", opens("da-une-image") == "preview"),
+        ("a .pdf goes to its own page", opens("da-un-dossier-pdf") == "page"),
+        ("no extension goes to its own page", opens("da-sans-extension") == "page"),
+        ('opens = "page" overrides a picture name',
+         opens("da-image-mais-projet") == "page"),
+        ('opens = "preview" overrides the other way',
+         opens("da-pdf-mais-image") == "preview"),
+        ("every preview it promised was built", dangling(h) == []),
     ]
 
 
 def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """A video inside a folder, opened from the window rather than the desk.
+    """A video inside a folder, opened from the window rather than a desk.
 
-    The film dialog lives on whichever page shows the icon. An icon in the
-    `da` window on the HOME page needs its film on the home page too, or
-    the click does nothing.
+    The dialog lives on whichever page shows the icon. An icon in the
+    `maison cosette` window on the DA desk needs its film on the DA desk,
+    or the click does nothing.
     """
+    q = d / "content" / "da" / "maison-cosette" / "un-film"
+    q.mkdir()
+    (q / "index.md").write_text(FRONT.format(title="un film.mov", extra=""))
+    (q / "clip.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
     ok, log = build(d)
-    home = page(d, "index.html")
-    da = re.search(r'<dialog class="win win-folder" id="folder-da">.*?</dialog>',
-                   home, re.S)
+    h = page(d, "da/index.html")
+    win = re.search(
+        r'<dialog class="win win-folder" id="folder-da-maison-cosette">.*?</dialog>',
+        h, re.S)
     return [
         ("builds", ok),
-        ("the da window is on the home desk", bool(da)),
+        ("the maison cosette window is on the DA desk", bool(win)),
         ("the film inside it points at a film window",
-         bool(da) and 'data-window="film-da-junes-cry"' in da.group(0)),
-        ("and that film window is on the home desk too",
-         'id="film-da-junes-cry"' in home),
+         bool(win) and 'data-window="film-da-maison-cosette-un-film"' in win.group(0)),
+        ("and that film window is on the DA desk too",
+         'id="film-da-maison-cosette-un-film"' in h),
         ("no page has a dangling window reference",
-         all(dangling(page(d, str(f.relative_to(d / "public")))) == []
-             for f in (d / "public").rglob("index.html"))),
+         all(dangling(f.read_text(encoding="utf-8")) == []
+             for f in (d / "public").rglob("*.html"))),
     ]
 
 
@@ -353,8 +446,10 @@ CASES = [
     ("a page added in French only", case_untranslated_page),
     ("a bureau that declares a wallpaper", case_declared_wallpaper),
     ("alt text written in front matter", case_alt_text),
-    ("a bureau with a project opens as a window", case_folder_window),
+    ("a bureau on the home desk goes to its own page", case_top_level_navigates),
+    ("a folder inside a bureau opens as a window", case_second_level_window),
     ("a folder three levels down", case_three_deep),
+    ("the name decides what a file does", case_opens_by_extension),
     ("a film opened from inside a folder window", case_film_in_a_folder),
 ]
 

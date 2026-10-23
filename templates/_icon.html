@@ -7,6 +7,8 @@
                 generic folder or file picture when there is none
       position  ic_x / ic_y when declared, otherwise a slot on a loose
                 grid, so undeclared icons never stack on each other
+      ic_opens  `opens` from the front matter, when she has overridden
+                what the extension would have decided
       ic_flow   set inside a folder window, where the icons are a list
                 and the desk's percentages mean nothing. The style
                 attribute is still written and CSS ignores it — one
@@ -14,6 +16,48 @@
       ic_path   the full path, slugified — two projects called
                 "calendar" in different bureaus must not collide
 -#}
+{#- WHAT THIS ICON DOES, decided here so it cannot disagree with what the
+    icon LOOKS like. A desktop works this way: the extension on the name
+    is the whole of it.
+
+      .mov .mp4 …   a film window, on the desk
+      .jpg .png …   a preview window, on the desk
+      anything else a page of its own — .pdf, .txt, no extension at all
+
+    A folder holding a video is a film whatever its title says, because
+    the video is the fact and the title is a label.
+
+    OVERRIDE with `opens` in the front matter when the extension is not
+    what she means. `grocery list.png` is the reason that exists: it is
+    named like a picture and it is a whole project with a page.
+
+        [extra]
+        opens = "page"      # or "preview"
+
+    The DIALOGS are rendered by section.html, which has to reach the same
+    conclusion as this file — there are no macros in this engine to share
+    the rule. They are checked against each other: "no data-window without
+    a dialog" is an expectation in tools/content-check.py, run on every
+    case, because an icon wired to a window nobody built is a click that
+    does nothing at all.                                              -#}
+{%- if ic_kind == "file" and ic_window == "" -%}
+  {%- set_global ic_clip = "" -%}
+  {%- for a in ic_assets -%}
+    {%- if a | split(pat=".") | last | lower in config.extra.video_types -%}
+      {%- set_global ic_clip = a -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- set how = ic_opens | default(value="") -%}
+  {%- if ic_clip != "" -%}
+    {%- set_global ic_window = "film-" ~ (ic_path | slugify) -%}
+  {%- elif how == "preview" -%}
+    {%- set_global ic_window = "preview-" ~ (ic_path | slugify) -%}
+  {%- elif how == "page" -%}
+    {%- set_global ic_window = "" -%}
+  {%- elif ic_title | split(pat=".") | last | lower in config.extra.image_types -%}
+    {%- set_global ic_window = "preview-" ~ (ic_path | slugify) -%}
+  {%- endif -%}
+{%- endif -%}
 {#- Which picture. Most explicit wins:
       1. a file named icon.* sitting in the project folder  (she drew it)
       2. an icon = "..." path declared in the front matter

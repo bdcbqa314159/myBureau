@@ -138,9 +138,33 @@ title = "mon projet.jpg"
 +++
 ```
 
-> Le `.jpg` à la fin du titre n'est pas obligatoire, mais il décide de
-> l'icône : `.jpg` donne une photo, `.mov` une pellicule, le reste un
-> document.
+> **La fin du titre décide de deux choses** : l'icône, et ce qui se passe
+> quand on clique dessus. C'est la seule règle à retenir.
+>
+> | tu écris | l'icône | un clic |
+> |---|---|---|
+> | `mon projet.jpg` `.png` `.jpeg` | une photo | ouvre un **aperçu** sur le bureau, comme la barre d'espace sur un Mac |
+> | `mon film.mov` `.mp4` | une pellicule | ouvre le **film** sur le bureau, avec ton texte à côté |
+> | `mon projet.pdf`, ou rien du tout | un document | ouvre **sa propre page**, qui se déroule |
+>
+> Un dossier qui contient une vidéo est un film, quel que soit son titre.
+
+#### Quand le titre ne dit pas ce que tu veux
+
+Un projet peut s'appeler `grocery list.png` et mériter quand même sa
+page à lui. Une ligne le dit :
+
+```
++++
+title = "grocery list.png"
+
+[extra]
+opens = "page"
++++
+```
+
+`opens = "page"` pour une page à soi, `opens = "preview"` pour un aperçu.
+Rien du tout, et c'est le titre qui décide.
 
 ### Écrire un texte de présentation
 
@@ -167,6 +191,12 @@ template = "section.html"
 ```
 
 Il apparaît sur le bureau **et** dans le bandeau du haut, tout seul.
+
+> **Où tu le mets change ce qu'il fait.** Un dossier posé sur la page
+> d'accueil ouvre **un nouveau bureau**, en plein écran, avec son propre
+> fond d'écran — c'est le cas de `DA`, `graphic design` et `pellicules`.
+> Un dossier rangé *à l'intérieur* d'un de ceux-là ouvre une **fenêtre**
+> sur le bureau où il est posé, sans quitter la page.
 
 ### Décider où une icône se pose
 
