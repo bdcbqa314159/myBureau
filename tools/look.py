@@ -90,6 +90,19 @@ def main() -> int:
                 "   fix: add images to the folder, or write something under the +++",
             ]))
 
+    # 6. a text file that is nearly index.md -> the folder is not on the site
+    #    TextEdit saves `index.md` as `index.md.txt` unless you insist, and
+    #    the build is perfectly happy: it just never sees the folder.
+    for folder in sorted(d for d in CONTENT.rglob("*") if d.is_dir()):
+        if (folder / "index.md").exists() or (folder / "_index.md").exists():
+            continue
+        for f in sorted(folder.iterdir()):
+            if f.is_file() and re.fullmatch(r"_?index\..+", f.name) and f.suffix.lower() != ".md":
+                notes.append((str(f.relative_to(ROOT)), [
+                    f"{f.name} is not index.md, so this folder is not on the site at all",
+                    "   fix: rename it to index.md",
+                ]))
+
     if not notes:
         print("\n  Nothing to report — everything in content/ will do what it says.\n")
         return 0
