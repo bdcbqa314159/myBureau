@@ -444,6 +444,63 @@ img.will-fade.is-in { opacity: 1; }
    playback is uninterrupted across the change.
    ==================================================================== */
 .win-film { width: min(62rem, 92vw); }
+
+/* ====================================================================
+   folder window — a folder opened on the desk instead of replacing it
+   --------------------------------------------------------------------
+   Not modal, so no backdrop dims the desk and the z-index has to be
+   declared: a show()n dialog is an ordinary positioned element, and
+   without this it opens UNDER the bandeau and the dock at 900.
+   ==================================================================== */
+.win-folder {
+  width: min(32rem, 86vw);
+  z-index: 1000;
+  /* The cascade step, set by desk.ts as the window opens, folded into the
+     same translate that centres it — so the second folder does not land
+     exactly on the first. A window that has been DRAGGED is pinned by
+     left/top with translate:none, and ignores all of this. */
+  translate: calc(-50% + var(--cascade, 0) * 1.15rem)
+             calc(-50% + var(--cascade, 0) * 1.15rem);
+}
+
+/* The same bevel as the close button beside it, because it is the same
+   kind of thing: a titlebar control. An <a> rather than a button —
+   it goes somewhere, and it still goes there with no JavaScript. */
+.win-expand {
+  display: grid; place-items: center;
+  min-width: 1.5rem; min-height: 1.35rem;
+  color: #000; text-decoration: none; font-size: .78em;
+  background: var(--face);
+  box-shadow: inset 1px 1px 0 var(--lit), inset -1px -1px 0 var(--dim);
+}
+.win-expand:active {
+  box-shadow: inset -1px -1px 0 var(--lit), inset 1px 1px 0 var(--dim);
+}
+
+/* The contents are a LIST, not a surface — so the icons flow in a grid
+   and the percentages in the content files mean nothing in here. */
+.win-files {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.2rem, 1fr));
+  gap: 1.15rem .5rem;
+  max-height: 58vh; overflow-y: auto;
+  /* .win sets touch-action:none so a window drags cleanly by its bar.
+     That also blocks panning INSIDE it, which on a phone makes a long
+     folder a list you can see a third of. */
+  touch-action: pan-y;
+}
+
+/* An icon in a window, against grey, at list size. On the desk it is
+   white text with a heavy shadow because it sits on a photograph; in
+   here that shadow is a smear on a flat panel. */
+.icon.is-flow {
+  position: static; width: auto;
+  color: #000; text-shadow: none; filter: none;
+  font-size: var(--f-2);
+}
+.icon.is-flow img { width: 3.3rem; margin-inline: auto; }
+.icon.is-flow:hover, .icon.is-flow:focus-visible { filter: none; scale: 1.06; }
+.icon.is-flow:focus-visible { outline-offset: 3px; }
 .win-controls { display: flex; gap: .3rem; align-items: center; }
 .win-controls form { display: contents; }
 

@@ -26,13 +26,27 @@
              --wallpaper-narrow:url('{{ wall_narrow.url }}')">
 {% set_global slot = 0 %}
 
-  {# FOLDERS — a directory with an _index.md is a bureau of its own. #}
+  {# FOLDERS — a directory with an _index.md is a bureau of its own, and
+     clicking it OPENS A WINDOW here rather than replacing the screen.
+     The desk stays where it is, which is the whole point of a desk.
+
+     The window is rendered further down. A folder only gets one if it has
+     something in it: an empty folder, and a gallery — which holds
+     photographs rather than icons — keep navigating to their own page,
+     because a window listing nothing is worse than the page.
+
+     `href` is untouched either way. Without JavaScript every one of
+     these is still a link to a working desk. #}
   {% for p in section.subsections %}
     {% set sub = get_section(path=p) %}
     {% set_global ic_title = sub.title %}{% set_global ic_href = sub.permalink %}
     {% set_global ic_path = sub.path %}{% set_global ic_assets = sub.assets %}
     {% set_global ic_declared = sub.extra.icon %}{% set_global ic_x = sub.extra.x %}{% set_global ic_y = sub.extra.y %}
-    {% set_global ic_slot = slot %}{% set_global ic_kind = "folder" %}{% set_global ic_window = "" %}
+    {% set_global ic_slot = slot %}{% set_global ic_kind = "folder" %}
+    {% set_global ic_flow = false %}
+    {% if sub.pages | length > 0 or sub.subsections | length > 0 %}
+      {% set_global ic_window = "folder-" ~ (sub.path | slugify) %}
+    {% else %}{% set_global ic_window = "" %}{% endif %}
     {% include "_icon.html" %}
     {% if not sub.extra.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
@@ -50,6 +64,7 @@
     {% set_global ic_path = p.path %}{% set_global ic_assets = p.assets %}
     {% set_global ic_declared = p.extra.icon %}{% set_global ic_x = p.extra.x %}{% set_global ic_y = p.extra.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}
+    {% set_global ic_flow = false %}
     {% if clip %}{% set_global ic_window = "film-" ~ (p.path | slugify) %}
     {% else %}{% set_global ic_window = "" %}{% endif %}
     {% include "_icon.html" %}
@@ -62,42 +77,58 @@
     {% set_global ic_path = item.name %}{% set_global ic_assets = [] %}
     {% set_global ic_declared = item.icon %}{% set_global ic_x = item.x %}{% set_global ic_y = item.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}
+    {% set_global ic_flow = false %}
     {% set_global ic_window = item.window | default(value="") %}
     {% include "_icon.html" %}
     {% if not item.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
 </main>
 
-{# A film and the thought behind it, side by side. Minimising keeps it
-   playing in the corner while the bureau stays usable. #}
+{# ------------------------------------------------------------------
+   The windows.
+
+   TWO LEVELS, WRITTEN OUT. Zola 0.23's engine has no macros, so nothing
+   here can call itself and a tree cannot be walked. Two levels covers
+   this site with a level to spare — the deepest folder in it sits at
+   depth 2 and holds only projects — and a folder deeper than that does
+   not break: `fw_depth` stops handing out windows at the bottom, so its
+   icon keeps its href and navigates to its own desk. A working outcome
+   rather than an icon that does nothing.
+
+   The FILMS have to be here too, for every folder a window can reach.
+   A film icon inside the `da` window points at `film-da-junes-cry`, and
+   that dialog has to exist on THIS page or the click does nothing at
+   all — the kind of failure that builds perfectly.
+   ------------------------------------------------------------------ #}
+
+{# this desk's own films #}
 {% for p in section.pages %}
-  {% set_global clip = "" %}
-  {% set_global still = "" %}
-  {% for a in p.assets %}
-    {% set ext = a | split(pat=".") | last | lower %}
-    {% if ext in config.extra.video_types %}{% set_global clip = a %}{% endif %}
-    {% if a | split(pat="/") | last | split(pat=".") | first == "poster" %}{% set_global still = a %}{% endif %}
-  {% endfor %}
-  {% if clip %}
-  <dialog class="win win-film" id="film-{{ p.path | slugify }}">
-    <div class="win-bar">
-      <span>{{ p.title }}</span>
-      <div class="win-controls">
-        <button type="button" data-mini aria-label="{{ trans(key='window_min', lang=lang) }}">&#x2013;</button>
-        <form method="dialog"><button aria-label="{{ trans(key='window_close', lang=lang) }}">&#x2715;</button></form>
-      </div>
-    </div>
-    <div class="win-body spread">
-      <div class="spread-film">
-        <video controls playsinline preload="metadata"
-               {% if still %}poster="{{ get_url(path=still) }}"{% endif %}>
-          <source src="{{ get_url(path=clip) }}">
-        </video>
-      </div>
-      <div class="spread-note">{{ p.content | safe }}</div>
-    </div>
-  </dialog>
+  {% set_global ff = p %}{% include "_film.html" %}
+{% endfor %}
+
+{% for p in section.subsections %}
+  {% set one = get_section(path=p) %}
+
+  {# depth 1 — a folder on this desk #}
+  {% if one.pages | length > 0 or one.subsections | length > 0 %}
+    {% set_global fw = one %}{% set_global fw_depth = 1 %}
+    {% include "_folder.html" %}
   {% endif %}
+  {% for q in one.pages %}
+    {% set_global ff = q %}{% include "_film.html" %}
+  {% endfor %}
+
+  {# depth 2 — a folder inside that one #}
+  {% for r in one.subsections %}
+    {% set two = get_section(path=r) %}
+    {% if two.pages | length > 0 or two.subsections | length > 0 %}
+      {% set_global fw = two %}{% set_global fw_depth = 2 %}
+      {% include "_folder.html" %}
+    {% endif %}
+    {% for q in two.pages %}
+      {% set_global ff = q %}{% include "_film.html" %}
+    {% endfor %}
+  {% endfor %}
 {% endfor %}
 
 {% block windows %}{% endblock %}

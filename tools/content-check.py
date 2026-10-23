@@ -238,6 +238,110 @@ def case_alt_text(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def dangling(h: str) -> list[str]:
+    """Every data-window on a page that has no dialog to open.
+
+    This is the failure mode folder windows are built on top of: the icon
+    renders, the build is clean, and the click does nothing at all. Worth
+    asserting on every page of every case rather than once.
+    """
+    have = set(re.findall(r'<dialog[^>]*id="([^"]+)"', h))
+    return [w for w in re.findall(r'data-window="([^"]+)"', h) if w not in have]
+
+
+def case_folder_window(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A new bureau with a project in it opens as a window on the desk."""
+    p = d / "content" / "scenographie"
+    p.mkdir()
+    (p / "_index.md").write_text(FRONT.format(
+        title="scenographie", extra='template = "section.html"\n'))
+    q = p / "les-planches"
+    q.mkdir()
+    (q / "index.md").write_text(FRONT.format(title="les planches.jpg", extra=""))
+    ok, log = build(d)
+    h = page(d, "index.html")
+    win = re.search(r'<dialog class="win win-folder" id="folder-scenographie">.*?</dialog>',
+                    h, re.S)
+    return [
+        ("builds", ok),
+        ("the folder has a window on the home desk", bool(win)),
+        ("the folder icon opens it",
+         'data-window="folder-scenographie"' in h),
+        ("the project inside is in the window",
+         bool(win) and "les planches.jpg" in win.group(0)),
+        ("the project inside flows rather than being pinned to the desk",
+         bool(win) and "icon is-flow" in win.group(0)),
+        ("the folder is still a link, so it works without JavaScript",
+         bool(re.search(r'<a class="icon"[^>]*href="[^"]*scenographie/"', h))),
+        ("nothing on the home desk points at a window that is not there",
+         dangling(h) == []),
+    ]
+
+
+def case_three_deep(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A folder three levels down — deeper than the windows are rendered.
+
+    The windows are written out to two levels because the template engine
+    has no recursion. The third level must then NAVIGATE, not render an
+    icon wired to a dialog nobody made.
+    """
+    p = d / "content" / "un"
+    p.mkdir()
+    (p / "_index.md").write_text(FRONT.format(
+        title="un", extra='template = "section.html"\n'))
+    q = p / "deux"
+    q.mkdir()
+    (q / "_index.md").write_text(FRONT.format(
+        title="deux", extra='template = "section.html"\n'))
+    r = q / "trois"
+    r.mkdir()
+    (r / "_index.md").write_text(FRONT.format(
+        title="trois", extra='template = "section.html"\n'))
+    s = r / "projet"
+    s.mkdir()
+    (s / "index.md").write_text(FRONT.format(title="projet.jpg", extra=""))
+    ok, log = build(d)
+    home = page(d, "index.html")
+    deux = re.search(r'<dialog class="win win-folder" id="folder-un-deux">.*?</dialog>',
+                     home, re.S)
+    return [
+        ("builds", ok),
+        ("the home desk has no dangling window reference", dangling(home) == []),
+        ("depth 2 still gets a window", bool(deux)),
+        ("depth 3 inside it is a link and not a dead icon",
+         bool(deux) and 'data-window="folder-un-deux-trois"' not in deux.group(0)
+                     and "un/deux/trois/" in deux.group(0)),
+        ("the deepest bureau is still reachable as its own desk",
+         "projet.jpg" in page(d, "un/deux/trois/index.html")),
+        ("and that desk has no dangling reference either",
+         dangling(page(d, "un/deux/trois/index.html")) == []),
+    ]
+
+
+def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A video inside a folder, opened from the window rather than the desk.
+
+    The film dialog lives on whichever page shows the icon. An icon in the
+    `da` window on the HOME page needs its film on the home page too, or
+    the click does nothing.
+    """
+    ok, log = build(d)
+    home = page(d, "index.html")
+    da = re.search(r'<dialog class="win win-folder" id="folder-da">.*?</dialog>',
+                   home, re.S)
+    return [
+        ("builds", ok),
+        ("the da window is on the home desk", bool(da)),
+        ("the film inside it points at a film window",
+         bool(da) and 'data-window="film-da-junes-cry"' in da.group(0)),
+        ("and that film window is on the home desk too",
+         'id="film-da-junes-cry"' in home),
+        ("no page has a dangling window reference",
+         all(dangling(page(d, str(f.relative_to(d / "public")))) == []
+             for f in (d / "public").rglob("index.html"))),
+    ]
+
+
 CASES = [
     ("a project with no icon", case_no_icon),
     ("PHOTO.JPG in capitals", case_shouting_extension),
@@ -249,6 +353,9 @@ CASES = [
     ("a page added in French only", case_untranslated_page),
     ("a bureau that declares a wallpaper", case_declared_wallpaper),
     ("alt text written in front matter", case_alt_text),
+    ("a bureau with a project opens as a window", case_folder_window),
+    ("a folder three levels down", case_three_deep),
+    ("a film opened from inside a folder window", case_film_in_a_folder),
 ]
 
 

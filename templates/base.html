@@ -53,6 +53,12 @@
 
    Matched by SELECTOR rather than by url pattern, so it keeps working
    when the site moves from a github.io subpath to her own domain.
+
+   `:not([data-window])` excludes the icons that OPEN something instead
+   of going somewhere. A folder icon is still a link — that is how it
+   works without JavaScript — but with it, clicking opens a window and
+   the desk it points at is never visited. Prerendering six of those on
+   hover is six wallpapers downloaded for nothing.
    Cross-origin links — the dock, bottom right — are not prerendered,
    which the spec handles for us. The selector would not reach them
    anyway, and prerendering someone else's site on hover is not ours to
@@ -63,7 +69,7 @@
 <script type="speculationrules">
 {
   "prerender": [{
-    "where": { "selector_matches": ".bar-nav a, a.icon" },
+    "where": { "selector_matches": ".bar-nav a, a.icon:not([data-window])" },
     "eagerness": "moderate"
   }]
 }
