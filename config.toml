@@ -36,6 +36,28 @@ nav_extra = [
   { key = "nav_contact", url = "#contact" },
 ]
 
+# Bottom right of every page. One line per place she is — drop the line
+# and the icon goes with it.
+#
+# TWO files per service, and neither of them ours. The marks are the
+# owners' trademarks, taken unmodified from each owner's own brand kit,
+# and NONE of the three allows you to recolour their mark yourself — so
+# where a white one is needed on a photograph and a black one on a cream
+# project page, both come from the kit. See static/img/brand/SOURCES.md.
+#
+# `url` must point at HER OWN profile before this goes live: all three
+# permit the mark as a link to your own presence, and none of them
+# permit it as decoration pointing at their homepage. The urls below are
+# placeholders, like the photographs.
+social = [
+  { name = "instagram", url = "https://instagram.com/",
+    on_photo = "img/brand/instagram-white.svg", on_paper = "img/brand/instagram-black.svg" },
+  { name = "youtube",   url = "https://youtube.com/",
+    on_photo = "img/brand/youtube-white.png",   on_paper = "img/brand/youtube-black.png" },
+  { name = "spotify",   url = "https://spotify.com/",
+    on_photo = "img/brand/spotify-white.png",   on_paper = "img/brand/spotify-black.png" },
+]
+
 # The strings the browser needs, written into each page as JSON for the
 # language being rendered. Everything else is resolved while building.
 browser_strings = [
@@ -101,6 +123,7 @@ access_key = ""
 # ======================================================================
 
 [translations]
+social_label   = "Ailleurs"
 nav_contact    = "contact"
 back_to        = "retour à"
 lost_title     = "Cette page n'existe pas."
@@ -138,6 +161,7 @@ err_msg_links    = "Trop de liens."
 title = "myBureau"
 
 [languages.en.translations]
+social_label   = "Elsewhere"
 nav_contact    = "contact"
 back_to        = "back to"
 lost_title     = "This page does not exist."

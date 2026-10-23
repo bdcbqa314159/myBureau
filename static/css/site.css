@@ -580,9 +580,12 @@ body.gallery { background: #0d0b0a; }
 
 /* ====================================================================
    author credit — licence §4, do not remove
+   --------------------------------------------------------------------
+   Bottom LEFT since the dock took the right. §4 asks for a visible,
+   discreet, human-readable credit; it does not ask for a corner.
    ==================================================================== */
 .credit {
-  position: fixed; right: .75rem; bottom: .55rem; z-index: 900;
+  position: fixed; left: .75rem; bottom: .55rem; z-index: 900;
   font-size: var(--f-1); font-weight: var(--w-light);
   letter-spacing: var(--tracking-text);
   color: #fff; text-shadow: 0 1px 2px rgb(0 0 0 / .9), 0 1px 8px rgb(0 0 0 / .6);
@@ -590,11 +593,61 @@ body.gallery { background: #0d0b0a; }
   transition: opacity .25s var(--ease);
 }
 .credit:hover { opacity: 1; }
-.credit { display: grid; justify-items: end; gap: .05em; line-height: 1.25; }
+.credit { display: grid; justify-items: start; gap: .05em; line-height: 1.25; }
 .credit a { text-decoration: none; }
 .credit-studio { font-size: .86em; opacity: .72; letter-spacing: .01em; }
 .credit a:hover { text-decoration: underline; }
 body.project .credit { color: var(--ink); text-shadow: none; }
+
+/* ====================================================================
+   the dock — where else she is, bottom right of every page
+   --------------------------------------------------------------------
+   Three brand marks, none of them ours and none of them recolourable by
+   us (see static/img/brand/SOURCES.md). So the white file shows over a
+   photograph, the black one over a cream page, and CSS does the picking
+   — no filter, no mask, no tinting. An `opacity` below 1 is the only
+   liberty taken, and it is the same discretion the credit gets.
+
+   HEIGHT ONLY. The marks are not all square — YouTube's is 1255x1075 —
+   and forcing a square would squash it. Spotify sets the floor for all
+   three at 21px, so 22 clears it with the icon's own padding on top.
+   ==================================================================== */
+.dock {
+  position: fixed; right: .75rem; bottom: .55rem; z-index: 900;
+  display: flex; align-items: center; gap: .85rem;
+}
+.dock a {
+  display: block; line-height: 0;
+  transition: transform .25s var(--ease);
+}
+.dock a:hover, .dock a:focus-visible { transform: translateY(-2px); }
+.dock img { height: 22px; width: auto; display: block; }
+
+/* Which of the two marks is showing. A photograph takes the white one,
+   a cream project page the black one. */
+.dock .on-paper { display: none; }
+body.project .dock .on-photo { display: none; }
+body.project .dock .on-paper { display: block; }
+
+/* A white mark on a pale sky is the bar's problem again, and it gets the
+   bar's answer: a scrim BEHIND the marks.
+   Not a shadow, not a filter, not reduced opacity — every one of those
+   three owners forbids adding an effect to their mark, and a drop-shadow
+   on the artwork is an effect. Darkening the ground behind it is not: the
+   mark renders at full opacity, in the colour its owner shipped,
+   untouched. The scrim is also why nothing here dims on hover; the lift
+   is the whole hover state. */
+body:not(.project) .dock::before {
+  content: ""; position: absolute; z-index: -1;
+  inset: -.5rem -.7rem -.45rem -.7rem;
+  background: radial-gradient(ellipse at center, rgb(0 0 0 / .38), rgb(0 0 0 / 0) 72%);
+  pointer-events: none;
+}
+
+@media (max-width: 40rem) {
+  .dock { gap: .7rem; }
+  .dock img { height: 20px; }
+}
 
 /* ====================================================================
    transitions

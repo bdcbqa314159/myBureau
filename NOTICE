@@ -91,6 +91,35 @@ separate matter: those are original work, drawn in tools/icons.py, and
 may stay or be replaced as the client prefers.
 
 --------------------------------------------------------------------
+THIRD-PARTY TRADEMARKS — static/img/brand/
+--------------------------------------------------------------------
+The Instagram glyph, the YouTube icon and the Spotify icon are
+trademarks of their respective owners. The files under
+static/img/brand/ are their owners' own published assets, unmodified,
+and they are NOT part of the Software licensed above and NOT covered
+by the LICENSE — no right to them is granted or implied by it.
+
+They are used here under each owner's brand guidelines, which permit
+the mark as a link to one's own presence on that service. Three
+conditions come with that and are load-bearing, not decorative:
+
+  - the artwork is used as published. Never recoloured, stretched,
+    masked, shadowed, faded or redrawn. A redrawn approximation is a
+    worse position than the real mark, not a safer one.
+  - each mark links to the site owner's OWN profile. Pointed at a
+    service's homepage it is decoration, which is outside what any of
+    the three permit.
+  - they come from the owner's own resources page and nowhere else.
+    Icon packs and search results are not approved sources, and the
+    kits are gated behind accepting the terms — which is the point:
+    accepting is what grants the use.
+
+static/img/brand/SOURCES.md names the exact asset behind every file.
+These are the only third-party marks on the site. No Microsoft asset
+appears anywhere, including no LinkedIn mark — that one was asked for
+and withdrawn.
+
+--------------------------------------------------------------------
 THIS IS NOT THE AGREEMENT
 --------------------------------------------------------------------
 These files declare the intended position. They are not a signed
