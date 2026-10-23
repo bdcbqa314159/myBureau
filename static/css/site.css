@@ -82,6 +82,9 @@
 
   /* win95 bevel */
   --face: #c0c0c0;
+  /* the same face, sheer — a folder window lets her wallpaper through.
+     Kept beside --face so the two cannot drift when the palette moves. */
+  --face-sheer: rgb(192 192 192 / .78);
   --lit:  #f2f2f2;
   --dim:  #828282;
   --title:#000082;
@@ -487,12 +490,55 @@ img.will-fade.is-in { opacity: 1; }
 .win-folder {
   width: min(32rem, 86vw);
   z-index: 1000;
+  /* Solid is the floor. The translucent version is layered on below,
+     behind @supports, so a browser without backdrop-filter gets a window
+     that is plainly readable rather than a tinted one it cannot blur. */
+  background: var(--face);
   /* The cascade step, set by desk.ts as the window opens, folded into the
      same translate that centres it — so the second folder does not land
      exactly on the first. A window that has been DRAGGED is pinned by
      left/top with translate:none, and ignores all of this. */
   translate: calc(-50% + var(--cascade, 0) * 1.15rem)
              calc(-50% + var(--cascade, 0) * 1.15rem);
+}
+
+/* ---- letting the wallpaper through -------------------------------
+   A folder window sits ON her photograph, and a flat grey rectangle
+   stops the photograph dead. So the panel is tinted rather than opaque
+   and the wall behind it is blurred: enough to SUGGEST what is under it,
+   not enough to read as a hole.
+
+   .78 and a heavy blur are both deliberate. The labels inside are black
+   text, and black on an unknown photograph is a contrast gamble — at
+   this weight the panel stays light whatever is behind it, and the blur
+   removes the detail that would fight the icons. Thinner than this and
+   the window starts depending on which wallpaper she picked.
+
+   The title bar stays SOLID. It is the thing you grab, and a handle you
+   can half-see through does not read as a handle.
+
+   Only the folder window. A preview is a picture and a film is a film:
+   both want their own ground, not hers. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .win-folder {
+    background: var(--face-sheer);
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+    backdrop-filter: blur(14px) saturate(1.15);
+  }
+  /* A light lift under the labels, for the one case the tint cannot
+     cover: a bright wallpaper directly behind black text. */
+  .win-folder .icon.is-flow span { text-shadow: 0 1px 2px rgb(255 255 255 / .55); }
+}
+
+/* Asked for less transparency at the system level, get less of it. The
+   window is still a window; it just stops being a window onto anything. */
+@media (prefers-reduced-transparency: reduce) {
+  .win-folder {
+    background: var(--face);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .win-folder .icon.is-flow span { text-shadow: none; }
 }
 
 /* The same bevel as the close button beside it, because it is the same
@@ -559,6 +605,8 @@ img.will-fade.is-in { opacity: 1; }
 .win-film.is-mini .spread { grid-template-columns: 1fr; }
 .win-film.is-mini .spread-note { display: none; }
 .win-film.is-mini .win-bar { cursor: pointer; }
+/* see the comment in _film.html — the toggle is the ⬜ down here */
+.win-film.is-mini .win-expand { display: none; }
 .win-controls button { min-width: 1.5rem; }
 /* the toggle stays — it is the way back up */
 

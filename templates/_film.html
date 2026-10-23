@@ -19,6 +19,14 @@
   <div class="win-bar">
     <span>{{ ff.title }}</span>
     <div class="win-controls">
+      {#- The same control a preview gets: the project's own page, which
+          is where the text lives at full width. Hidden while the window
+          is minimised — down there the toggle beside it is already
+          showing ⬜ for "put it back", and two ⬜ in one title bar
+          meaning two different things is worse than one fewer control. -#}
+      <a class="win-expand" href="{{ ff.permalink }}"
+         aria-label="{{ trans(key='window_page', lang=lang) }}"
+         title="{{ trans(key='window_page', lang=lang) }}">&#x2b1c;</a>
       <button type="button" data-mini aria-label="{{ trans(key='window_min', lang=lang) }}">&#x2013;</button>
       <form method="dialog"><button aria-label="{{ trans(key='window_close', lang=lang) }}">&#x2715;</button></form>
     </div>
