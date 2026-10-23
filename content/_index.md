@@ -10,7 +10,7 @@ wallpaper = "img/wall-home.jpg"
 items = [
   { name = "about me.txt", icon = "img/icons/photo.svg", window = "about",   x = 28, y = 26 },
 
-  # Elsewhere lives in the dock, bottom right of every page — see
+  # Elsewhere lives in the dock, bottom centre of every page — see
   # `social` in config.toml. It used to be two desk icons here, which put
   # it on the home desk and nowhere else.
   #

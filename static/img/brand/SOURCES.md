@@ -51,7 +51,28 @@ shipping these marks, not a nicety.
 ## Sizes the owners require
 
 Spotify sets the floor: the icon never below **21px**, with clear space
-of half its height. The dock uses 22px, which clears it for all three.
+of half its height. The dock renders its ink at 22.3px with a 13.6px gap,
+which clears both.
+
+**The three are not framed alike**, which is why they are not sized
+alike. Measured, the ink inside each file fills:
+
+| | ink fills | ink aspect |
+|---|---|---|
+| `instagram-*.svg` | 100% x 100% | 1.00 |
+| `spotify-*.png` | 97% x 97% | 1.00 |
+| `youtube-*.png` | **66% x 54%** | 1.43 |
+
+YouTube ships its icon with the required clear space built into the file.
+Give all three the same height and YouTube's mark renders at barely half
+the visual size of the other two. So each is scaled until the ink reads
+as one size, and the per-mark numbers live in `site.css` with the
+arithmetic written out.
+
+Scaling proportionally is what every one of the three owners allows, and
+what their minimum-size rules presume. Nothing here is stretched,
+cropped or trimmed — the clear space inside YouTube's file scales with
+the file, so it stays above their minimum rather than under it.
 
 ## LinkedIn
 

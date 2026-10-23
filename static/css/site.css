@@ -581,11 +581,12 @@ body.gallery { background: #0d0b0a; }
 /* ====================================================================
    author credit — licence §4, do not remove
    --------------------------------------------------------------------
-   Bottom LEFT since the dock took the right. §4 asks for a visible,
-   discreet, human-readable credit; it does not ask for a corner.
+   Bottom right, with the dock in the centre. §4 asks for a credit that
+   is visible, discreet and readable by assistive technology; it does not
+   ask for a corner, and it has now been in two.
    ==================================================================== */
 .credit {
-  position: fixed; left: .75rem; bottom: .55rem; z-index: 900;
+  position: fixed; right: .75rem; bottom: .55rem; z-index: 900;
   font-size: var(--f-1); font-weight: var(--w-light);
   letter-spacing: var(--tracking-text);
   color: #fff; text-shadow: 0 1px 2px rgb(0 0 0 / .9), 0 1px 8px rgb(0 0 0 / .6);
@@ -593,14 +594,14 @@ body.gallery { background: #0d0b0a; }
   transition: opacity .25s var(--ease);
 }
 .credit:hover { opacity: 1; }
-.credit { display: grid; justify-items: start; gap: .05em; line-height: 1.25; }
+.credit { display: grid; justify-items: end; gap: .05em; line-height: 1.25; }
 .credit a { text-decoration: none; }
 .credit-studio { font-size: .86em; opacity: .72; letter-spacing: .01em; }
 .credit a:hover { text-decoration: underline; }
 body.project .credit { color: var(--ink); text-shadow: none; }
 
 /* ====================================================================
-   the dock — where else she is, bottom right of every page
+   the dock — where else she is, bottom centre of every page
    --------------------------------------------------------------------
    Three brand marks, none of them ours and none of them recolourable by
    us (see static/img/brand/SOURCES.md). So the white file shows over a
@@ -608,12 +609,40 @@ body.project .credit { color: var(--ink); text-shadow: none; }
    — no filter, no mask, no tinting. An `opacity` below 1 is the only
    liberty taken, and it is the same discretion the credit gets.
 
-   HEIGHT ONLY. The marks are not all square — YouTube's is 1255x1075 —
-   and forcing a square would squash it. Spotify sets the floor for all
-   three at 21px, so 22 clears it with the icon's own padding on top.
+   SAME SIZE IS NOT THE SAME NUMBER. The three files are not framed
+   alike. Measured, the ink inside each one fills:
+
+       instagram   100% x 100%   square
+       spotify      97% x  97%   square
+       youtube      66% x  54%   wide (ink aspect 1.43)
+
+   YouTube publishes its icon with the required clear space built into
+   the file. So one height for all three renders YouTube's mark at barely
+   half the visual size of the other two, and one square box is worse.
+
+   The three heights below are therefore chosen so the INK reads as one
+   size — equal visual area, which is what the eye compares when a
+   circle, a rounded square and a wide rectangle sit in a row:
+
+       instagram   22px box -> ink 22.0 x 22.0
+       spotify     23px box -> ink 22.3 x 22.3
+       youtube     34px box -> ink 26.2 x 18.4   (wide and short, as drawn)
+
+   Nothing is stretched, cropped or trimmed to achieve it. Each file is
+   scaled proportionally, which every one of the three owners allows and
+   their minimum-size rules presume; the clear space inside YouTube's file
+   scales with it and so stays above their minimum rather than below it.
+   Distortion is the one thing all three forbid outright, so the SIZE is
+   what differs per mark, never the shape.
+
+   Floors and clear space are met: Spotify's icon never below 21px (ink
+   22.3) with clear space half its height (11.2px needed, the 13.6px gap
+   gives it). A service added to `social` with no rule here gets the
+   default, which is right for any mark that fills its own file.
    ==================================================================== */
 .dock {
-  position: fixed; right: .75rem; bottom: .55rem; z-index: 900;
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: .55rem; z-index: 900;
   display: flex; align-items: center; gap: .85rem;
 }
 .dock a {
@@ -622,6 +651,8 @@ body.project .credit { color: var(--ink); text-shadow: none; }
 }
 .dock a:hover, .dock a:focus-visible { transform: translateY(-2px); }
 .dock img { height: 22px; width: auto; display: block; }
+.dock .spotify img { height: 23px; }
+.dock .youtube img { height: 34px; }
 
 /* Which of the two marks is showing. A photograph takes the white one,
    a cream project page the black one. */
@@ -644,9 +675,11 @@ body:not(.project) .dock::before {
   pointer-events: none;
 }
 
+/* Narrow screens tighten the GAP and not the marks. Shrinking them is
+   what would take Spotify under its 21px floor, and the gap has 2.4px to
+   give before it reaches the clear space Spotify asks for. */
 @media (max-width: 40rem) {
-  .dock { gap: .7rem; }
-  .dock img { height: 20px; }
+  .dock { gap: .72rem; }
 }
 
 /* ====================================================================
