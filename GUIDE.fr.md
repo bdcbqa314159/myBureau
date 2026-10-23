@@ -117,7 +117,11 @@ dossier de projet → **Dupliquer** (⌘-D), puis :
 
 1. renomme le dossier (`mon-projet`, sans accent ni espace)
 2. jette les images qui étaient dedans, dépose les tiennes
-3. ouvre son `index.md` et change le titre entre les guillemets
+3. ouvre `index.md` **et** `index.en.md` — il y en a un par langue — et
+   change le titre entre les guillemets dans les deux
+4. dans les deux, change aussi les deux nombres `x` et `y` : le dossier
+   dupliqué a gardé ceux de l'original, et sans ça la nouvelle icône se
+   pose exactement sur celle que tu as dupliquée
 
 C'est tout. Le projet apparaît sur le bureau et a sa page. Les images
 s'affichent dans l'ordre de leur nom — `01.jpg`, `02.jpg`, `03.jpg`.
@@ -252,16 +256,18 @@ donne la correction sur la ligne `fix:`. Les trois courantes :
 | `no https://` | un lien vers l'extérieur sans `https://` au début |
 | `is not shown on the site` | une image en `.tiff`, `.psd`… — réexporte en JPEG |
 | `is not index.md` | le fichier texte du dossier n'est pas nommé exactement `index.md` — le dossier n'est pas sur le site |
+| `the same title as` | deux projets portent le même nom, en général un dossier dupliqué dont un seul fichier de langue a été renommé |
 
 ### La fenêtre noire dit `Error when parsing front matter`
 
 Ce sont presque toujours les guillemets. Les lignes entre les `+++`
-veulent des guillemets droits `"` ; TextEdit les remplace parfois par
-des guillemets courbes `“ ”`, et là le site ne se construit plus.
+veulent des guillemets droits `"`. Des guillemets courbes `“ ”` — ceux
+que tu obtiens en collant un titre depuis un mail, Word ou Pages — et le
+site ne se construit plus.
 
-Réécris la ligne avec des guillemets droits. Pour qu'il arrête de les
-transformer : TextEdit ouvert, menu **TextEdit → Réglages**, décoche
-**Guillemets typographiques** (*Smart quotes*).
+Réécris la ligne en tapant les guillemets toi-même. Si ton éditeur les
+transforme en courbes pendant que tu tapes, cherche **Guillemets
+typographiques** (*Smart quotes*) dans ses réglages et décoche-le.
 
 ### Un dossier que j'ai ajouté n'apparaît nulle part
 

@@ -103,6 +103,31 @@ def main() -> int:
                     "   fix: rename it to index.md",
                 ]))
 
+    # 7. two projects in the same folder with the same title -> almost
+    #    always a duplicated folder whose other language file was never
+    #    renamed. The desk then shows the old name twice.
+    titles: dict[tuple[str, str], list[tuple[str, str]]] = {}
+    for md in sorted(CONTENT.rglob("*index*.md")):
+        if md.parent == CONTENT:
+            continue
+        title = re.search(r'^\s*title\s*=\s*"([^"]+)"', front_matter(md), re.M)
+        if title is None:
+            continue
+        titles.setdefault((str(md.parent.parent), md.name), []).append(
+            (title.group(1), str(md.relative_to(ROOT)))
+        )
+    for group in titles.values():
+        seen: dict[str, str] = {}
+        for title, where in group:
+            if title in seen:
+                notes.append((where, [
+                    f'title = "{title}" — the same title as {seen[title]},'
+                    " so the desk shows that name twice",
+                    "   fix: change this title (a duplicated folder has one"
+                    " file per language, and both need renaming)",
+                ]))
+            seen[title] = where
+
     if not notes:
         print("\n  Nothing to report — everything in content/ will do what it says.\n")
         return 0
