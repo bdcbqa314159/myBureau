@@ -446,6 +446,38 @@ img.will-fade.is-in { opacity: 1; }
 .win-film { width: min(62rem, 92vw); }
 
 /* ====================================================================
+   preview window — a picture looked at, not navigated to
+   --------------------------------------------------------------------
+   Modal, unlike a folder window. Pressing space on a Mac does not take
+   you anywhere and does not leave the desk half-usable behind it: it
+   shows you the thing. So this one gets the backdrop and the browser's
+   own Escape, and the desk waits.
+
+   The body loses .win-body's padding, because a preview is the picture —
+   edge to edge inside its frame, with the text underneath it if there
+   is any.
+   ==================================================================== */
+.win-preview { width: min(56rem, 94vw); }
+.preview-body {
+  padding: 0;
+  max-height: 78vh; overflow-y: auto;
+  /* .win sets touch-action:none so a window drags by its bar; without
+     this a tall preview is unscrollable on a phone. */
+  touch-action: pan-y;
+  background: #000;
+}
+.preview-body img { display: block; width: 100%; height: auto; }
+.preview-note {
+  padding: .9rem 1.2rem 1.1rem;
+  background: var(--face);
+  font-family: var(--font-body);
+  font-weight: var(--w-prose);
+  font-size: var(--f-3);
+  letter-spacing: var(--tracking-text);
+}
+.preview-note p + p { margin-top: .8em; }
+
+/* ====================================================================
    folder window — a folder opened on the desk instead of replacing it
    --------------------------------------------------------------------
    Not modal, so no backdrop dims the desk and the z-index has to be

@@ -3,12 +3,11 @@
     Expects two globals, set before the include:
 
       fw        the section this window shows
-      fw_depth  how far below the current desk it is (1 or 2)
 
     Zola 0.23's template engine has no macros, so a global plus an
-    include is the only way to pass an argument. That is also why the
-    windows are rendered by explicit depth in section.html rather than by
-    walking the tree: nothing here can call itself.
+    include is the only way to pass an argument — and why nothing here
+    can call itself, which is the reason a folder inside this window
+    navigates to its own desk instead of opening a third window.
 
     The desk STAYS BEHIND IT. These are opened with show() and not
     showModal(), so several folders can be open at once and the bureau
@@ -30,11 +29,10 @@
   </div>
   <div class="win-body win-files">
 
-    {#- FOLDERS inside this folder. They get a window of their own only
-        while one has been rendered for them — at the bottom of the depth
-        this template is rendered to, a folder navigates to its own desk
-        instead. That is a working outcome rather than an icon that does
-        nothing, which is what a dangling data-window would be. -#}
+    {#- FOLDERS inside this folder. These NAVIGATE — one level of windows
+        per desk is the rule, and their desk is one click away with its own
+        wallpaper on it. An icon wired to a window nobody rendered would be
+        a click that does nothing. -#}
     {% for p in fw.subsections %}
       {% set sub = get_section(path=p) %}
       {% set_global ic_title = sub.title %}{% set_global ic_href = sub.permalink %}
@@ -42,27 +40,22 @@
       {% set_global ic_declared = sub.extra.icon %}{% set_global ic_x = sub.extra.x %}{% set_global ic_y = sub.extra.y %}
       {% set_global ic_slot = loop.index0 %}{% set_global ic_kind = "folder" %}
       {% set_global ic_flow = true %}
-      {% if fw_depth < 2 and (sub.pages | length > 0 or sub.subsections | length > 0) %}
-        {% set_global ic_window = "folder-" ~ (sub.path | slugify) %}
-      {% else %}{% set_global ic_window = "" %}{% endif %}
+      {% set_global ic_opens = "" %}
+      {% set_global ic_window = "" %}
       {% include "_icon.html" %}
     {% endfor %}
 
-    {#- FILES. A project holding a video opens its film window, exactly as
-        it does out on the desk; section.html renders those films for this
-        folder's pages too, which is what makes that work from in here. -#}
+    {#- FILES. Exactly as on a desk — a film opens as a film, a picture as
+        a preview, everything else goes to its own page. section.html
+        renders those dialogs for this folder's pages as well as for the
+        desk's, which is what makes them work from in here. -#}
     {% for p in fw.pages %}
-      {% set_global clip = "" %}
-      {% for a in p.assets %}
-        {% if a | split(pat=".") | last | lower in config.extra.video_types %}{% set_global clip = a %}{% endif %}
-      {% endfor %}
       {% set_global ic_title = p.title %}{% set_global ic_href = p.permalink %}
       {% set_global ic_path = p.path %}{% set_global ic_assets = p.assets %}
       {% set_global ic_declared = p.extra.icon %}{% set_global ic_x = p.extra.x %}{% set_global ic_y = p.extra.y %}
       {% set_global ic_slot = loop.index0 %}{% set_global ic_kind = "file" %}
-      {% set_global ic_flow = true %}
-      {% if clip %}{% set_global ic_window = "film-" ~ (p.path | slugify) %}
-      {% else %}{% set_global ic_window = "" %}{% endif %}
+      {% set_global ic_flow = true %}{% set_global ic_window = "" %}
+      {% set_global ic_opens = p.extra.opens | default(value="") %}
       {% include "_icon.html" %}
     {% endfor %}
 
@@ -74,6 +67,7 @@
       {% set_global ic_slot = loop.index0 %}{% set_global ic_kind = "file" %}
       {% set_global ic_flow = true %}
       {% set_global ic_window = item.window | default(value="") %}
+      {% set_global ic_opens = "" %}
       {% include "_icon.html" %}
     {% endfor %}
   </div>
