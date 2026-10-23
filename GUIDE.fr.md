@@ -8,6 +8,17 @@ tu ne taperas qu'une seule commande dans ta vie — celle de l'étape 1.
 
 ---
 
+## Les deux adresses
+
+Garde-les sous la main — tout le reste du guide en dépend.
+
+| | |
+|---|---|
+| **le site en ligne**, à regarder tout de suite | <https://bdcbqa314159.github.io/myBureau/> |
+| **le dépôt**, d'où tu copieras le site sur ton Mac | <https://github.com/bdcbqa314159/myBureau> |
+
+---
+
 ## Ce qu'il faut comprendre d'abord, en trois phrases
 
 Le site **est** un dossier de fichiers. Les dossiers que tu vois sur ton
@@ -43,14 +54,25 @@ c'est normal :
 C'est l'application qui fait l'aller-retour entre ton Mac et GitHub,
 sans ligne de commande.
 
-1. va sur **desktop.github.com**, télécharge, installe
+1. va sur <https://desktop.github.com>, télécharge, installe
 2. ouvre-la, **Sign in to GitHub.com**, connecte-toi avec ton compte
-3. elle propose la liste de tes dépôts : choisis **myBureau**,
-   puis **Clone**
+3. menu **File → Clone repository…**, onglet **URL**, et colle l'adresse
+   du dépôt dans le premier champ :
+
+```
+https://github.com/bdcbqa314159/myBureau
+```
+
+4. **Clone**
+
+> Elle te propose aussi la liste de tes dépôts : **myBureau n'y est
+> pas**, parce qu'il est pour l'instant sous le compte de Bernardo et
+> pas sous le tien. C'est pour ça qu'on passe par l'adresse. Rien
+> d'anormal.
 
 Elle te demande où le mettre. L'endroit par défaut (`Documents/GitHub/`)
-est parfait. À la fin tu as un dossier `myBureau` sur ton Mac : c'est le
-site.
+est parfait. À la fin tu as un dossier `myBureau` dans
+`Documents/GitHub/` : c'est le site.
 
 ---
 
@@ -79,25 +101,42 @@ simplement la fenêtre.
 
 ## Étape 3 — modifier le site
 
-Tout se passe dans le dossier `content/`. Il n'y a rien à comprendre
-d'autre que ça.
+Tout se passe dans `Documents/GitHub/myBureau/content/`. Il n'y a rien à
+comprendre d'autre que ça.
+
+### Avec quoi ouvrir les fichiers `.md`
+
+**TextEdit**, qui est déjà sur ton Mac : clic droit sur le fichier →
+**Ouvrir avec → TextEdit**. Aucune application à installer.
 
 ### Ajouter un projet
 
-1. crée un dossier dans `content/da/` ou `content/graphic-design/`
-2. mets dedans un fichier texte nommé **`index.md`** avec ces trois
-   lignes :
+Le plus simple, et celui qui ne se trompe pas : **duplique un projet qui
+existe déjà.** Dans le Finder, va dans `content/da/`, clic droit sur un
+dossier de projet → **Dupliquer** (⌘-D), puis :
+
+1. renomme le dossier (`mon-projet`, sans accent ni espace)
+2. jette les images qui étaient dedans, dépose les tiennes
+3. ouvre `index.md` **et** `index.en.md` — il y en a un par langue — et
+   change le titre entre les guillemets dans les deux
+4. dans les deux, change aussi les deux nombres `x` et `y` : le dossier
+   dupliqué a gardé ceux de l'original, et sans ça la nouvelle icône se
+   pose exactement sur celle que tu as dupliquée
+
+C'est tout. Le projet apparaît sur le bureau et a sa page. Les images
+s'affichent dans l'ordre de leur nom — `01.jpg`, `02.jpg`, `03.jpg`.
+
+> **Pourquoi dupliquer plutôt que créer.** Un fichier créé de zéro dans
+> TextEdit arrive en texte enrichi et s'enregistre en `index.md.txt` —
+> dans les deux cas le dossier n'apparaît pas du tout sur le site, sans
+> aucun message d'erreur. Le dossier dupliqué, lui, est déjà correct.
+> Si tu y tiens, le contenu minimum d'un `index.md` est :
 
 ```
 +++
 title = "mon projet.jpg"
 +++
 ```
-
-3. dépose tes images dans le même dossier
-
-C'est tout. Le projet apparaît sur le bureau et a sa page. Les images
-s'affichent dans l'ordre de leur nom — `01.jpg`, `02.jpg`, `03.jpg`.
 
 > Le `.jpg` à la fin du titre n'est pas obligatoire, mais il décide de
 > l'icône : `.jpg` donne une photo, `.mov` une pellicule, le reste un
@@ -170,6 +209,13 @@ du formulaire — sont tous dans `config.toml`, dans le bloc
 
 ## Étape 4 — publier
 
+> **Pas encore.** Tant que le dépôt est celui de Bernardo, **Push
+> origin** sera refusé : tu n'as pas les droits d'écriture dessus, et
+> c'est normal à ce stade. Pour l'instant tu travailles sur ta copie,
+> tu regardes le résultat avec `preview.command`, et tu lui envoies tes
+> remarques. Cette étape devient la tienne le jour où le dépôt est le
+> tien — la suite est écrite pour ce jour-là.
+
 Dans **GitHub Desktop** :
 
 1. à gauche, la liste de ce que tu as changé — regarde-la, c'est ton
@@ -209,6 +255,26 @@ donne la correction sur la ligne `fix:`. Les trois courantes :
 | `there is no such file` | le nom d'une icône est mal orthographié |
 | `no https://` | un lien vers l'extérieur sans `https://` au début |
 | `is not shown on the site` | une image en `.tiff`, `.psd`… — réexporte en JPEG |
+| `is not index.md` | le fichier texte du dossier n'est pas nommé exactement `index.md` — le dossier n'est pas sur le site |
+| `the same title as` | deux projets portent le même nom, en général un dossier dupliqué dont un seul fichier de langue a été renommé |
+
+### La fenêtre noire dit `Error when parsing front matter`
+
+Ce sont presque toujours les guillemets. Les lignes entre les `+++`
+veulent des guillemets droits `"`. Des guillemets courbes `“ ”` — ceux
+que tu obtiens en collant un titre depuis un mail, Word ou Pages — et le
+site ne se construit plus.
+
+Réécris la ligne en tapant les guillemets toi-même. Si ton éditeur les
+transforme en courbes pendant que tu tapes, cherche **Guillemets
+typographiques** (*Smart quotes*) dans ses réglages et décoche-le.
+
+### Un dossier que j'ai ajouté n'apparaît nulle part
+
+Son fichier texte n'est pas nommé `index.md`. Affiche les extensions
+dans le Finder (**Finder → Réglages → Avancé → Afficher tous les noms
+d'extension de fichier**) et regarde : un `index.md.txt` ou un
+`index.rtf` ne compte pas. Renomme-le en `index.md`.
 
 ### Une photo n'apparaît pas
 
@@ -239,8 +305,9 @@ ce qui a été publié.
 
 | | |
 |---|---|
-| voir le site | double-clic sur `preview.command` |
-| ajouter un projet | un dossier, un `index.md`, les images |
+| voir le site en ligne | <https://bdcbqa314159.github.io/myBureau/> |
+| voir le site sur ton Mac | double-clic sur `preview.command` |
+| ajouter un projet | duplique un dossier de projet, remplace les images |
 | écrire un texte | sous le deuxième `+++` |
 | publier | GitHub Desktop → Commit → Push |
 | tout annuler | GitHub Desktop → Branch → Discard all changes |
