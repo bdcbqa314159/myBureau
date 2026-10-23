@@ -644,7 +644,12 @@ window.addEventListener("orientationchange", relayout);
 // home again, for the life of the page.
 document.querySelectorAll<HTMLElement>(".desk .icon").forEach(rememberAuthored);
 
-document.querySelectorAll<HTMLElement>(".icon").forEach((el) => draggable(el, true));
+// Only the icons ON the desk. The ones inside a folder window are a list,
+// not objects on a surface: they have no authored position to go back to,
+// and arrange() — which is what puts a dragged icon back where it belongs
+// — only ever looks inside .desk. Made draggable, they could be dropped
+// somewhere no pass would ever reclaim.
+document.querySelectorAll<HTMLElement>(".desk .icon").forEach((el) => draggable(el, true));
 document.querySelectorAll<HTMLElement>(".win").forEach((el) => draggable(el, false));
 
 /** One handler per icon. Two separate listeners could not work: suppressing
@@ -670,8 +675,94 @@ document.querySelectorAll<HTMLElement>(".icon").forEach((icon) => {
     if (id === undefined) return;   // an ordinary link: let it navigate
     e.preventDefault();
     const win = document.getElementById(id);
-    if (win instanceof HTMLDialogElement) win.showModal();
+    if (win instanceof HTMLDialogElement) open_(win);
   });
+});
+
+// ---------------------------------------------------------------------
+// Folder windows
+//
+// A folder opens as a window ON the desk, and the desk has to go on
+// working underneath it: several folders open at once, all of them
+// draggable, the icons behind them still live. That is show(), not
+// showModal() — a modal dialog makes everything outside it inert, which
+// would leave the second folder unopenable and the first undraggable.
+//
+// The cost is that everything a modal gets for free has to be done here
+// by hand: the stacking order, the cascade so two windows do not land on
+// the same pixel, raising one to the front, and Escape.
+// ---------------------------------------------------------------------
+
+const folders = (): HTMLDialogElement[] =>
+  [...document.querySelectorAll<HTMLDialogElement>(".win-folder[open]")];
+
+/** The one in front. Not the last in the DOM — the one with the highest
+ *  z-index, because that is what the visitor sees on top after raising
+ *  and dragging have reordered them. */
+function front(): HTMLDialogElement | null {
+  let best: HTMLDialogElement | null = null;
+  let bestZ = -1;
+  for (const w of folders()) {
+    const z = Number(w.style.zIndex) || 0;
+    if (z >= bestZ) { bestZ = z; best = w; }
+  }
+  return best;
+}
+
+// Its OWN counter, starting above the bandeau and the dock. topZ, which
+// the drag handler uses, starts at 10 — fine for icons, which live inside
+// .desk, and useless for a window, which is a sibling of it: at z-index
+// 11 a folder window opens UNDER the bandeau and under the dock, both of
+// which sit at 900.
+let winZ = 1000;
+
+function raise(win: HTMLElement): void {
+  win.style.zIndex = String(++winZ);
+}
+
+function open_(win: HTMLDialogElement): void {
+  if (!win.classList.contains("win-folder")) {
+    win.showModal();                 // a film, the about text, the form
+    return;
+  }
+  if (win.open) { raise(win); return; }   // already open — bring it forward
+
+  // Cascade. Modulo, so the tenth window opened is not off the screen;
+  // it lands back on the first step instead, which is what a real desk
+  // did too.
+  win.style.setProperty("--cascade", String(folders().length % 6));
+  win.show();
+  raise(win);
+
+  // show() does not move focus the way showModal() does, so a keyboard
+  // visitor would still be standing on the icon behind the window they
+  // just opened.
+  win.querySelector<HTMLElement>(".win-files .icon, .win-bar a, .win-bar button")?.focus();
+}
+
+// Clicking anywhere in a window brings it forward. The drag handler
+// already does this when a window is picked up by its bar, but a click
+// in the BODY bails out of that handler before it gets there — and a
+// window you have to grab by the title bar to see all of is a window
+// that feels broken.
+document.querySelectorAll<HTMLDialogElement>(".win-folder").forEach((win) => {
+  win.addEventListener("pointerdown", (): void => { if (win.open) raise(win); });
+});
+
+// Escape closes the front one. A modal dialog does this itself; a
+// show()n one does not, so without this the only way out is the ✕.
+document.addEventListener("keydown", (e: KeyboardEvent): void => {
+  if (e.key !== "Escape") return;
+  const win = front();
+  if (win === null) return;
+  // Not while a film or the contact form is open on top of it: those are
+  // modal, the browser is already closing them on this same Escape, and
+  // taking a folder window with it loses something the visitor did not
+  // ask to lose. Their own dialog is the event's target; a folder
+  // window's is not.
+  const inside = e.target instanceof Element ? e.target.closest("dialog") : null;
+  if (inside !== null && inside !== win) return;
+  win.close();
 });
 
 /** A link to #something that turns out to be a <dialog> opens it.
