@@ -36,7 +36,7 @@ nav_extra = [
   { key = "nav_contact", url = "#contact" },
 ]
 
-# Bottom right of every page. One line per place she is — drop the line
+# Bottom centre of every page. One line per place she is — drop the line
 # and the icon goes with it.
 #
 # TWO files per service, and neither of them ours. The marks are the

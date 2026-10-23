@@ -180,11 +180,10 @@ setTimeout(function(){d.classList.remove("booting")},6000)})(document.documentEl
   </div>
 </dialog>
 
-{# Bottom left on every page, bottom right on every page. Two corners,
-   two owners: the engine is credited on the left, she is reachable on
-   the right. The credit moved here from the right to make room, which
-   licence §4 allows — it asks for visible and discreet, not for a
-   particular corner. #}
+{# Two things along the bottom of every page: the credit in the right
+   corner, and the dock in the centre. Centre is where she asked for it,
+   and it leaves the credit the corner licence §4 has always been happy
+   with. #}
 <footer class="credit">
   <a href="{{ config.extra.author_url }}" rel="author">site by {{ config.extra.author }}</a>
   {% if config.extra.studio %}<span class="credit-studio">{{ config.extra.studio }}</span>{% endif %}
@@ -198,9 +197,9 @@ setTimeout(function(){d.classList.remove("booting")},6000)})(document.documentEl
    ponytail: six files on every page instead of three, ~45KB. If that
    ever matters, the lever is per-template, not here.
 
-   The marks are NOT square — YouTube's is 1255x1075 — so the height is
-   set and the width follows. Stretching one to a square would distort
-   it, which is the one thing all three owners forbid outright. #}
+   The marks do not share an aspect ratio — YouTube's is 1255x1075 — so
+   they are given one square box each and scaled to fit inside it. Equal
+   boxes, untouched artwork; see "the dock" in site.css. #}
 {% if config.extra.social %}
 <nav class="dock" aria-label="{{ trans(key='social_label', lang=lang) }}">
   {% for s in config.extra.social %}
@@ -209,7 +208,10 @@ setTimeout(function(){d.classList.remove("booting")},6000)})(document.documentEl
      hide that img — display:none takes the element out of the
      accessibility tree, and a cream page would be left with three links
      called nothing. #}
-  <a href="{{ s.url }}" target="_blank" rel="noopener noreferrer me"
+  {# The name is also the class, because the three marks are not sized
+     alike — each file frames its artwork differently, so the size that
+     makes them read as equal is per-mark. See "the dock" in site.css. #}
+  <a class="{{ s.name }}" href="{{ s.url }}" target="_blank" rel="noopener noreferrer me"
      aria-label="{{ s.name }}" title="{{ s.name }}">
     <img class="on-photo" src="{{ get_url(path=s.on_photo) }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
     <img class="on-paper" src="{{ get_url(path=s.on_paper) }}" alt="" aria-hidden="true" loading="lazy" decoding="async">
