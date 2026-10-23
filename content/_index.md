@@ -10,10 +10,12 @@ wallpaper = "img/wall-home.jpg"
 items = [
   { name = "about me.txt", icon = "img/icons/photo.svg", window = "about",   x = 28, y = 26 },
 
-  # Elsewhere. Any item with an http(s) url becomes a shortcut that opens
-  # in a new tab. Change the url, change where it goes — nothing else.
-  { name = "instagram", icon = "img/icons/shortcut.svg", url = "https://instagram.com/", x = 52, y = 30 },
-  { name = "youtube",   icon = "img/icons/shortcut.svg", url = "https://youtube.com/",   x = 52, y = 58 },
+  # Elsewhere lives in the dock, bottom right of every page — see
+  # `social` in config.toml. It used to be two desk icons here, which put
+  # it on the home desk and nowhere else.
+  #
+  # The mechanism stays: any item with an http(s) url becomes a shortcut
+  # that opens in a new tab.
   { name = "contact", icon = "img/icons/window.svg", window = "contact", x = 30, y = 72 },
 ]
 +++
