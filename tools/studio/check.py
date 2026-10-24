@@ -275,6 +275,24 @@ def serve() -> None:
               "127.0.0.1:{}".format(port + 1) not in framed and ":1111" not in framed)
         check("the framed page is a real desk, with real icons",
               'data-vt="da"' in framed)
+
+        # HEADERS A BROWSER OBEYS AND curl IGNORES. The panel sent
+        # X-Frame-Options: DENY on everything, as a blanket precaution —
+        # including the proxied site, whose entire job is to be framed.
+        # Every request still answered 200, so nothing here noticed;
+        # Firefox refused the frame and said so.
+        head = urllib.request.urlopen(
+            "http://127.0.0.1:{}/site/".format(port), timeout=10).headers
+        xfo = (head.get("X-Frame-Options") or "").upper()
+        check("the site it proxies may actually be framed by the panel",
+              xfo in ("", "SAMEORIGIN"), "X-Frame-Options: " + (xfo or "(none)"))
+        csp = head.get("Content-Security-Policy") or ""
+        check("and no frame-ancestors policy forbids it either",
+              "frame-ancestors" not in csp, csp)
+        own = urllib.request.urlopen(
+            "http://127.0.0.1:{}/?t={}".format(port, token), timeout=10).headers
+        check("while the panel itself still refuses to be framed by others",
+              (own.get("X-Frame-Options") or "").upper() in ("SAMEORIGIN", "DENY"))
         inner = sorted({u for u in re.findall(r'(?:href|src)="(/site/[^"]+)"', framed)})
         broken = [u for u in inner if code_for_plain(port, u) != 200]
         check("everything the framed page asks for loads too", broken == [], str(broken[:3]))
