@@ -119,6 +119,7 @@ function kindOf(o) {
 }
 
 const all = () => {
+  if (!model) return [];
   const out = [];
   for (const d of model.desks) {
     out.push({ o: d, depth: d.path.split("/").length - 1 });
@@ -438,6 +439,25 @@ function mark(doc, icon) {
   if (icon) icon.classList.add("studio-chosen");
 }
 
+/* IN HERE, A CLICK EDITS. The page's own dynamics — a folder opening a
+ * window, a project opening a preview — belong to a visitor, and firing
+ * them while she is arranging a desk carries her away from the thing she
+ * just touched. Caught on the way down, before the site's own handler on
+ * the icon ever sees it.
+ *
+ * Armed once per document and guarded by a flag, because the frame is
+ * reloaded often and a second copy of this would be harmless but silly. */
+function arm(doc) {
+  if (doc.__studioArmed) return;
+  doc.__studioArmed = true;
+  doc.addEventListener("click", (e) => {
+    const icon = e.target.closest && e.target.closest("a.icon[data-vt]");
+    if (!icon) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }, true);
+}
+
 function hook() {
   let doc;
   try { doc = view.contentDocument; } catch (e) { return; }
@@ -448,6 +468,15 @@ function hook() {
     : "Cette page n'est pas un bureau — rien à déplacer ici.";
   if (!desk) return;
 
+  // FIRST, and before anything that can fail. This used to sit below the
+  // code that builds the slug map, which reads `model` — and `model` is
+  // null until the tree arrives. The first load therefore threw here and
+  // the suppression was never installed at all, so a click went straight
+  // through to the site and opened the window. Nothing that follows may
+  // be allowed to stop this being armed.
+  arm(doc);
+  if (!model) return;
+
   bySlug = new Map();
   for (const { o } of all()) {
     bySlug.set(o.path.replace(/^content\//, "").replace(/\//g, "-"), o.path);
@@ -457,18 +486,6 @@ function hook() {
     const slug = chosen.replace(/^content\//, "").replace(/\//g, "-");
     mark(doc, doc.querySelector(`a.icon[data-vt="${slug}"]`));
   }
-
-  // IN HERE, A CLICK EDITS. The page's own dynamics — a folder opening a
-  // window, a project opening a preview — are the visitor's, and firing
-  // them while she is arranging the desk carries her away from the thing
-  // she just touched. Captured and stopped before the site's own handler
-  // ever sees it; double-click is how she goes in on purpose.
-  doc.addEventListener("click", (e) => {
-    const icon = e.target.closest && e.target.closest("a.icon[data-vt]");
-    if (!icon) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-  }, true);
 
   doc.querySelectorAll("a.icon[data-vt]").forEach((icon) => {
     const path = bySlug.get(icon.dataset.vt);
@@ -505,6 +522,9 @@ function hook() {
 }
 
 view.addEventListener("load", hook);
+// the frame's src is in the markup, so its first load can land BEFORE
+// this script runs. Hook what is already there.
+hook();
 
 /* ---- staying in step ---------------------------------------------- */
 
@@ -576,6 +596,7 @@ el("verify").addEventListener("click", async () => {
 // as a label rather than an editor, and the panel looked like a viewer.
 ask("/api/tree").then((out) => {
   if (out && typeof out.n === "number") seen = out.n;
+  hook();                      // now that there IS a model to hook with
   if (model && model.desks.length) select(model.desks[0]);
   tell("prêt");
 });
