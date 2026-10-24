@@ -299,6 +299,40 @@ def main() -> int:
               a.get("gallery") is True and b.get("gallery") is True)
         check("and it knows about its photographs", len(a.get("photographs", [])) > 0)
 
+    # WHAT THE PANEL OFFERS vs WHAT THE SERVER ALLOWS. The panel lights up
+    # a folder she can drop onto; if that disagrees with the verb she
+    # either aims at something that then refuses, or is denied a move that
+    # was always legal. Asked of every folder in the real tree.
+    import shutil as _sh
+    disagreed = []
+    for d in got["desks"]:
+        probe = pathlib.Path(tempfile.mkdtemp(prefix="studio-rx-"))
+        _sh.copytree(ROOT / "content", probe / "content")
+        verbs.ROOT, verbs.CONTENT = probe, probe / "content"
+        verbs.STUDIO, verbs.JOURNAL = probe / ".studio", probe / ".studio/journal.jsonl"
+        verbs.TRASH = probe / ".studio/trash"
+        # a probe that is not ALREADY in the destination, or the server
+        # refuses for a different reason entirely ("il y est déjà") and
+        # the comparison is answering the wrong question
+        probe_item = ("content/graphic-design/calendar"
+                      if d["path"] in ("content/da", "content/da/theodora")
+                      else "content/da/theodora")
+        if d["path"] in (probe_item, "content"):
+            _sh.rmtree(probe, ignore_errors=True); continue
+        allowed = True
+        try:
+            verbs.move(probe_item, d["path"])
+        except verbs.Refused:
+            allowed = False
+        if allowed != d["can_receive"]:
+            disagreed.append((d["path"], d["can_receive"], allowed))
+        _sh.rmtree(probe, ignore_errors=True)
+    verbs.ROOT, verbs.CONTENT = tmp, tmp / "content"
+    verbs.STUDIO, verbs.JOURNAL = tmp / ".studio", tmp / ".studio/journal.jsonl"
+    verbs.TRASH = tmp / ".studio/trash"
+    check("what the panel offers as a target is what the server accepts",
+          disagreed == [], str(disagreed))
+
     # nothing may be filed into a gallery: it renders photographs only
     for fn, args in ((verbs.new_project, ("content/pellicules", "Essai")),
                      (verbs.new_bureau, ("content/pellicules", "Essai")),

@@ -126,8 +126,9 @@ Tu peux :
 > il ouvre sa page — c'est normal, mets quelque chose dedans.
 - **regarder** une chose plutôt que le bureau où elle est posée : le
   bouton « regarder » au-dessus de la page
-- **ranger** : attrape une ligne dans la liste de gauche et pose-la sur un
-  dossier. Tout part avec — les deux langues, les photos, ce qu'il y a
+- **ranger** : attrape une chose **dans la page** et lâche-la sur un
+  dossier — il s'entoure de vert quand il peut la prendre. Ça marche
+  aussi depuis la liste de gauche. Tout part avec — les deux langues, les photos, ce qu'il y a
   dedans. Son adresse change.
 - **jeter** : le bouton rouge en bas à droite. Annuler la ramène.
 - **un film** : dépose la vidéo sur « le film », et une image sur
