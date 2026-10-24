@@ -35,6 +35,7 @@ PLAN: list[tuple[str, str, int, int]] = [
     ("static/img/wall-home.jpg",       "bureau-home",   2000, 1125),
     ("static/img/wall-da.jpg",         "bureau-da",     2000, 1125),
     ("static/img/wall-graphic.jpg",    "bureau-gd",     2000, 1125),
+    ("static/img/wall-travail.jpg",    "bureau-atelier", 2000, 1125),
 ]
 
 # ---- pellicules: varied proportions, because that is what makes a
@@ -58,11 +59,18 @@ _PROJECTS = [
     "graphic-design/logofolio/wordmarks", "da/theodora",
     "da/confidence-glow", "da/maison-cosette/jojo",
     "da/maison-cosette/lookbook",
+    "travail-selectionne/nocturne", "travail-selectionne/vitrine-hiver",
+    "travail-selectionne/papier-calque",
 ]
 # A seed draws whatever it draws. Where the draw did not suit the page
 # it sits on, the seed is chosen by hand here instead.
 RESEEDED = {
     "content/graphic-design/atelier-mirabelle/terrasses/01.jpg": "terrasses-01",
+    # the first draw carried an airline's livery on a tail fin
+    "content/travail-selectionne/nocturne/01.jpg": "nocturne-01",
+    # first draw: a sportswear logo on a shoe, over a rooftop drop.
+    # second: an identifiable face, which no other placeholder here has.
+    "content/travail-selectionne/vitrine-hiver/01.jpg": "vitrine-03",
 }
 
 for _p in _PROJECTS:
