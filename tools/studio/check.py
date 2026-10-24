@@ -278,6 +278,38 @@ def main() -> int:
     say = refused(verbs.add_image, film, "photo.heic", pixels)
     check("and so is an iPhone .heic", "JPEG" in say, say)
 
+    # ---- a gallery is a gallery, however you arrive at it ----------
+    import json as _json, subprocess as _sub
+    got = _json.loads(_sub.run([sys.executable, "tools/studio/model.py"], cwd=ROOT,
+                               capture_output=True, text=True).stdout)
+    as_child = [o for d in got["desks"] for o in d["on"]
+                if o["path"] == "content/pellicules"]
+    as_desk = [d for d in got["desks"] if d["path"] == "content/pellicules"]
+    check("the gallery is described both as a child and as a desk",
+          len(as_child) == 1 and len(as_desk) == 1)
+    if as_child and as_desk:
+        a, b = as_child[0], as_desk[0]
+        same = all(a.get(k) == b.get(k)
+                   for k in ("gallery", "depth", "opens_as", "empty", "holds",
+                             "photographs", "x", "y", "icon"))
+        check("and the two descriptions agree on every fact", same,
+              str({k: (a.get(k), b.get(k)) for k in
+                   ("gallery", "depth", "opens_as", "empty", "holds")}))
+        check("whichever way she reaches it, it knows it is a gallery",
+              a.get("gallery") is True and b.get("gallery") is True)
+        check("and it knows about its photographs", len(a.get("photographs", [])) > 0)
+
+    # nothing may be filed into a gallery: it renders photographs only
+    for fn, args in ((verbs.new_project, ("content/pellicules", "Essai")),
+                     (verbs.new_bureau, ("content/pellicules", "Essai")),
+                     (verbs.move, ("content/da/theodora", "content/pellicules"))):
+        try:
+            fn(*args)
+            check("a gallery refuses to be filed into (%s)" % fn.__name__, False)
+        except verbs.Refused as exc:
+            check("a gallery refuses to be filed into (%s)" % fn.__name__,
+                  "galerie" in str(exc), str(exc))
+
     # ---- moving and throwing away, the two Finder trips -------------
     verbs.move("content/da/theodora", "content/graphic-design")
     check("a project moves whole, into another bureau",

@@ -277,6 +277,12 @@ Une série faite en une nuit, à la lumière des phares.
 
 ### La page pellicules
 
+Dans le panneau, choisis-la et tu vois toutes ses photos : tu peux les
+réordonner, en jeter, en déposer de nouvelles. Elle n'a pas de fond
+d'écran — c'est une galerie, pas un bureau — et on ne peut rien ranger
+dedans à part des photos.
+
+
 Celle-là n'est pas un bureau : c'est une galerie. Dépose tes photos à
 côté de son `_index.md` et elles apparaissent, en cinq colonnes. Pas de
 `index.md` à écrire, pas de dossier par photo.

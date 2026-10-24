@@ -1152,6 +1152,34 @@ do. Every verb is journalled to `.studio/` with the previous text, so
 **Annuler** takes it back; a deleted photograph goes to `.studio/trash/`
 rather than being unlinked. `.studio/` is git-ignored.
 
+#### A gallery, and why it was inconsistent
+
+A bureau appears **twice** in the model: once as a child of the bureau it
+sits on, and once as a desk in its own right. Those were two different
+objects, and only the desk one knew whether it was a gallery, how deep it
+sat, or what a click would do.
+
+So reaching `pellicules` one way gave something that did not know it was
+a gallery — and the panel hid its twelve photographs — while reaching the
+same folder another way showed them. The inconsistency was not in the
+panel's rules; it was being handed two descriptions of one thing.
+
+`model.tree()` now merges the computed facts onto the child row, so a
+folder has **one set of facts** however it is reached. `check.py` compares
+the two descriptions field by field.
+
+What a gallery is, once it knows what it is:
+
+| | |
+|---|---|
+| its photographs | listed, reorderable, removable, and droppable — the same verbs as anywhere |
+| its order | filename order, which is what the page renders |
+| a wallpaper | **not offered** — a gallery ignores one, and `look.py` flags a declared one as a line that does nothing |
+| filing anything into it | **refused** — a gallery renders photographs and nothing else, so a project put there would be built and never shown |
+
+That last one was possible before and silent: the verb allowed it because
+the folder has an `_index.md`, and the result would have been invisible.
+
 #### Inside the panel, a click edits
 
 The framed page is the real site, so it carries the real dynamics: a

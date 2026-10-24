@@ -159,7 +159,29 @@ def tree() -> dict:
         d["depth"] = 0 if rel == "." else len(rel.split("/"))
         d["opens_as"] = opens_as(d, d["depth"])
         d["empty"] = not d["on"]
+        d["holds"] = len(d["on"])
         desks.append(d)
+
+    # ONE FOLDER, ONE SET OF FACTS.
+    #
+    # A bureau appears twice: once as a child of the bureau it sits on,
+    # and once as a desk in its own right. Those were two different
+    # objects, and only the desk one knew whether it was a gallery, how
+    # deep it sat, or what a click would do.
+    #
+    # So choosing `pellicules` in the list gave something that did not
+    # know it was a gallery, and the panel hid its twelve photographs —
+    # while arriving at the same folder another way showed them. The
+    # inconsistency was not in the panel's rules but in it being handed
+    # two different descriptions of one thing.
+    known = {d["path"]: d for d in desks}
+    for d in desks:
+        for child in d["on"]:
+            k = known.get(child["path"])
+            if k is None:
+                continue                      # a project: not a desk anywhere
+            for field in ("gallery", "depth", "opens_as", "empty", "holds"):
+                child[field] = k[field]
     return {"desks": desks}
 
 

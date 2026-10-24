@@ -3,7 +3,7 @@ title = "film"
 template = "gallery.html"
 
 [extra]
-x = 77
-y = 26
+x = 79
+y = 27
 icon = "img/icons/folder-slate.svg"
 +++
