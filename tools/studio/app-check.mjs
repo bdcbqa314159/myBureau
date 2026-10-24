@@ -48,6 +48,18 @@ const node = (id = "") => ({
 // hand goes stale the moment an element is renamed, and then this check
 // fails for the wrong reason — or worse, passes while the real page is
 // missing something the script reaches for.
+// A stand-in for the page inside the frame. It exists so the check can
+// ask the question that was never asked: when the panel hooks the frame
+// BEFORE the tree has arrived — which is what happens on the very first
+// load — does it still stop a click reaching the site?
+const frameDoc = {
+  heard: [],
+  addEventListener(kind) { this.heard.push(kind); },
+  querySelector: (s) => (s === ".desk" ? {} : null),
+  querySelectorAll: () => [],
+  getElementById: () => null,
+};
+
 const markup = readFileSync(new URL("./app.html", import.meta.url), "utf8");
 const ids = [...markup.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
 const byId = new Map(ids.map((id) => [id, node(id)]));
@@ -104,6 +116,8 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 
+byId.get("view").contentDocument = frameDoc;
+
 const code = readFileSync(new URL("./app.js", import.meta.url), "utf8");
 let loaded = true;
 let why = "";
@@ -119,6 +133,13 @@ check("every element it reaches for exists in app.html", missing.length === 0,
   "app.js wants #" + missing.join(", #"));
 
 if (loaded) {
+  // This is the one that was missing. The suppression used to sit below
+  // code that reads `model`, which is null on the first load — so it
+  // threw before arming, and a click went straight through to the site
+  // and opened the window.
+  check("the frame is disarmed on the FIRST load, before any tree arrives",
+    frameDoc.heard.includes("click"), JSON.stringify(frameDoc.heard));
+
   check("it carries the token out of the address bar",
     fetched.length > 0 && String(fetched[0]).includes("t=TESTTOKEN"),
     JSON.stringify(fetched));
