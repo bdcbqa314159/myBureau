@@ -2,8 +2,6 @@
 title = "grocery list.png"
 
 [extra]
-# named like a picture, but it is a project with a page of its own
-opens = "page"
 x = 64
 y = 40
 +++

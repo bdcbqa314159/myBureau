@@ -103,23 +103,23 @@
    this desk's own, and each of those folders'. Nothing deeper, because
    a folder inside a window navigates rather than opening another window.
 
-   That is also what keeps this honest. A window has to exist on the page
-   whose icon points at it, or the click does nothing at all and the build
-   is perfectly happy. _icon.html decides what an icon opens; these loops
-   decide what gets built; the two have to agree, and there are no macros
-   in this engine to share the rule between them. So they are checked
-   against each other instead: "no data-window without a dialog" is
-   asserted on every case in tools/content-check.py.
+   Every project gets _film.html and _preview.html included, and EACH OF
+   THOSE decides whether it has anything to render — a film only where
+   there is a video, a preview only where there is a picture and nobody
+   asked for the page instead. The loops here carry no rule of their own,
+   so there is one fewer place for it to drift.
+
+   What is left to keep honest is _icon.html, which has to reach the same
+   conclusion about the same folder to point at a window that exists. No
+   macros in this engine to share it, so the two are checked against each
+   other: "no data-window without a dialog" is asserted on every case in
+   tools/content-check.py. A click that does nothing builds perfectly.
    ------------------------------------------------------------------ #}
 
 {# this desk's own projects #}
 {% for p in section.pages %}
   {% set_global ff = p %}{% include "_film.html" %}
-  {% set_global fp = p %}
-  {% set_global shows = p.extra.opens | default(value="") %}
-  {% if shows == "preview" or (shows != "page" and p.title | split(pat=".") | last | lower in config.extra.image_types) %}
-    {% include "_preview.html" %}
-  {% endif %}
+  {% set_global fp = p %}{% include "_preview.html" %}
 {% endfor %}
 
 {# a window for each folder on this desk, and everything inside it that
@@ -133,11 +133,7 @@
     {% endif %}
     {% for r in one.pages %}
       {% set_global ff = r %}{% include "_film.html" %}
-      {% set_global fp = r %}
-      {% set_global shows = r.extra.opens | default(value="") %}
-      {% if shows == "preview" or (shows != "page" and r.title | split(pat=".") | last | lower in config.extra.image_types) %}
-        {% include "_preview.html" %}
-      {% endif %}
+      {% set_global fp = r %}{% include "_preview.html" %}
     {% endfor %}
   {% endfor %}
 {% endif %}

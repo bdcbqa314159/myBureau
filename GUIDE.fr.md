@@ -138,21 +138,26 @@ title = "mon projet.jpg"
 +++
 ```
 
-> **La fin du titre décide de deux choses** : l'icône, et ce qui se passe
-> quand on clique dessus. C'est la seule règle à retenir.
->
-> | tu écris | l'icône | un clic |
-> |---|---|---|
-> | `mon projet.jpg` `.png` `.jpeg` | une photo | ouvre un **aperçu** sur le bureau, comme la barre d'espace sur un Mac |
-> | `mon film.mov` `.mp4` | une pellicule | ouvre le **film** sur le bureau, avec ton texte à côté |
-> | `mon projet.pdf`, ou rien du tout | un document | ouvre **sa propre page**, qui se déroule |
->
-> Un dossier qui contient une vidéo est un film, quel que soit son titre.
+> **La fin du titre décide de l'icône** : `.jpg` donne une photo, `.mov`
+> une pellicule, le reste un document. C'est tout ce qu'elle décide.
 
-#### Quand le titre ne dit pas ce que tu veux
+### Ce qui se passe quand on clique
 
-Un projet peut s'appeler `grocery list.png` et mériter quand même sa
-page à lui. Une ligne le dit :
+Une seule règle : **un clic montre la chose**, il ne t'emmène pas
+ailleurs. Un aperçu s'ouvre sur le bureau, comme la barre d'espace sur un
+Mac. Et dans le coin de la fenêtre, le bouton **⬜** ouvre la vraie page
+du projet, en grand, si tu veux aller plus loin.
+
+Deux exceptions, et elles tombent toutes seules :
+
+- un dossier qui contient une **vidéo** est un film : il s'ouvre comme un
+  film, avec ton texte à côté
+- un dossier **sans aucune image** n'a rien à montrer en aperçu : il va
+  directement à sa page
+
+#### Si un projet mérite sa page tout de suite
+
+Certains projets ne se regardent pas en petit. Une ligne le dit :
 
 ```
 +++
@@ -163,8 +168,7 @@ opens = "page"
 +++
 ```
 
-`opens = "page"` pour une page à soi, `opens = "preview"` pour un aperçu.
-Rien du tout, et c'est le titre qui décide.
+Rien du tout, et c'est l'aperçu qui s'ouvre.
 
 ### Écrire un texte de présentation
 
