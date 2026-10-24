@@ -425,6 +425,54 @@ def case_what_a_file_does(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_the_project_page_has_a_rhythm(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """One big thing, then quieter ones — and never a broken container.
+
+    The pairs block is opened and closed inside a loop with a flag,
+    because this template engine has no macros. A flag that is set and
+    never cleared leaves an unclosed <div>, which browsers paper over and
+    nobody notices until a layout goes strange three pages later.
+    """
+    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    base = d / "content" / "da"
+    for name, n in (("une-seule", 1), ("quatre", 4), ("aucune", 0)):
+        q = base / name
+        q.mkdir()
+        (q / "index.md").write_text(FRONT.format(title=f"{name}.jpg", extra=""))
+        for i in range(1, n + 1):
+            (q / f"{i:02d}.jpg").write_bytes(photo)
+    ok, log = build(d)
+
+    def main_of(rel: str) -> str:
+        m = re.search(r'<main class="proj".*?</main>', page(d, rel), re.S)
+        return m.group(0) if m else ""
+
+    one, four, none = main_of("da/une-seule/index.html"), main_of("da/quatre/index.html"), main_of("da/aucune/index.html")
+
+    def balanced(s: str) -> bool:
+        return len(re.findall(r"<div\b", s)) == len(re.findall(r"</div>", s))
+
+    return [
+        ("builds", ok),
+        ("the first photograph opens the page",
+         four.count('class="proj-open"') == 1),
+        ("the rest sit in pairs", four.count('class="proj-pairs"') == 1
+                                  and four.count('class="proj-fig"') == 3),
+        ("one photograph gets an opener and no empty pairs block",
+         one.count('class="proj-open"') == 1 and 'proj-pairs' not in one),
+        ("the pairs container is closed on every shape of project",
+         all(balanced(s) for s in (one, four, none))),
+        ("a project with no photographs still renders its text",
+         "Un texte." in none),
+        ("the opener is the one image fetched eagerly",
+         four.count('fetchpriority="high"') == 1),
+        ("the paired images ask for half the page, not all of it",
+         'sizes="(max-width: 52rem) 100vw, 44vw"' in four),
+        ("every photograph still carries its real proportions",
+         len(re.findall(r'<img[^>]*width="\d+" height="\d+"', four)) == 4),
+    ]
+
+
 def case_icon_is_the_work(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A project wears its own first photograph.
 
@@ -514,6 +562,7 @@ CASES = [
     ("a folder inside a bureau opens as a window", case_second_level_window),
     ("a folder three levels down", case_three_deep),
     ("what a file does when you click it", case_what_a_file_does),
+    ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film opened from inside a folder window", case_film_in_a_folder),
 ]

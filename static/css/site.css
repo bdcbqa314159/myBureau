@@ -720,8 +720,49 @@ body.project .bar { color: var(--ink); text-shadow: none; }
   line-height: var(--lh-text); letter-spacing: var(--tracking-text);
 }
 .proj-intro p + p { margin-top: 1em; }
-.proj-fig { margin-top: clamp(3rem, 7vw, 7rem); }
-.proj-fig img { width: 100%; }
+
+/* ---- the opener ---------------------------------------------------
+   The first photograph carries the page, so it gets the full width —
+   and a CEILING, because "full width" on a portrait photograph is four
+   screens tall on a laptop and the visitor never reaches the second
+   image. Bounded by height and centred rather than cropped: a portfolio
+   does not get to cut someone's picture to fit a layout. */
+.proj-open { margin-top: clamp(3rem, 7vw, 7rem); }
+.proj-open img {
+  display: block;
+  width: auto; max-width: 100%;
+  max-height: 92vh;
+  margin-inline: auto;
+}
+
+/* ---- and then they breathe ----------------------------------------
+   Everything after the opener sits two across with cream around it. The
+   change of rhythm is the point: one big thing, then quieter ones, which
+   is what the prototype does on its second screen and what stops a
+   project reading as a pile of images all at one size.
+
+   A row left holding a single photograph is not a bug. It sits in its
+   column with the space beside it, which reads as deliberate — far
+   better than stretching one image to twice the size of its neighbours
+   to fill a gap. */
+.proj-pairs {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: clamp(2rem, 6vw, 7rem);
+  padding-inline: clamp(1.5rem, 8vw, 9rem);
+  margin-top: clamp(3rem, 8vw, 8rem);
+  align-items: start;
+}
+.proj-fig { margin: 0; }
+.proj-fig img { display: block; width: 100%; height: auto; }
+
+/* One column on a phone, where two of anything is two of nothing. */
+@media (max-width: 52rem) {
+  .proj-pairs {
+    grid-template-columns: 1fr;
+    padding-inline: var(--pad);
+    gap: clamp(2rem, 9vw, 4rem);
+  }
+}
 .proj-back {
   display: inline-block; margin: clamp(3rem, 6vw, 6rem) var(--pad);
   font-size: var(--f-2); font-weight: var(--w-bold); text-decoration: none;

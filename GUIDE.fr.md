@@ -126,6 +126,15 @@ dossier de projet → **Dupliquer** (⌘-D), puis :
 C'est tout. Le projet apparaît sur le bureau et a sa page. Les images
 s'affichent dans l'ordre de leur nom — `01.jpg`, `02.jpg`, `03.jpg`.
 
+> **L'ordre fait la mise en page.** La première image ouvre la page en
+> grand, toute la largeur. Les suivantes se rangent deux par deux, avec
+> de l'air autour. Pour changer laquelle ouvre la page, renomme-la :
+> celle qui vient en premier dans l'ordre des noms gagne.
+>
+> Une image verticale n'est jamais coupée — elle est simplement limitée
+> en hauteur pour qu'on voie la suite de la page sans faire défiler
+> pendant dix secondes.
+
 > **Pourquoi dupliquer plutôt que créer.** Un fichier créé de zéro dans
 > TextEdit arrive en texte enrichi et s'enregistre en `index.md.txt` —
 > dans les deux cas le dossier n'apparaît pas du tout sur le site, sans
