@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -199,6 +200,13 @@ def serve() -> None:
                 headers=headers or {})
             return urllib.request.urlopen(req, timeout=10)
 
+        def code_for_plain(port_, path):
+            try:
+                return urllib.request.urlopen(
+                    "http://127.0.0.1:{}{}".format(port_, path), timeout=10).getcode()
+            except urllib.error.HTTPError as e:
+                return e.code
+
         def code_for(path, tok, headers=None):
             try:
                 return get(path, tok, headers).getcode()
@@ -216,6 +224,31 @@ def serve() -> None:
               len(tree["desks"]) == len(json.loads(
                   subprocess.run([sys.executable, "tools/studio/model.py"], cwd=tmp,
                                  capture_output=True, text=True).stdout)["desks"]))
+
+        # THE PAGE'S OWN SUBRESOURCES, asked for the way a browser asks:
+        # exactly the url written in the markup, with nothing appended.
+        # This is the check that was missing. The suite asserted
+        # "/app.js?t=<token>" and passed, while the browser asked for
+        # "/app.js" and got 403 — no stylesheet, no script, dead buttons.
+        # Never test the url you invented; test the one the page uses.
+        page = get("/").read().decode()
+        refs = sorted({u for u in re.findall(r'(?:href|src)="([^"]+)"', page)
+                       if not u.startswith("http")})
+        check("the page references something at all", len(refs) >= 3)
+        dead = []
+        for u in refs:
+            req = urllib.request.Request("http://127.0.0.1:{}{}".format(port, u))
+            try:
+                if urllib.request.urlopen(req, timeout=10).getcode() != 200:
+                    dead.append(u)
+            except urllib.error.HTTPError as e:
+                dead.append("{} ({})".format(u, e.code))
+        check("every one of them loads with NO token, as the browser asks",
+              dead == [], str(dead))
+
+        # and the icons app.js names directly, which carry no token either
+        for u in ("/img/icons/folder.svg", "/img/icons/doc.svg"):
+            check("the panel can draw " + u, code_for_plain(port, u) == 200)
 
         check("no token, no answer", code_for("/api/tree", "wrong") == 403)
         check("the page itself refuses without the token",

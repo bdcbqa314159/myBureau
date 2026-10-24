@@ -32,6 +32,7 @@ jobs:
       - run: zola build
       - run: python3 tools/content-check.py  # the contract holds against real mistakes
       - run: python3 tools/studio/check.py   # the panel keeps its hands in content/
+      - run: node tools/studio/app-check.mjs # the panel wakes up and its buttons are wired
 
       # Zola copies every source photograph into the output, and again
       # into each translation. The pages serve the resized versions, so

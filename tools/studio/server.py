@@ -42,7 +42,10 @@ TOKEN = secrets.token_urlsafe(24)
 # dashboard re-reads when it changes. A counter rather than a description
 # of what changed: the dashboard re-reads everything anyway, and a
 # description would be a second opinion about the filesystem.
-STATE = {"n": 0, "look": ""}
+# preview.sh hunts for a free port, so the site is not always on 1111 and
+# the panel must be told rather than guessing. Guessing is how "Voir le
+# site" opens a dead tab on the second run of the day.
+STATE = {"n": 0, "look": "", "site": ""}
 
 
 def watch() -> None:
@@ -120,9 +123,13 @@ class Studio(http.server.BaseHTTPRequestHandler):
                 return self.send(403, b"Open the address the terminal printed.")
             return self.file(HERE / "app.html", "text/html; charset=utf-8")
 
-        if not self.allowed(q):
-            return self.oops(403, "no")
-
+        # ---- the shell, served without a token -----------------------
+        # A <link> and a <script> in the page cannot carry one: the browser
+        # asks for exactly the url written in the markup. These hold no
+        # content — the panel's own code, the site's stylesheet, and the
+        # drawn icons and pointers that are public on the live site anyway.
+        # The token still guards everything that reads or writes HER work:
+        # /api/* and /media/*.
         if path == "/app.css":
             return self.file(HERE / "app.css", "text/css; charset=utf-8")
         if path == "/app.js":
@@ -140,8 +147,13 @@ class Studio(http.server.BaseHTTPRequestHandler):
             except ValueError:
                 return self.oops(403, "no")
             return self.file(f, mimetypes.guess_type(f.name)[0] or "image/png")
+
+        # ---- everything past here is her work, or acts on it ---------
+        if not self.allowed(q):
+            return self.oops(403, "no")
         if path == "/api/tree":
-            body = json.dumps({"tree": model.tree(), "n": STATE["n"]},
+            body = json.dumps({"tree": model.tree(), "n": STATE["n"],
+                               "site": STATE["site"]},
                               ensure_ascii=False).encode("utf-8")
             return self.send(200, body, "application/json; charset=utf-8")
         if path == "/api/look":
@@ -238,6 +250,7 @@ class Studio(http.server.BaseHTTPRequestHandler):
 
 def main() -> int:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 1112
+    STATE["site"] = sys.argv[2] if len(sys.argv) > 2 else "http://127.0.0.1:1111/"
     threading.Thread(target=watch, daemon=True).start()
     srv = http.server.ThreadingHTTPServer(("127.0.0.1", port), Studio)
     srv.daemon_threads = True

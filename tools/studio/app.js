@@ -14,6 +14,7 @@ const el = (id) => document.getElementById(id);
 const map = el("map"), well = el("well"), which = el("which");
 const lamp = el("lamp"), says = el("says"), health = el("health");
 
+let site = "";        // where the site is being served, per the server
 let tree = null;      // what the server last told us
 let deskPath = null;  // which desk is on screen
 let pick = null;      // which project is in the well
@@ -28,6 +29,7 @@ async function ask(path, opts) {
     const out = await r.json();
     if (!r.ok) { lamp.classList.add("bad"); tell(out.error || "refusé"); return null; }
     lamp.classList.remove("bad");
+    if (out.site) site = out.site;
     if (out.tree) { tree = out.tree; draw(); }
     return out;
   } catch (e) { lamp.classList.add("bad"); tell("le panneau a perdu le serveur"); return null; }
@@ -213,17 +215,22 @@ well.addEventListener("drop", async (e) => {
     const out = await ask(
       `/api/upload?into=${encodeURIComponent(it.path)}&name=${encodeURIComponent(f.name)}`,
       { method: "POST", body: await f.arrayBuffer() });
-    tell(out ? `${f.name} → ${out.did.named}` : `${f.name} refusée`);
+    tell(out ? `${f.name} → ${(out.did && out.did.named) || "ajoutée"}`
+             : `${f.name} refusée`);
   }
 });
 
 /* ---- the bar ------------------------------------------------------ */
 
 which.addEventListener("change", () => { deskPath = which.value; pick = null; draw(); showWell(); });
-el("site").addEventListener("click", () => window.open("http://127.0.0.1:1111/", "mybureau-site"));
+el("site").addEventListener("click", () =>
+  window.open(site || "http://127.0.0.1:1111/", "mybureau-site"));
 el("undo").addEventListener("click", async () => {
   const out = await act({ verb: "undo" });
-  if (out) { tell("annulé : " + out.did.undid); showWell(); }
+  // never reach blindly into the answer: an exception inside a click
+  // handler looks, from the outside, exactly like a button that does
+  // nothing at all
+  if (out) { tell("annulé : " + ((out.did && out.did.undid) || "")); showWell(); }
 });
 el("verify").addEventListener("click", async () => {
   const out = await ask("/api/look");
