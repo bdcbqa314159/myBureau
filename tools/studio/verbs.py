@@ -280,6 +280,40 @@ def add_image(item: str, name: str, data: bytes) -> dict:
     return {"named": dest.name}
 
 
+def set_wallpaper(item: str, name: str, data: bytes) -> dict:
+    """The photograph behind a bureau.
+
+    Dropped in as `wallpaper.<ext>` beside the `_index.md`, which is the
+    convention the engine already reads — one file serving every
+    language, and a sub-bureau inheriting it unless it has its own. Any
+    wallpaper already there goes to the bin first, so two of them cannot
+    sit in one folder arguing about which is the ground.
+    """
+    d = inside(item)
+    if not any(d.glob("_index*.md")):
+        raise Refused("only a bureau has a wallpaper")
+    ext = pathlib.Path(name).suffix.lower()
+    if ext not in IMAGE:
+        raise Refused("a wallpaper is a picture")
+    if not data:
+        raise Refused("that file is empty")
+    moves = []
+    for old in sorted(d.iterdir()):
+        if old.is_file() and old.stem.lower() == "wallpaper":
+            TRASH.mkdir(parents=True, exist_ok=True)
+            bin_ = TRASH / str(int(time.time() * 1000))
+            bin_.mkdir(exist_ok=True)
+            shutil.move(str(old), str(bin_ / old.name))
+            moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
+    dest = d / ("wallpaper" + ext)
+    tmp = dest.with_name(dest.name + ".studio-tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, dest)
+    moves.append({"from": "", "to": rel(dest)})
+    record("set_wallpaper", [], moves)
+    return {"wallpaper": dest.name}
+
+
 def reorder(item: str, names: list) -> dict:
     """Renumber the photographs into the order given.
 

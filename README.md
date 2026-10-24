@@ -1073,7 +1073,8 @@ itself — one mechanism rather than two.
 #### What it may do
 
 A closed list in `tools/studio/verbs.py`, not a file manager: `place`,
-`retitle`, `set_body`, `add_image`, `reorder`, `remove_image`, `undo`.
+`retitle`, `set_body`, `add_image`, `reorder`, `remove_image`,
+`set_wallpaper`, `undo`.
 Two rules in that file are not negotiable, because both have bitten this
 project:
 

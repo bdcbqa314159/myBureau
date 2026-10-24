@@ -28,7 +28,11 @@ const node = (id = "") => ({
   id,
   style: {}, dataset: {}, classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
   innerHTML: "", textContent: "", value: "",
-  append() {}, insertAdjacentHTML() {}, setPointerCapture() {},
+  children: [],
+  append(...n) { this.children.push(...n); },
+  insertAdjacentHTML() {}, setPointerCapture() {},
+  setAttribute() {}, getAttribute: () => null, removeAttribute() {},
+  focus() {}, remove() {}, insertBefore() {},
   getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 450 }),
   hidden: false, src: "", contentDocument: null,
   querySelector: () => null,
@@ -67,10 +71,31 @@ const sandbox = {
   EventSource: class { constructor(u) { this.url = u; } },
   fetch: async (url) => {
     fetched.push(url);
-    // shaped like the real answer: /api/do always carries `did`
+    // Shaped like the REAL answer, desks and all. An empty tree let the
+    // panel "work" while drawing nothing, which is close to what he saw.
     return {
       ok: true,
-      json: async () => ({ did: { undid: "place" }, tree: { desks: [] }, n: 1 }),
+      json: async () => ({
+        did: { undid: "place" },
+        site: "http://127.0.0.1:1111/",
+        n: 1,
+        tree: {
+          desks: [{
+            kind: "desk", path: "content/da", name: "da", gallery: false,
+            titles: { fr: "DA", en: "art direction" },
+            bodies: { fr: "Un texte.", en: "Some text." },
+            x: null, y: null, opens: null, icon: null, wallpaper: "wallpaper.jpg",
+            photographs: [], video: null, languages: ["en", "fr"],
+            on: [{
+              kind: "project", path: "content/da/theodora", name: "theodora",
+              titles: { fr: "theodora.jpeg", en: "theodora.jpeg" },
+              bodies: { fr: "", en: "" },
+              x: "32", y: "12", opens: null, icon: null, wallpaper: null,
+              photographs: ["01.jpg", "02.jpg"], video: null, languages: ["en", "fr"],
+            }],
+          }],
+        },
+      }),
     };
   },
 };
@@ -104,6 +129,31 @@ if (loaded) {
   for (const id of buttons) {
     check(`the ${id} button has a handler`, (listeners.get(id + ":click") || []).length > 0);
   }
+  // The panel wakes up asynchronously: it asks for the tree and draws
+  // when the answer lands. Checking the DOM before that is checking an
+  // empty room and calling it empty.
+  await new Promise((r) => setTimeout(r, 30));
+
+  // ---- is there anything to EDIT? ----------------------------------
+  // The panel showed the site and a list, and the only place anything
+  // could be changed was hidden by a media query below 1152px. Nothing
+  // here noticed, because nothing here had ever asked.
+  const tree = byId.get("tree"), look = byId.get("look");
+  check("the list down the side actually gets rows", tree.children.length > 0);
+  check("something is chosen as soon as it opens, so the editor is not blank",
+    look.innerHTML.length > 0 && !/Choisis quelque chose/.test(look.innerHTML),
+    JSON.stringify(look.innerHTML.slice(0, 60)));
+  check("the editor offers a name to type into", /<input[^>]*data-title/.test(look.innerHTML));
+  check("and a text to write", /<textarea[^>]*data-body/.test(look.innerHTML));
+  check("one box per language, not one for both",
+    (look.innerHTML.match(/data-title="/g) || []).length >= 2);
+
+  const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
+  check("and no rule anywhere hides the editor",
+    !/\.look\s*\{[^}]*display:\s*none/.test(css)
+    && !/display:\s*none[^}]*\}\s*\/\*[^*]*look/.test(css),
+    "app.css still hides .look somewhere");
+
   const before = fetched.length;
   for (const fn of listeners.get("undo:click") || []) fn();
   await new Promise((r) => setTimeout(r, 20));
