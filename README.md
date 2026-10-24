@@ -1001,7 +1001,30 @@ zola build                # fails on broken templates, links and missing strings
 node tools/desk-check.mjs        # a remembered position survives a resize
 python3 tools/content-check.py   # the content contract against real mistakes
 ./tools/ready.sh                 # is this repo ready to be somebody's real site
+python3 tools/prune.py --check   # what the built site carries and never asks for
 ```
+
+### What gets deployed, and what does not
+
+Zola copies every photograph sitting beside a content file into the
+output — and again into each translated output, byte for byte. The
+templates serve what `resize_image` made, so those originals are shipped
+and never requested: **19.5 MB of 35.3 MB** on the demo, more than half.
+
+`tools/prune.py` drops them, in CI, between `zola build` and the artifact
+upload. It never runs on her machine; `preview.sh` does not call it, and
+it only ever touches `public/`, which is generated and git-ignored. The
+photographs stay in the repository, which is where they belong.
+
+Two things keep it from eating the site. Anything the image pipeline
+produced is **never a candidate** — so the worst a bad matcher can do is
+delete an original, not the visible site. And every media url the built
+pages ask for is resolved against the pruned tree afterwards: if one
+cannot be found it exits non-zero and nothing is uploaded.
+
+Matched by url **suffix**, not by parsing off a base_url prefix, so it
+keeps working the day the site moves from a github.io subpath to her own
+domain.
 
 `desk-check` runs the real `static/js/desk.js` in a Node vm with a
 stubbed document — so it is a smoke test that the script loads at all,

@@ -425,6 +425,61 @@ def case_what_a_file_does(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """The deploy step deletes files. This is the net under it.
+
+    tools/prune.py drops what the built site never requests. It runs
+    between the build and the upload, so a prune that takes one file too
+    many produces a site that builds, deploys, and is quietly missing a
+    photograph. Everything here is about what must SURVIVE.
+    """
+    ok, log = build(d)
+    pub = d / "public"
+    before = {p for p in pub.rglob("*") if p.is_file()}
+    html_before = {p: p.read_bytes() for p in pub.rglob("*.html")}
+
+    r = subprocess.run([sys.executable, "tools/prune.py"], cwd=d,
+                       capture_output=True, text=True)
+    after = {p for p in pub.rglob("*") if p.is_file()}
+
+    MEDIA = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif",
+             ".mp4", ".webm", ".mov", ".m4v"}
+    on_disk = {str(p.relative_to(pub)) for p in after}
+    broken = []
+    for p in list(pub.rglob("*.html")) + list(pub.rglob("*.css")):
+        txt = p.read_text(encoding="utf-8", errors="replace")
+        urls = set(re.findall(r'(?:src|href)="([^"]+)"', txt))
+        urls |= {m.group(1) for m in re.finditer(r'url\(\s*[\'"]?([^)\'"]+)', txt)}
+        for m in re.finditer(r'srcset="([^"]+)"', txt):
+            urls |= {b.strip().split(" ")[0] for b in m.group(1).split(",") if b.strip()}
+        for u in urls:
+            tail = u.split("?")[0]
+            if pathlib.PurePosixPath(tail).suffix.lower() not in MEDIA:
+                continue
+            if not any(tail.endswith("/" + x) or tail == x for x in on_disk):
+                broken.append(tail)
+
+    survived = lambda frag: any(frag in str(p) for p in after)
+    return [
+        ("builds", ok),
+        ("prune succeeds", r.returncode == 0),
+        ("it actually removed something", len(after) < len(before)),
+        ("every page is still there",
+         len([p for p in after if p.suffix == ".html"]) == len(html_before)),
+        ("and byte-for-byte unchanged",
+         all(p.exists() and p.read_bytes() == b for p, b in html_before.items())),
+        ("nothing the site asks for is missing", broken == []),
+        ("the cursors survived — they are referenced only from CSS",
+         survived("cursors/open.png") and survived("cursors/no.png")),
+        ("the brand marks survived", survived("brand/youtube-white.png")),
+        ("the images the pages actually load survived",
+         any("processed_images" in str(p) for p in after)),
+        ("what the image pipeline made was never even a candidate",
+         "generated file(s) never considered" in r.stdout
+         and " 0 generated" not in r.stdout),
+    ]
+
+
 def case_every_page_can_say_what_it_is(d: pathlib.Path) -> list[tuple[str, bool]]:
     """Headings and link names — the two things a screen reader needs.
 
@@ -659,6 +714,7 @@ CASES = [
     ("a folder inside a bureau opens as a window", case_second_level_window),
     ("a folder three levels down", case_three_deep),
     ("what a file does when you click it", case_what_a_file_does),
+    ("prune keeps what the site asks for", case_prune_keeps_what_the_site_asks_for),
     ("every page can say what it is", case_every_page_can_say_what_it_is),
     ("about me opens as a screen", case_about_is_a_screen),
     ("every photograph in the gallery opens", case_gallery_photographs_open),

@@ -32,6 +32,15 @@ jobs:
       - run: zola build
       - run: python3 tools/content-check.py  # the contract holds against real mistakes
 
+      # Zola copies every source photograph into the output, and again
+      # into each translation. The pages serve the resized versions, so
+      # those originals ship and are never requested — more than half the
+      # bytes on the demo. Dropped here, between the build and the
+      # upload, so the deployed site carries only what it asks for.
+      # Runs on pull requests too, where nothing is uploaded: a prune that
+      # goes wrong should fail in review, not on main.
+      - run: python3 tools/prune.py
+
       # only the real deploy publishes an artifact — a PR build that
       # uploaded one would contend with an in-flight deploy
       - uses: actions/upload-pages-artifact@v3
