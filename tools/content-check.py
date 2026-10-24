@@ -79,18 +79,36 @@ def case_no_icon(d: pathlib.Path) -> list[tuple[str, bool]]:
 
 
 def case_shouting_extension(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """PHOTO.JPG straight off a camera — capitals everywhere."""
+    """PHOTO.JPG straight off a camera — capitals everywhere.
+
+    Two paths have to be case-blind, not one: the FILE extension, which
+    now decides whether a picture becomes the project's icon, and the
+    TITLE extension, which still decides the drawn icon when a folder has
+    no picture at all.
+    """
     p = d / "content" / "da" / "criard"
     p.mkdir()
     (p / "index.md").write_text(FRONT.format(title="CRIARD.JPG", extra=""))
     shutil.copyfile(ROOT / "content/da/theodora/01.jpg", p / "GRANDE.JPG")
+    q = d / "content" / "da" / "criard-vide"
+    q.mkdir()
+    (q / "index.md").write_text(FRONT.format(title="VIDE.JPG", extra=""))
     ok, log = build(d)
     h = page(d, "da/criard/index.html")
+    desk = page(d, "da/index.html")
+
+    def img_of(slug: str) -> str:
+        m = re.search(r'<a class="icon[^"]*"[^>]*data-vt="' + re.escape(slug)
+                      + r'"[^>]*>\s*(<img[^>]*>)', desk, re.S)
+        return m.group(1) if m else ""
+
     return [
         ("builds", ok),
         ("the capitalised image is resized like any other", "processed_images" in h),
-        ("the title's capitalised extension still picks the photo icon",
-         "icons/photo.svg" in page(d, "da/index.html")),
+        ("GRANDE.JPG is recognised as a picture and becomes the icon",
+         "is-photo" in img_of("da-criard")),
+        ("with no picture at all, VIDE.JPG still picks the drawn photo icon",
+         "icons/photo.svg" in img_of("da-criard-vide")),
     ]
 
 
@@ -407,6 +425,51 @@ def case_what_a_file_does(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_icon_is_the_work(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A project wears its own first photograph.
+
+    The prototype has no generic icons anywhere — every one is the work.
+    Nothing should have to be drawn or named for that to be true, so the
+    first picture in the folder is the icon unless she says otherwise.
+    """
+    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    base = d / "content" / "da"
+    for name, files in (
+        ("par-defaut", ("01.jpg", "02.jpg")),
+        ("choisie", ("icon.png", "01.jpg")),
+        ("sans-image", ()),
+    ):
+        q = base / name
+        q.mkdir()
+        (q / "index.md").write_text(FRONT.format(title=f"{name}.jpg", extra=""))
+        for f in files:
+            (q / f).write_bytes(photo)
+    ok, log = build(d)
+    h = page(d, "da/index.html")
+
+    def img_of(slug: str) -> str:
+        m = re.search(r'<a class="icon[^"]*"[^>]*data-vt="' + re.escape(slug)
+                      + r'"[^>]*>\s*(<img[^>]*>)', h, re.S)
+        return m.group(1) if m else ""
+
+    first, chosen, bare = img_of("da-par-defaut"), img_of("da-choisie"), img_of("da-sans-image")
+    return [
+        ("builds", ok),
+        ("the first photograph becomes the icon",
+         "is-photo" in first and "/icons/" not in first),
+        ("it carries the real proportions, so nothing reflows",
+         bool(re.search(r'width="\d+" height="\d+"', first))
+         and 'width="160" height="160"' not in first),
+        ("an icon.* in the folder wins over it", "icon" in chosen and "is-photo" not in chosen),
+        ("that icon is not also shown among the project's photographs",
+         "icon.png" not in page(d, "da/choisie/index.html")),
+        ("a project with no images falls back to a drawn icon",
+         "/icons/" in bare and "is-photo" not in bare),
+        ("a folder still looks like a folder",
+         "/icons/folder" in img_of("da-maison-cosette")),
+    ]
+
+
 def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A video inside a folder, opened from the window rather than a desk.
 
@@ -451,6 +514,7 @@ CASES = [
     ("a folder inside a bureau opens as a window", case_second_level_window),
     ("a folder three levels down", case_three_deep),
     ("what a file does when you click it", case_what_a_file_does),
+    ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film opened from inside a folder window", case_film_in_a_folder),
 ]
 

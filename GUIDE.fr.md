@@ -138,8 +138,32 @@ title = "mon projet.jpg"
 +++
 ```
 
-> **La fin du titre décide de l'icône** : `.jpg` donne une photo, `.mov`
-> une pellicule, le reste un document. C'est tout ce qu'elle décide.
+### L'icône d'un projet, c'est le projet
+
+Tu n'as rien à faire : **l'icône d'un projet est sa première image.** Le
+calendrier montre le calendrier, la brochure montre sa couverture. Le
+bureau se remplit de ton travail et pas de petits dessins gris.
+
+C'est `01.jpg` qui sert d'icône — celle qui est la première dans l'ordre
+des noms. Pour en choisir une autre, mets dans le dossier un fichier
+appelé **`icon`** :
+
+```
+mon-projet/
+  icon.png        ← l'icône, et elle n'apparaît pas dans le projet
+  01.jpg
+  02.jpg
+  index.md
+```
+
+Une image nommée `icon` sert d'icône et **n'est jamais montrée** parmi
+les photos du projet. C'est aussi comme ça qu'on donne une texture à un
+dossier — le léopard, le croco — en mettant un `icon.png` à côté de son
+`_index.md`.
+
+> S'il n'y a aucune image dans le dossier, c'est la fin du titre qui
+> décide : `.jpg` donne une photo, `.mov` une pellicule, le reste un
+> document.
 
 ### Ce qui se passe quand on clique
 
