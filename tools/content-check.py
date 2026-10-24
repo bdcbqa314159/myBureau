@@ -425,6 +425,36 @@ def case_what_a_file_does(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_gallery_photographs_open(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Every photograph in the gallery opens, and opens its OWN window.
+
+    Two windows sharing an id, or a link pointing at one that was never
+    rendered, both build perfectly and both end in a click that does
+    nothing — and in a gallery that is every photograph after the first.
+    """
+    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    g = d / "content" / "pellicules"
+    # two names that slugify close to each other, plus one already there
+    (g / "Vue 13.JPG").write_bytes(photo)
+    (g / "vue-13.jpg").write_bytes(photo)
+    ok, log = build(d)
+    h = page(d, "pellicules/index.html")
+    links = re.findall(r'<a class="shot" href="#([^"]+)"', h)
+    ids = re.findall(r'<dialog[^>]*id="(shot-[^"]+)"', h)
+    imgs = len(re.findall(r'<a class="shot"[^>]*>\s*<img', h))
+    return [
+        ("builds", ok),
+        ("every photograph is a link", len(links) > 0 and imgs == len(links)),
+        ("every link has a window to open", set(links) <= set(ids)),
+        ("one window per photograph", len(ids) == len(links)),
+        ("no two photographs share a window id", len(ids) == len(set(ids))),
+        ("the large file is lazy, so a closed window costs nothing",
+         all('loading="lazy"' in m for m in
+             re.findall(r'<dialog[^>]*class="[^"]*win-shot[^"]*"[^>]*>.*?</dialog>', h, re.S))),
+        ("a capitalised extension is a photograph too", "Vue 13.JPG" in h),
+    ]
+
+
 def case_the_project_page_has_a_rhythm(d: pathlib.Path) -> list[tuple[str, bool]]:
     """One big thing, then quieter ones — and never a broken container.
 
@@ -562,6 +592,7 @@ CASES = [
     ("a folder inside a bureau opens as a window", case_second_level_window),
     ("a folder three levels down", case_three_deep),
     ("what a file does when you click it", case_what_a_file_does),
+    ("every photograph in the gallery opens", case_gallery_photographs_open),
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film opened from inside a folder window", case_film_in_a_folder),
