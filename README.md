@@ -150,27 +150,65 @@ image list and the navigation are all derived from it. Nothing else to edit.
 
 ### Icons
 
-You rarely need to set one. The extension in the **title** decides, the
-way a real desktop works:
+**A project's icon is its own first photograph.** `01.jpg` is already in
+the folder, so there is nothing to draw, name or configure — and the desk
+fills with the work rather than with grey symbols.
+
+Most explicit wins:
+
+1. a file named `icon.*` in the project folder — her artwork. It is the
+   icon and it is never shown among the project's photographs.
+2. `icon = "img/icons/folder-rust.svg"` in the front matter
+3. the first image in the folder
+4. the extension in the **title**, when the folder holds no image at all:
 
 | title ends in | icon |
 |---|---|
 | `.mov` `.mp4` `.m4v` `.avi` `.webm` | film strip |
 | `.jpg` `.png` `.gif` `.webp` `.tif` … | Polaroid |
 | anything else | document |
-| (it is a folder) | folder |
 
-So naming a project `june's cry.mov` gets you a film strip and
-`12 regards.pdf` gets you a document, with nothing to configure.
-
-To override, most explicit wins:
-
-1. a file named `icon.*` in the project folder — her artwork
-2. `icon = "img/icons/folder-rust.svg"` in the front matter
-3. the extension rule above
+A folder keeps its folder: one that looked like a photograph would stop
+reading as somewhere you can go into. Her textured folders are an
+`icon.png` beside the `_index.md`.
 
 Folders ship in four colourways — `folder.svg` (amber), `folder-rust`,
 `folder-olive`, `folder-slate`.
+
+### What a click does
+
+One rule, and two exceptions that fall out of it rather than being
+configured.
+
+> **A click shows you the thing.** It does not take you anywhere. The ⬜
+> in a window's title bar is the deliberate second step to the page.
+
+| you click | you get |
+|---|---|
+| a folder **on the home desk** | its own desk, its own wallpaper — a new page |
+| a folder **anywhere else** | a window on the desk it sits on, translucent, several at once |
+| a project with a **video** in it | the film window, text beside it, minimisable |
+| any other project | a **preview** window, modal, Escape closes it |
+| a project with **no image at all** | its page — there is nothing to preview |
+| a photograph in **pellicules** | that photograph, in a window |
+
+`opens = "page"` in a project's front matter skips the preview and goes
+straight to the page. It is the one override, and it does not apply to a
+film: a folder with a video in it is a film.
+
+One level of windows per desk. A folder inside a window navigates to its
+own desk, because this template engine has no macros and so nothing can
+render itself — there has to be a floor, and a floor that navigates is a
+floor that works. `tools/content-check.py` asserts there is never a
+`data-window` without a dialog to open, which is what keeps the icon
+template and the window templates agreeing.
+
+### Along the bottom
+
+`site by …` in the right corner (LICENSE §4), the social marks in the
+centre, on every page. The marks are their owners' trademarks, taken
+unmodified from each owner's own brand kit — `static/img/brand/SOURCES.md`
+names the exact asset behind every file and what may not be done to them.
 
 ### Regenerating the art
 
@@ -359,8 +397,13 @@ right, divided like an open book. The text is simply the body of
 
 **Minimised**, it stops being modal, shrinks to the corner, drops the
 text and keeps playing — so the bureau underneath is usable again and
-folders can still be dragged around while the film runs. Click the title
-bar to bring it back up. Closing it stops the sound.
+folders can still be dragged around while the film runs. The same button
+brings it back up; it is a toggle, and it says which way it goes. Closing
+it stops the sound.
+
+(The title bar does not restore it, and cannot: a window drags by its
+bar, a drag captures the pointer, and the capture retargets the click. A
+handler there never fires — see the comment in `src/desk.ts`.)
 
 The project page still exists, so without JavaScript the icon simply
 navigates there. Nothing is lost, it is just less fun.

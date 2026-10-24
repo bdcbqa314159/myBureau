@@ -707,6 +707,20 @@ img.will-fade.is-in { opacity: 1; }
    anyone using a keyboard or a screen reader. */
 .trap { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 
+/* Said, not shown. Every page needs to be able to announce what it is —
+   a desk has no visible heading and a project page carries its title in
+   the bandeau, so without this the whole site has no headings at all and
+   every page opens as an unlabelled wall.
+
+   clip-path rather than the old `left: -9999px` the honeypot above uses:
+   an off-screen element still occupies the layout and can widen the page,
+   and two of these live inside a desk that must never scroll. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  clip-path: inset(50%); overflow: hidden; white-space: nowrap;
+}
+
 .says:empty { display: none; }
 .says { margin-top: .5rem; font-weight: var(--w-bold); }
 .win-note { margin-top: .8rem; font-size: .82em; opacity: .7; line-height: 1.35; }
@@ -1026,3 +1040,6 @@ input, textarea { cursor: text; }
 /* It borrows the project page's cream surface; it only needs to be
    legible and to offer the way back. */
 .notfound .proj-intro { min-height: 60vh; display: grid; align-content: center; }
+/* It was a <p> and reads as one; it is an <h1> because it is the only
+   thing the page says. The semantics changed, the page did not. */
+.notfound h1 { font: inherit; margin: 0; }

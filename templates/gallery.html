@@ -8,6 +8,7 @@
    one page on the site that cross-faded while every other page grew out
    of the icon you clicked. #}
 <main class="grid" style="view-transition-name:vt-{{ section.path | slugify }}">
+  <h1 class="sr-only">{{ section.title }}</h1>
   {# Drop photos next to _index.md and they appear here.
 
      Each one is resized at build time and served as WebP — the originals
@@ -50,7 +51,14 @@
           nothing, and that is the right trade here: the grid is already
           showing every photograph at a size you can see. Enlarging is the
           enhancement, not the content. -#}
-      <a class="shot" href="#shot-{{ loop.index }}-{{ file | slugify }}">
+      {#- When she has written alt text the <img> names the link and there
+          is nothing to add. When she has not — which is every photograph
+          until she does — the link has NO accessible name at all, and a
+          screen reader reads twelve links called "link". The file name is
+          what the window's title bar shows, so it is what the link is
+          called. -#}
+      <a class="shot" href="#shot-{{ loop.index }}-{{ file | slugify }}"
+         {%- if alt == "" %} aria-label="{{ file }}"{% endif %}>
         <img src="{{ one.url }}"
              srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
              sizes="(max-width: 52rem) 50vw, 20vw"

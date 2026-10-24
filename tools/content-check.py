@@ -425,6 +425,44 @@ def case_what_a_file_does(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_every_page_can_say_what_it_is(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Headings and link names — the two things a screen reader needs.
+
+    Both were missing and neither showed: the site had no <h1> anywhere,
+    and every photograph in the gallery was a link called nothing. Nothing
+    looks wrong either way, which is exactly why it stayed broken.
+    """
+    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    g = d / "content" / "pellicules"
+    (g / "sans-alt.jpg").write_bytes(photo)
+    # one WITH alt text, to prove the label is not doubled up
+    # [extra.alt] is a sub-table of [extra], so it goes last, just before
+    # the closing fence. This file has no body at all.
+    idx = g / "_index.md"
+    txt = idx.read_text(encoding="utf-8").rstrip()
+    assert txt.endswith("+++"), "the gallery front matter is not shaped as expected"
+    idx.write_text(txt[: -3] + '[extra.alt]\n"01.jpg" = "Une description."\n+++\n',
+                   encoding="utf-8")
+    ok, log = build(d)
+    pages = list((d / "public").rglob("*.html"))
+    gal = page(d, "pellicules/index.html")
+    unnamed = [a for a in re.findall(r'<a\b[^>]*>(?:\s*<img[^>]*>\s*)*</a>', gal)
+               if "aria-label" not in a and not re.search(r'alt="[^"]+"', a)]
+    described = re.search(r'<a class="shot"[^>]*>\s*<img[^>]*alt="Une description\."', gal, re.S)
+    return [
+        ("builds", ok),
+        ("every page has an h1",
+         all(re.search(r"<h1\b", p.read_text(encoding='utf-8')) for p in pages)),
+        ("a project page's h1 is its title",
+         bool(re.search(r'<h1[^>]*>theodora\.jpeg</h1>', page(d, "da/theodora/index.html")))),
+        ("a desk's h1 is the bureau's name",
+         bool(re.search(r'<h1[^>]*>DA</h1>', page(d, "da/index.html")))),
+        ("no photograph in the gallery is a link called nothing", unnamed == []),
+        ("where she wrote alt text, the photograph speaks for itself",
+         bool(described) and 'aria-label' not in described.group(0)),
+    ]
+
+
 def case_about_is_a_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     """about me.txt opens at a size worth reading, and shows her words.
 
@@ -621,6 +659,7 @@ CASES = [
     ("a folder inside a bureau opens as a window", case_second_level_window),
     ("a folder three levels down", case_three_deep),
     ("what a file does when you click it", case_what_a_file_does),
+    ("every page can say what it is", case_every_page_can_say_what_it_is),
     ("about me opens as a screen", case_about_is_a_screen),
     ("every photograph in the gallery opens", case_gallery_photographs_open),
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
