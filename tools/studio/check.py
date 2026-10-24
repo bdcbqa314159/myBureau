@@ -336,6 +336,26 @@ def serve() -> None:
         broken = [u for u in inner if code_for_plain(port, u) != 200]
         check("everything the framed page asks for loads too", broken == [], str(broken[:3]))
 
+        # THE FEEDBACK LOOP. A verb's own write must not come back as
+        # news: the panel would reload the frame for a change it already
+        # has on screen, and land on zola's mid-rebuild 404 doing it.
+        n0 = json.loads(get("/api/tree").read())["n"]
+        post_do = urllib.request.Request(
+            "http://127.0.0.1:{}/api/do?t={}".format(port, token),
+            data=json.dumps({"verb": "place", "item": "content/da/theodora",
+                             "x": 66, "y": 44}).encode(),
+            headers={"Content-Type": "application/json"}, method="POST")
+        said = json.loads(urllib.request.urlopen(post_do, timeout=10).read())["n"]
+        check("a write moves the counter once", said == n0 + 1, "{} -> {}".format(n0, said))
+        time.sleep(1.2)                       # long enough for the watcher to look
+        later = json.loads(get("/api/tree").read())["n"]
+        check("and the watcher does not report it back as somebody else's",
+              later == said, "{} -> {}".format(said, later))
+        urllib.request.urlopen(urllib.request.Request(
+            "http://127.0.0.1:{}/api/do?t={}".format(port, token),
+            data=json.dumps({"verb": "undo"}).encode(),
+            headers={"Content-Type": "application/json"}, method="POST"), timeout=10)
+
         check("no token, no answer", code_for("/api/tree", "wrong") == 403)
         check("the page itself refuses without the token",
               code_for("/", "wrong") == 403)

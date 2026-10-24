@@ -16,6 +16,26 @@ const el = (id) => document.getElementById(id);
 const view = el("view"), tree = el("tree"), look = el("look");
 const lamp = el("lamp"), says = el("says"), health = el("health"), tip = el("tip");
 
+/* ---- the loop ------------------------------------------------------
+ * Measured on this machine: the panel writes a change in about 13 ms and
+ * zola takes about 1.3 SECONDS to rebuild. For three edits in four it
+ * answers 404 while it is working. So the frame must never be reloaded
+ * eagerly — it lands on the blank page — and never reloaded at all when
+ * what it would show is already on screen.
+ *
+ * `seen` is the state counter the server hands back. A change this panel
+ * made is accounted for at once; a bump past it means somebody else
+ * touched content/, which is the only thing worth reloading for.
+ */
+let seen = 0;
+let waiting = null;
+
+// Verbs whose effect is ALREADY on screen when they return. A drag is
+// the whole list today: the site's own desk.js moved the icon before the
+// write was even sent, so reloading would throw a correct view away to
+// fetch an identical one — and risk the 404 doing it.
+const NOTHING_TO_SEE = new Set(["place"]);
+
 let site = "";
 let model = null;
 let chosen = null;          // content path of the thing being inspected
@@ -37,10 +57,48 @@ async function ask(path, opts) {
     lamp.className = "lamp bad"; tell("le panneau a perdu le serveur"); return null;
   }
 }
-const act = (body) => ask("/api/do", {
-  method: "POST", headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(body),
-});
+async function act(body) {
+  const out = await ask("/api/do", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (out) {
+    if (typeof out.n === "number") seen = out.n;      // we know about this one
+    if (!NOTHING_TO_SEE.has(body.verb)) reframe();
+  }
+  return out;
+}
+
+/* Reload the frame — but only once things have settled, and only once the
+ * page is actually there. Debounced, so dropping four photographs is one
+ * reload and not four. */
+function reframe() {
+  clearTimeout(waiting);
+  waiting = setTimeout(async () => {
+    const url = view.src;
+    let was = 0;
+    try {
+      const d = view.contentDocument;
+      was = d ? (d.documentElement.scrollTop || d.body.scrollTop || 0) : 0;
+    } catch (e) { /* nothing to remember */ }
+    // wait for zola rather than race it: while it rebuilds it answers
+    // 404, and reloading into that is the blank flash
+    const until = Date.now() + 15000;
+    while (Date.now() < until) {
+      try { if ((await fetch(url, { cache: "no-store" })).ok) break; }
+      catch (e) { /* still coming up */ }
+      await new Promise((r) => setTimeout(r, 80));
+    }
+    view.addEventListener("load", function back() {
+      view.removeEventListener("load", back);
+      try {
+        const d = view.contentDocument;
+        if (d && was) { d.documentElement.scrollTop = was; d.body.scrollTop = was; }
+      } catch (e) { /* nothing to restore */ }
+    });
+    view.src = url;
+  }, 250);
+}
 
 /* ---- what kind of thing is this? --------------------------------- */
 /* The engine has more than folders and photographs, and the panel has to
@@ -263,11 +321,14 @@ view.addEventListener("load", hook);
 /* ---- staying in step ---------------------------------------------- */
 
 const stream = new EventSource(q("/api/events"));
-stream.onmessage = async () => {
+stream.onmessage = async (e) => {
+  let n = null;
+  try { n = JSON.parse(e.data).n; } catch (err) { /* keep going */ }
   await ask("/api/tree");
-  // the frame is a real page: let it rebuild, then re-attach
-  const here = view.src;
-  view.src = here;
+  // Only when somebody OTHER than this panel changed something — she
+  // edited a file in TextEdit, or placeholders were fetched. Our own
+  // writes were accounted for the moment the server answered.
+  if (n === null || n > seen) { if (n !== null) seen = n; reframe(); }
 };
 stream.onerror = () => { lamp.className = "lamp bad"; tell("connexion perdue — relance preview"); };
 
@@ -318,7 +379,8 @@ el("verify").addEventListener("click", async () => {
 
 // Open on something. An empty inspector saying "choose something" reads
 // as a label rather than an editor, and the panel looked like a viewer.
-ask("/api/tree").then(() => {
+ask("/api/tree").then((out) => {
+  if (out && typeof out.n === "number") seen = out.n;
   if (model && model.desks.length) select(model.desks[0]);
   tell("prêt");
 });

@@ -1067,8 +1067,34 @@ panel's address, `self` means the panel. A stylesheet still pointing at
 zola's port would be blocked by the site's own policy.
 
 The cost is zola's live-reload, whose socket no longer finds its way
-home. The panel's watcher notices content changing and reloads the frame
-itself — one mechanism rather than two.
+home. The panel reloads the frame itself — one mechanism rather than two,
+and one it can be careful with.
+
+#### The loop, measured
+
+The panel is not the slow part and never was:
+
+```
+the panel writes a change        ~13 ms
+zola rebuilds the site           ~1.3 s
+and answers 404 for part of it   3 edits in 4
+```
+
+Three rules fall out of those numbers:
+
+- **a drag reloads nothing.** The site's own `desk.js` moved the icon
+  before the write was sent, so the frame is already correct. Reloading
+  would throw a correct view away to fetch an identical one — and land in
+  the 404 while doing it. `NOTHING_TO_SEE` in `app.js` is that list.
+- **everything else waits rather than races.** The frame is reloaded only
+  once the page answers, so the blank flash cannot happen.
+- **reloads are debounced.** Four photographs dropped at once is one
+  reload.
+
+And the server does not report its own writes back: a verb leaves its
+fingerprint behind so the watcher does not announce, a moment later, a
+change the panel made itself and already has on screen. Without that the
+counter moved twice per edit and every careful rule above was defeated.
 
 #### What it may do
 
