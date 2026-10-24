@@ -425,6 +425,35 @@ def case_what_a_file_does(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_about_is_a_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """about me.txt opens at a size worth reading, and shows her words.
+
+    The text comes from the body of the home page's own content file. If
+    that ever stops being passed in, the window still opens, still looks
+    right, and is empty — which nobody notices until a visitor does.
+    """
+    home = d / "content" / "_index.md"
+    t = home.read_text(encoding="utf-8")
+    home.write_text(t.replace("Texte de présentation à venir.",
+                              "Je suis directrice artistique. MARQUEUR-ABOUT."))
+    ok, log = build(d)
+    h = page(d, "index.html")
+    win = re.search(r'<dialog class="win win-about" id="about">.*?</dialog>', h, re.S)
+    en = re.search(r'<dialog class="win win-about" id="about">.*?</dialog>',
+                   page(d, "en/index.html"), re.S)
+    return [
+        ("builds", ok),
+        ("it opens as a screen rather than a dialog box", bool(win)),
+        ("its body is the one that holds its size when the text is short",
+         bool(win) and "about-body" in win.group(0)),
+        ("the icon on the desk opens it", 'data-window="about"' in h),
+        ("her text is actually in it",
+         bool(win) and "MARQUEUR-ABOUT" in win.group(0)),
+        ("the English desk has its own, with the English text",
+         bool(en) and "MARQUEUR-ABOUT" not in en.group(0)),
+    ]
+
+
 def case_gallery_photographs_open(d: pathlib.Path) -> list[tuple[str, bool]]:
     """Every photograph in the gallery opens, and opens its OWN window.
 
@@ -592,6 +621,7 @@ CASES = [
     ("a folder inside a bureau opens as a window", case_second_level_window),
     ("a folder three levels down", case_three_deep),
     ("what a file does when you click it", case_what_a_file_does),
+    ("about me opens as a screen", case_about_is_a_screen),
     ("every photograph in the gallery opens", case_gallery_photographs_open),
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),

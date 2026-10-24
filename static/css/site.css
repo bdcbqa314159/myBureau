@@ -499,6 +499,32 @@ img.will-fade.is-in { opacity: 1; }
    is any.
    ==================================================================== */
 .win-preview { width: min(56rem, 94vw); }
+
+/* ====================================================================
+   about me — a screen, not a dialog box
+   --------------------------------------------------------------------
+   The same width a photograph opens at, because that is what the brief
+   asks for and because a window that opens big for a picture and small
+   for her own words gets the priority backwards.
+
+   It also keeps that size while the text is short. `min-height` rather
+   than a fixed one: the placeholder in here is a single line today, and
+   a window that shrink-wraps one line is a tooltip. When the real text
+   arrives it grows, and past 72vh it scrolls instead of running off the
+   screen — which is what would have happened to any presentation text
+   longer than a couple of paragraphs.
+   ==================================================================== */
+.win-about { width: min(56rem, 94vw); }
+.about-body {
+  min-height: min(40vh, 20rem);
+  max-height: 72vh; overflow-y: auto;
+  /* .win sets touch-action:none so a window drags by its bar; without
+     this the text is unscrollable on a phone. */
+  touch-action: pan-y;
+  padding: clamp(1.4rem, 3.5vw, 2.6rem);
+  max-width: 54ch;
+}
+.about-body p + p { margin-top: 1em; }
 .preview-body {
   padding: 0;
   max-height: 78vh; overflow-y: auto;
