@@ -1152,6 +1152,34 @@ do. Every verb is journalled to `.studio/` with the previous text, so
 **Annuler** takes it back; a deleted photograph goes to `.studio/trash/`
 rather than being unlinked. `.studio/` is git-ignored.
 
+#### A folder's job is where it is
+
+This is the part of the model that catches people out, so the panel says
+it out loud rather than letting it be discovered:
+
+| a folder | opens |
+|---|---|
+| on the home desk | its own page, with its own wallpaper and a place in the bandeau |
+| inside a bureau | a **window** on the desk it sits on |
+| a gallery | its own page, wherever it is |
+| **with nothing in it** | its own page, **wherever it is** |
+
+That last row is the one. A folder just created is empty, so it opens a
+page even where a window was wanted, and becomes a window the moment
+something goes in it. Making one inside a bureau and clicking it looks
+broken while being exactly right.
+
+So the panel **names the destination before anything is made** — "dans
+DA" — and says what the thing will do once it is there, including the
+empty caveat. The destination is a choice, not something inferred from
+whatever happened to be selected.
+
+`model.py` computes this and `content-check.py` holds it to account: what
+the panel says a folder will do is checked against whether the site
+actually rendered a window for it. The fixture includes an **empty folder
+inside a bureau**, because without one in the tree that clause never
+fires and the guard cannot tell whether the panel knows.
+
 #### What kind of thing is this?
 
 The engine has more objects than folders and photographs, and the panel

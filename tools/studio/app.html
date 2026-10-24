@@ -20,15 +20,21 @@
   <div class="side">
     <nav class="tree" id="tree" aria-label="le contenu"></nav>
     <div class="make">
+      <label class="where">dans
+        <select id="into" aria-label="dans quel dossier"></select>
+      </label>
       <select id="kind" aria-label="quoi créer">
         <option value="photos">des photos</option>
         <option value="film">un film</option>
         <option value="document">un document</option>
         <option value="page">une page</option>
-        <option value="bureau">un bureau</option>
+        <option value="bureau">un dossier</option>
       </select>
       <input type="text" id="newname" placeholder="nom" aria-label="nom">
       <button id="make">Créer</button>
+      <!-- what it will do THERE. A folder's job depends on where it is,
+           so the destination is not a detail to be inferred. -->
+      <p class="willbe" id="willbe"></p>
     </div>
   </div>
 
