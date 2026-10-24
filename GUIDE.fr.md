@@ -114,6 +114,10 @@ Tu peux :
   (des photos, un film, un document, une page), donne un nom, Créer
 - **regarder** une chose plutôt que le bureau où elle est posée : le
   bouton « regarder » au-dessus de la page
+- **ranger** : attrape une ligne dans la liste de gauche et pose-la sur un
+  dossier. Tout part avec — les deux langues, les photos, ce qu'il y a
+  dedans. Son adresse change.
+- **jeter** : le bouton rouge en bas à droite. Annuler la ramène.
 - **cliquer un projet** pour voir ses photos
 - **déposer des photos** dessus : elles sont numérotées toutes seules.
   La première est l'icône du projet.
