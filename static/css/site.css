@@ -788,6 +788,15 @@ body.project .bar { color: var(--ink); text-shadow: none; }
   max-height: 92vh;
   margin-inline: auto;
 }
+/* A film opening a project page gets the same ceiling as a photograph,
+   and a black ground so letterboxing is the film's own edge rather than
+   a cream gap nobody meant. */
+.proj-reel { background: #000; }
+.proj-reel video {
+  display: block;
+  width: 100%; max-height: 92vh;
+  margin-inline: auto;
+}
 
 /* ---- and then they breathe ----------------------------------------
    Everything after the opener sits two across with cream around it. The

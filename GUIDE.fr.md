@@ -184,7 +184,7 @@ du projet, en grand, si tu veux aller plus loin.
 Deux exceptions, et elles tombent toutes seules :
 
 - un dossier qui contient une **vidéo** est un film : il s'ouvre comme un
-  film, avec ton texte à côté
+  film, avec ton texte à côté — sauf si tu demandes sa page, voir plus bas
 - un dossier **sans aucune image** n'a rien à montrer en aperçu : il va
   directement à sa page
 
@@ -202,6 +202,10 @@ opens = "page"
 ```
 
 Rien du tout, et c'est l'aperçu qui s'ouvre.
+
+> Ça marche aussi pour une vidéo. `opens = "page"` sur un film l'envoie
+> sur sa page, où la vidéo s'affiche en grand avec les photos en dessous
+> — pratique pour un projet qui a beaucoup à raconter.
 
 ### Écrire un texte de présentation
 

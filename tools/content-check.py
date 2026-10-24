@@ -670,6 +670,55 @@ def case_icon_is_the_work(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_a_film_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """`opens = "page"` means the same thing on every kind of project.
+
+    It used to be tested below the video check, so it was the one
+    override that silently did nothing on the one kind of project most
+    likely to want a page — a film with a lot to say about it. And the
+    page it would have reached did not show the film at all, which is
+    also what a visitor with no JavaScript has always been given.
+    """
+    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    base = d / "content" / "da"
+    for name, extra in (("film-page", 'opens = "page"\n'), ("film-normal", "")):
+        q = base / name
+        q.mkdir()
+        (q / "index.md").write_text(
+            FRONT.format(title=f"{name}.mov", extra=("[extra]\n" + extra) if extra else ""))
+        (q / "01.jpg").write_bytes(photo)
+        (q / "poster.jpg").write_bytes(photo)
+        (q / "clip.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
+    ok, log = build(d)
+    desk = page(d, "da/index.html")
+    opened = dict()
+    for m in re.finditer(r'<a class="icon[^"]*"([^>]*)>', desk):
+        vt = re.search(r'data-vt="([^"]+)"', m.group(1))
+        w = re.search(r'data-window="([^"]+)"', m.group(1))
+        if vt:
+            opened[vt.group(1)] = w.group(1) if w else "page"
+    page_html = page(d, "da/film-page/index.html")
+    normal_html = page(d, "da/film-normal/index.html")
+    main = re.search(r'<main class="proj".*?</main>', page_html, re.S)
+    return [
+        ("builds", ok),
+        ('opens = "page" sends a film to its page', opened.get("da-film-page") == "page"),
+        ("a film without it still opens as a film",
+         opened.get("da-film-normal", "").startswith("film-")),
+        ("no film window is built for the one nobody will open",
+         'id="film-da-film-page"' not in desk),
+        ("and one still is for the other", 'id="film-da-film-normal"' in desk),
+        ("the page it reaches actually shows the film",
+         bool(main) and "<video" in main.group(0)),
+        ("the film's own still is its poster, not a photograph underneath it",
+         bool(main) and "poster=" in main.group(0)
+         and main.group(0).count("proj-fig") == 1),
+        ("a film page works without JavaScript too — the video is in the page",
+         "<video" in normal_html),
+        ("nothing dangles", dangling(desk) == []),
+    ]
+
+
 def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A video inside a folder, opened from the window rather than a desk.
 
@@ -720,6 +769,7 @@ CASES = [
     ("every photograph in the gallery opens", case_gallery_photographs_open),
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
+    ("a film can ask for its page", case_a_film_can_ask_for_its_page),
     ("a film opened from inside a folder window", case_film_in_a_folder),
 ]
 

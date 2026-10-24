@@ -192,9 +192,14 @@ configured.
 | a project with **no image at all** | its page — there is nothing to preview |
 | a photograph in **pellicules** | that photograph, in a window |
 
-`opens = "page"` in a project's front matter skips the preview and goes
-straight to the page. It is the one override, and it does not apply to a
-film: a folder with a video in it is a film.
+`opens = "page"` in a project's front matter skips the window and goes
+straight to the page — **including for a film**, where the page shows the
+video at the top and the photographs below it. It is tested before
+anything else, so it means the same thing on every kind of project.
+
+The project page renders the video whether or not the override is set,
+which is also what a visitor with no JavaScript gets: for them this page
+*is* the film window.
 
 One level of windows per desk. A folder inside a window navigates to its
 own desk, because this template engine has no macros and so nothing can
