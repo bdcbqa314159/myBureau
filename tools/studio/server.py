@@ -91,7 +91,11 @@ class Studio(http.server.BaseHTTPRequestHandler):
         # this page is a tool, not a document: nothing about it should be
         # cached, embedded, or sent anywhere
         self.send_header("Cache-Control", "no-store")
-        self.send_header("X-Frame-Options", "DENY")
+        # SAMEORIGIN, not DENY. The panel frames the site it proxies, and
+        # that frame is this same address — DENY refused it, which is what
+        # Firefox was complaining about. Another site still cannot frame
+        # the panel, which is the thing worth preventing.
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
         self.send_header("Referrer-Policy", "no-referrer")
         for k, v in (extra or {}).items():
             self.send_header(k, v)
@@ -135,6 +139,12 @@ class Studio(http.server.BaseHTTPRequestHandler):
             return self.file(HERE / "app.css", "text/css; charset=utf-8")
         if path == "/app.js":
             return self.file(HERE / "app.js", "text/javascript; charset=utf-8")
+        # The framed site carries NO token, and cannot: the iframe's src is
+        # written in the markup, and every link inside the page is a plain
+        # href. That is not a hole being opened — `zola serve` is already
+        # serving these exact bytes on its own port with no token at all,
+        # on the same loopback address. The proxy adds a second door to a
+        # room that was never locked, not a door to a new room.
         if path == "/site" or path.startswith("/site/"):
             return self.proxy(path[len("/site"):] or "/")
         # ---- everything past here is her work, or acts on it ---------

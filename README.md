@@ -1108,8 +1108,16 @@ names which it is looking at, because they do not behave alike:
 #### Why it is not a hole in her machine
 
 Bound to loopback. A token minted at startup and required on every
-request that reads or writes her work — `/api/*`, `/media/*`, `/site/*` —
-so a page that cannot read the address bar cannot act. Cross-site
+request that reads or writes her work — `/api/*` and `/media/*` — so a
+page that cannot read the address bar cannot act.
+
+`/site/*` is **not** behind the token, and cannot be: the frame's `src`
+is written in the markup and every link inside the page is a plain href.
+That opens nothing — `zola serve` is already serving those exact bytes on
+its own port with no token at all, on the same loopback address.
+
+The panel sends `X-Frame-Options: SAMEORIGIN`, not `DENY`. It frames its
+own proxy, and `DENY` refused it — Firefox said so plainly. Cross-site
 requests refused even with a token. Every path through `verbs.inside()`,
 which resolves symlinks and refuses anything outside `content/`.
 
