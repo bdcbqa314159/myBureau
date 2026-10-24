@@ -6,6 +6,24 @@
 <main class="proj" style="view-transition-name:vt-{{ page.path | slugify }}">
   <div class="proj-intro">{{ page.content | safe }}</div>
 
+  {#- THE RHYTHM OF THE PAGE, from the prototype: the first photograph
+      opens it at full width, and everything after it sits in pairs with
+      cream around them. One big thing, then quieter ones — which is what
+      stops a project reading as a pile of images at one size.
+
+      Decided by POSITION, not by the shape of the photograph. Position is
+      predictable: she can see which image is first by its name, and
+      renaming 02.jpg to 00.jpg moves it. An aspect-ratio rule would make
+      the page rearrange itself for reasons she cannot see from the
+      Finder.
+
+      Shape is left to CSS, which can bound a tall photograph by its
+      HEIGHT instead of cropping it. Nothing here cuts anyone's picture.
+
+      There are no macros in this engine, so the pairs container is opened
+      and closed inside the loop with a flag. `paired` is the flag. -#}
+  {% set_global shown = 0 %}
+  {% set_global paired = false %}
   {# every image in the folder, in filename order; icon.png is the desktop icon, not content #}
   {% for asset in page.assets %}
     {% set file = asset | split(pat="/") | last %}
@@ -28,13 +46,26 @@
             {% set shape = get_image_metadata(path=asset) %}
       {% set one = resize_image(path=asset, width=900, op="fit_width", format="webp", quality=78) %}
       {% set two = resize_image(path=asset, width=1800, op="fit_width", format="webp", quality=78) %}
-      <figure class="proj-fig"><img src="{{ one.url }}"
-        srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
-        sizes="100vw"
-        width="{{ shape.width }}" height="{{ shape.height }}" alt="{{ alt }}" decoding="async"
-        {% if loop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}></figure>
+      {%- if shown == 0 -%}
+        <figure class="proj-open"><img src="{{ one.url }}"
+          srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
+          sizes="100vw"
+          width="{{ shape.width }}" height="{{ shape.height }}" alt="{{ alt }}"
+          decoding="async" loading="eager" fetchpriority="high"></figure>
+      {%- else -%}
+        {%- if not paired %}<div class="proj-pairs">{% set_global paired = true %}{% endif -%}
+        {#- half the page from here, so the browser stops fetching the
+            width it needed for the opener -#}
+        <figure class="proj-fig"><img src="{{ one.url }}"
+          srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
+          sizes="(max-width: 52rem) 100vw, 44vw"
+          width="{{ shape.width }}" height="{{ shape.height }}" alt="{{ alt }}"
+          decoding="async" loading="lazy"></figure>
+      {%- endif -%}
+      {% set_global shown = shown + 1 %}
     {% endif %}
   {% endfor %}
+  {% if paired %}</div>{% endif %}
 
   {# ancestors gives a FILE PATH — get_section turns it into a URL.
      Linking the path directly produced /da/_index.md, a 404 on every
