@@ -135,12 +135,27 @@ const find = (p) => all().map((r) => r.o).find((o) => o.path === p) || null;
 /* What a folder put HERE would do, in her words, including the clause
  * that catches people out: a folder with nothing in it opens a page
  * wherever it is, so a brand new one always does until she fills it. */
+/* What each kind REALLY is, said before she commits to it.
+ *
+ * "un document" made a project called Brochure.pdf and then asked for
+ * photographs — because the engine has no idea how to show a PDF. The
+ * extension only ever chose the drawn ICON. Offering it as a kind of
+ * thing to make, without saying that, promised something the site cannot
+ * do. */
+const KINDS = {
+  photos:   "Des photos. La première sert d'icône.",
+  film:     "Un film : dépose la vidéo, et une image comme affiche.",
+  document: "Le site n'affiche pas les PDF — il montre des pages. "
+            + "L'icône sera celle d'un document ; exporte les pages en JPEG.",
+  page:     "Une page de texte, avec des photos si tu en ajoutes.",
+};
+
 function wouldBe(intoPath, kind) {
   const into = model.desks.find((d) => d.path === intoPath);
   if (!into) return "";
   const here = into.titles.fr || into.name;
   if (kind !== "bureau") {
-    return `Un projet dans <b>${esc(here)}</b>. Il s'ouvrira sur ce bureau.`;
+    return `Dans <b>${esc(here)}</b>. ${esc(KINDS[kind] || "")}`;
   }
   const deep = (into.depth || 0) >= 1;
   return deep
@@ -230,6 +245,22 @@ const isBureau = (o) => model.desks.some((d) => d.path === o.path);
  *
  * Each target takes one kind. A video dropped on the photographs is
  * refused with where it should have gone, and the same the other way. */
+/* What a project is waiting for, said in the empty space rather than
+ * left for her to guess from a generic "drop photos here". */
+function waitingFor(o) {
+  if (o.kind === "desk" || o.gallery) return "";
+  const named = (o.titles.fr || "").toLowerCase();
+  const isFilm = o.video || /\.(mov|mp4|m4v|webm)$/.test(named);
+  const isDoc = /\.pdf$/.test(named);
+  if (isFilm && !o.video) return "Ce film attend sa vidéo.";
+  if (isDoc && !o.photographs.length) {
+    return "Ce document attend ses pages. Le site n'affiche pas les PDF :"
+         + " exporte les pages en JPEG et dépose-les ici.";
+  }
+  if (!o.photographs.length && !o.video) return "Rien dedans pour l'instant.";
+  return "";
+}
+
 function reel(o) {
   const named = (o.titles.fr || "").toLowerCase();
   const wantsFilm = o.video || /\.(mov|mp4|m4v|webm)$/.test(named);
@@ -357,6 +388,7 @@ function inspect(o) {
        : o.holds !== undefined ? ` · ${o.holds} chose${o.holds > 1 ? "s" : ""} dedans` : ""}${
        o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · pas encore posé"}</p>
     ${isDesk ? `<p class="what">${folderSays(o)}</p>` : ""}
+    ${waitingFor(o) ? `<p class="waiting">${esc(waitingFor(o))}</p>` : ""}
     ${titles}${bodies}${face}${wall}
     ${isDesk && !o.gallery ? "" : reel(o) + `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">${o.gallery
