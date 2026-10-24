@@ -47,24 +47,34 @@ TOKEN = secrets.token_urlsafe(24)
 # preview.sh hunts for a free port, so the site is not always on 1111 and
 # the panel must be told rather than guessing. Guessing is how "Voir le
 # site" opens a dead tab on the second run of the day.
-STATE = {"n": 0, "look": "", "site": ""}
+STATE = {"n": 0, "look": "", "site": "", "mark": None}
+
+
+def fingerprint() -> int:
+    stamp = []
+    for p in sorted((ROOT / "content").rglob("*")):
+        try:
+            stamp.append((str(p), p.stat().st_mtime_ns, p.stat().st_size))
+        except OSError:
+            pass
+    return hash(tuple(stamp))
 
 
 def watch() -> None:
-    """Notice that content/ changed, whoever changed it."""
-    last = None
+    """Notice that content/ changed, WHOEVER changed it — except us.
+
+    A verb writes a file, so the watcher sees it a moment later and would
+    report it as news. The panel then reloads the frame for a change it
+    made itself and already has on screen — which is the whole thing we
+    are trying not to do. So a verb leaves its own fingerprint behind on
+    the way out, and this only counts what does not match it.
+    """
     while True:
-        stamp = []
-        for p in sorted((ROOT / "content").rglob("*")):
-            try:
-                stamp.append((str(p), p.stat().st_mtime_ns, p.stat().st_size))
-            except OSError:
-                pass
-        now = hash(tuple(stamp))
-        if last is not None and now != last:
+        now = fingerprint()
+        if STATE["mark"] is not None and now != STATE["mark"]:
             STATE["n"] += 1
-        last = now
-        time.sleep(0.6)
+        STATE["mark"] = now
+        time.sleep(0.4)
 
 
 def look() -> str:
@@ -269,6 +279,9 @@ class Studio(http.server.BaseHTTPRequestHandler):
         except Exception as exc:                    # noqa: BLE001
             return self.oops(500, "{}: {}".format(type(exc).__name__, exc))
 
+        # our own change, written down so the watcher does not report it
+        # back to us as news a moment later
+        STATE["mark"] = fingerprint()
         STATE["n"] += 1
         body = json.dumps({"did": out, "tree": model.tree(), "n": STATE["n"]},
                           ensure_ascii=False).encode("utf-8")

@@ -56,6 +56,8 @@ const missing = [];
 let fetched = [];
 const sandbox = {
   console,
+  // a browser has these; a vm context does not inherit them
+  setTimeout, clearTimeout, setInterval, clearInterval, Promise, Date,
   document: {
     getElementById: (id) => {
       if (!byId.has(id)) missing.push(id);     // app.js asked for something
@@ -168,6 +170,25 @@ if (loaded) {
   await new Promise((r) => setTimeout(r, 20));
   check("pressing Annuler actually asks the server something",
     fetched.length > before, `${before} -> ${fetched.length}`);
+
+  // ---- the feedback loop -------------------------------------------
+  // Measured: zola takes ~1.3s to rebuild and answers 404 for most of
+  // it. Reloading the frame the moment a write returns lands on that
+  // 404 — the blank flash. The panel must ASK FIRST and reload after.
+  const view = byId.get("view");
+  view.src = "/site/da/";
+  const mark = fetched.length;
+  for (const fn of listeners.get("undo:click") || []) fn();
+  await new Promise((r) => setTimeout(r, 450));
+  const polled = fetched.slice(mark).some((u) => String(u).startsWith("/site/"));
+  check("after an edit it waits for the page before reloading the frame",
+    polled, JSON.stringify(fetched.slice(mark)));
+
+  const src = readFileSync(new URL("./app.js", import.meta.url), "utf8");
+  check("and a drag reloads nothing, because the icon has already moved",
+    /NOTHING_TO_SEE\s*=\s*new Set\(\["place"\]\)/.test(src));
+  check("reloads are debounced, so four photographs are one reload",
+    /clearTimeout\(waiting\)/.test(src) && /setTimeout\(async/.test(src));
 }
 
 console.log();
