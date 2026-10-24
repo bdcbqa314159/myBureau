@@ -1100,8 +1100,8 @@ counter moved twice per edit and every careful rule above was defeated.
 
 A closed list in `tools/studio/verbs.py`, not a file manager:
 `new_project`, `new_bureau`, `move`, `throw_away`, `place`, `retitle`,
-`set_body`, `set_icon`, `set_wallpaper`, `add_image`, `reorder`,
-`remove_image`, `undo`.
+`set_body`, `set_icon`, `set_wallpaper`, `add_image`, `add_video`,
+`set_poster`, `reorder`, `remove_image`, `undo`.
 
 #### Why `move` has to nudge
 
