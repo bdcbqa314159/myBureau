@@ -275,10 +275,25 @@ const urlOf = (o) => "/site/" + o.path.replace(/^content\/?/, "") + (o.path === 
  * toggle covers both without either mode being a special case. */
 let mode = "desk";
 
+/* The desk a thing SITS ON — never the one it contains.
+ *
+ * This returned a bureau's own desk, so choosing a folder put that
+ * folder's desk in the frame: a single click went inside it. The click
+ * the site would have acted on was being stopped correctly all along,
+ * and then this walked in through the front door instead. From the
+ * outside the two are identical, which is why stopping the click looked
+ * like it had changed nothing.
+ *
+ * Arranging means seeing a thing WHERE IT IS. Going inside is a
+ * double-click, or "regarder" for a project's own page. */
+function deskOf(o) {
+  if (o.path === "content") return "content";
+  return o.path.split("/").slice(0, -1).join("/");
+}
+
 function frameFor(o) {
-  const isDesk = model.desks.some((d) => d.path === o.path);
   if (mode === "page") return urlOf(o);
-  return isDesk ? urlOf(o) : urlOf({ path: o.path.split("/").slice(0, -1).join("/") });
+  return urlOf({ path: deskOf(o) });
 }
 
 function select(o) {
