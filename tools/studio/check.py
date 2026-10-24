@@ -161,6 +161,45 @@ def main() -> int:
           (tmp / "content" / "_index.md").exists()
           and (tmp / "content" / "da" / "theodora" / "index.md").exists())
 
+    # ---- making things, and dressing them ----------------------------
+    out = verbs.new_project("content/da", "Mon Essai", "film")
+    made = tmp / out["made"]
+    check("a new project is a folder with a file per language",
+          made.is_dir() and (made / "index.md").exists() and (made / "index.en.md").exists())
+    check("its name carries the extension that gives it a face",
+          out["title"] == "Mon Essai.mov", out["title"])
+    check("the folder name is a slug, whatever she typed",
+          made.name == "mon-essai", made.name)
+    verbs.new_project("content/da", "Mon Essai", "photos")
+    check("asking twice does not collide",
+          (tmp / "content" / "da" / "mon-essai-2").is_dir())
+
+    b = verbs.new_bureau("content/da", "Sous Bureau")
+    nb = tmp / b["made"]
+    check("a new bureau declares the template that makes it a desk",
+          'template = "section.html"' in (nb / "_index.md").read_text(encoding="utf-8"))
+    check("and exists in both languages too", (nb / "_index.en.md").exists())
+
+    try:
+        verbs.new_project("content/da/theodora", "Dedans")
+        check("a project cannot be made inside a project", False)
+    except verbs.Refused:
+        check("a project cannot be made inside a project", True)
+
+    pixels = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    verbs.set_icon("content/da", "whatever.png", pixels)
+    check("a BUREAU can be given a face, which it never could before",
+          (tmp / "content" / "da" / "icon.png").exists())
+    verbs.set_icon("content/da", "again.jpg", pixels)
+    check("a second icon replaces the first rather than joining it",
+          not (tmp / "content" / "da" / "icon.png").exists()
+          and (tmp / "content" / "da" / "icon.jpg").exists())
+    verbs.undo()
+    check("and undo brings the first one back",
+          (tmp / "content" / "da" / "icon.png").exists()
+          and not (tmp / "content" / "da" / "icon.jpg").exists())
+
+
     shutil.rmtree(tmp, ignore_errors=True)
 
     serve()

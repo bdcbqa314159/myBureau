@@ -252,8 +252,11 @@ class Studio(http.server.BaseHTTPRequestHandler):
             if u.path == "/api/upload":
                 into = (q.get("into") or [""])[0]
                 name = (q.get("name") or [""])[0]
-                if (q.get("as") or [""])[0] == "wallpaper":
+                how = (q.get("as") or [""])[0]
+                if how == "wallpaper":
                     out = verbs.set_wallpaper(into, name, raw)
+                elif how == "icon":
+                    out = verbs.set_icon(into, name, raw)
                 else:
                     out = verbs.add_image(into, name, raw)
             elif u.path == "/api/do":
@@ -275,6 +278,10 @@ class Studio(http.server.BaseHTTPRequestHandler):
         name = ask.get("verb")
         if name == "place":
             return verbs.place(ask["item"], ask["x"], ask["y"])
+        if name == "new_project":
+            return verbs.new_project(ask["into"], ask["name"], ask.get("kind", "photos"))
+        if name == "new_bureau":
+            return verbs.new_bureau(ask["into"], ask["name"])
         if name == "retitle":
             return verbs.retitle(ask["item"], ask.get("lang", "fr"), ask["title"])
         if name == "set_body":

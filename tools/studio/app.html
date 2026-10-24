@@ -17,13 +17,32 @@
 </header>
 
 <main class="frame">
-  <nav class="tree" id="tree" aria-label="le contenu"></nav>
+  <div class="side">
+    <nav class="tree" id="tree" aria-label="le contenu"></nav>
+    <div class="make">
+      <select id="kind" aria-label="quoi créer">
+        <option value="photos">des photos</option>
+        <option value="film">un film</option>
+        <option value="document">un document</option>
+        <option value="page">une page</option>
+        <option value="bureau">un bureau</option>
+      </select>
+      <input type="text" id="newname" placeholder="nom" aria-label="nom">
+      <button id="make">Créer</button>
+    </div>
+  </div>
 
   <section class="stage">
     <!-- the real site, served from this address so the panel can reach
          into it. Not a drawing of the site: the site. -->
     <iframe id="view" title="le site" src="/site/"></iframe>
-    <p class="tip" id="tip">Attrape une icône dans la page et pose-la.</p>
+    <p class="tip">
+      <span id="tip">Attrape une icône dans la page et pose-la.</span>
+      <span class="toggle">
+        <button id="asdesk" aria-pressed="true">sur le bureau</button><button
+                id="aspage" aria-pressed="false">regarder</button>
+      </span>
+    </p>
   </section>
 
   <aside class="look" id="look" aria-label="détails"></aside>

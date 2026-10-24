@@ -148,6 +148,15 @@ if (loaded) {
   check("one box per language, not one for both",
     (look.innerHTML.match(/data-title="/g) || []).length >= 2);
 
+  check("the editor offers an appearance to change",
+    /data-drop="icon"/.test(look.innerHTML));
+  check("a bureau also offers its wallpaper",
+    /data-drop="wallpaper"/.test(look.innerHTML));
+  check("there is a way to make something new",
+    /<button[^>]*id="make"/.test(markup) && /<select[^>]*id="kind"/.test(markup));
+  check("and a way to look INSIDE a thing rather than at its desk",
+    /id="aspage"/.test(markup) && (listeners.get("aspage:click") || []).length > 0);
+
   const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
   check("and no rule anywhere hides the editor",
     !/\.look\s*\{[^}]*display:\s*none/.test(css)
