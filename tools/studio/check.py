@@ -206,9 +206,15 @@ def main() -> int:
     # does not write code is a dead end, however correct it is.
     import re as _re
     source = (HERE / "verbs.py").read_text(encoding="utf-8")
-    english = set("that this file folder empty name site only there is are"
-                  " cannot inside goes photograph photographs unknown kind"
-                  " position percentage desk project bureau quote".split())
+    # Common English words that are NOT also French. "site", "image",
+    # "page" and "a" are deliberately absent — they appear in perfectly
+    # good French and would make this cry wolf.
+    english = set("the is are was this that these those no such thing things"
+                  " file files folder not with your you cannot does has have"
+                  " there here what which where open close address printed"
+                  " very large missing empty name only inside goes unknown"
+                  " kind percentage desk quote photograph photographs"
+                  " exist exists already whole set same".split())
     offenders = []
     for m in _re.finditer(r'Refused\(\s*"([^"]+)"', source):
         words = set(_re.findall(r"[a-zA-Z']+", m.group(1).lower()))
@@ -217,6 +223,14 @@ def main() -> int:
             offenders.append(m.group(1))
     check("every refusal she can meet is in her language", offenders == [],
           "; ".join(offenders[:3]))
+
+    # the server has messages of its own, and she meets those too
+    srv = (HERE / "server.py").read_text(encoding="utf-8")
+    spoken = _re.findall(r'oops\(\d+,\s*"([^"{]+)"', srv)
+    spoken += _re.findall(r'send\(4\d\d,\s*"([^"]+)"', srv)
+    loud = [s for s in spoken
+            if len(set(_re.findall(r"[a-zA-Z']+", s.lower())) & english) >= 2]
+    check("and so are the server's own", loud == [], "; ".join(loud[:3]))
 
     # ---- a film can receive a film ----------------------------------
     clip = b"\x00\x00\x00\x18ftypmp42" + b"0" * 200

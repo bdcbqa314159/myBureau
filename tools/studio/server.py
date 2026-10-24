@@ -136,7 +136,9 @@ class Studio(http.server.BaseHTTPRequestHandler):
 
         if path == "/":
             if (q.get("t") or [None])[0] != TOKEN:
-                return self.send(403, b"Open the address the terminal printed.")
+                return self.send(403, "Ouvre l'adresse que la fenêtre noire a "
+                                  "affichée — elle change à chaque fois."
+                             .encode("utf-8"))
             return self.file(HERE / "app.html", "text/html; charset=utf-8")
 
         # ---- the shell, served without a token -----------------------
@@ -173,11 +175,11 @@ class Studio(http.server.BaseHTTPRequestHandler):
             return self.stream()
         if path.startswith("/media/"):
             return self.media(urllib.parse.unquote(path[len("/media/"):]))
-        return self.oops(404, "no such thing")
+        return self.oops(404, "cette adresse n'existe pas.")
 
     def file(self, p: pathlib.Path, kind: str) -> None:
         if not p.is_file():
-            return self.oops(404, "missing " + p.name)
+            return self.oops(404, "il manque " + p.name)
         self.send(200, p.read_bytes(), kind)
 
     def media(self, rel: str) -> None:
@@ -186,7 +188,7 @@ class Studio(http.server.BaseHTTPRequestHandler):
         except verbs.Refused as exc:
             return self.oops(403, str(exc))
         if not f.is_file():
-            return self.oops(404, "no such file")
+            return self.oops(404, "ce fichier n'existe pas.")
         kind = mimetypes.guess_type(f.name)[0] or "application/octet-stream"
         self.send(200, f.read_bytes(), kind)
 
@@ -209,16 +211,28 @@ class Studio(http.server.BaseHTTPRequestHandler):
         content changed, which is one mechanism instead of two.
         """
         site = STATE["site"].rstrip("/")
-        if not site:
-            return self.oops(503, "the site is not running")
         try:
+            if not site:
+                raise OSError("no site address")
             with urllib.request.urlopen(site + rest, timeout=20) as r:
                 kind = r.headers.get("Content-Type", "application/octet-stream")
                 body = r.read()
         except urllib.error.HTTPError as e:
             return self.send(e.code, b"", "text/plain")
-        except Exception as exc:                    # noqa: BLE001
-            return self.oops(502, "the site did not answer: {}".format(exc))
+        except Exception:                           # noqa: BLE001
+            # This lands INSIDE the frame, where she is looking. A JSON
+            # blob with a Python error in it tells her nothing she can
+            # act on; a sentence does. Editing still works meanwhile —
+            # only the preview is missing.
+            return self.send(502, (
+                "<!doctype html><meta charset=utf-8>"
+                "<style>body{font:14px/1.5 system-ui;margin:3rem;color:#444}"
+                "b{color:#111}</style>"
+                "<p><b>Le site ne répond pas.</b></p>"
+                "<p>Il est reconstruit en ce moment, ou la fenêtre noire a été "
+                "fermée. Tu peux continuer à modifier : tout est enregistré. "
+                "L'aperçu reviendra tout seul.</p>"
+            ).encode("utf-8"), "text/html; charset=utf-8")
         if kind.split(";")[0] in ("text/html", "text/css", "application/javascript",
                                   "text/javascript", "application/json"):
             body = body.decode("utf-8", "replace").replace(site, "/site").encode("utf-8")
@@ -255,7 +269,7 @@ class Studio(http.server.BaseHTTPRequestHandler):
             return self.oops(403, "no")
         length = int(self.headers.get("Content-Length") or 0)
         if length > 64 * 1024 * 1024:
-            return self.oops(413, "that file is very large")
+            return self.oops(413, "ce fichier est très lourd.")
         raw = self.rfile.read(length) if length else b""
 
         try:
@@ -277,7 +291,7 @@ class Studio(http.server.BaseHTTPRequestHandler):
                 ask = json.loads(raw.decode("utf-8") or "{}")
                 out = self.verb(ask)
             else:
-                return self.oops(404, "no such thing")
+                return self.oops(404, "cette adresse n'existe pas.")
         except verbs.Refused as exc:
             return self.oops(400, str(exc))
         except Exception as exc:                    # noqa: BLE001
