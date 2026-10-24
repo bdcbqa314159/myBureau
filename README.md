@@ -1037,6 +1037,70 @@ python3 tools/content-check.py   # the content contract against real mistakes
 python3 tools/prune.py --check   # what the built site carries and never asks for
 ```
 
+### The panel
+
+`preview.command` starts two things now: `zola serve` as before, and
+`tools/studio/server.py` — a dashboard that edits `content/` by hand
+rather than by typing.
+
+```
+double-click preview.command
+   ├── studio   127.0.0.1:1112   python stdlib, writes content/
+   └── zola     127.0.0.1:1111   watches content/, rebuilds, reloads
+```
+
+**Neither knows about the other.** The panel writes a line; zola notices
+and rebuilds; zola's own live-reload moves the site. Kill the panel and
+preview is exactly what it always was.
+
+**Nothing new is installed.** `http.server` from the standard library —
+python3 was already a hard requirement of `preview.sh`. The page is plain
+HTML, CSS and JS with no build step, and it loads the site's own
+`site.css` so the panel is made of the same bevels, typeface and pointers
+as the thing it edits.
+
+The live half is **Server-Sent Events**, not a WebSocket: one-way is all
+that is needed, `EventSource` is native, and a stdlib WebSocket would
+have been a handshake written by hand for nothing. A watcher thread
+notices anything that changes in `content/` — including edits the panel
+had nothing to do with — and the page re-reads. **The panel holds no
+state: the filesystem wins, always.**
+
+#### What it may do
+
+A closed list in `tools/studio/verbs.py`, not a file manager: `place`,
+`add_image`, `reorder`, `remove_image`, `undo`. Two rules in that file
+are not negotiable, because both have bitten this project:
+
+- **every verb touching a project touches every language file it has** —
+  a position written to one and not the other is the oldest trap here
+- **front matter is edited surgically**, one line by regex, leaving the
+  rest byte for byte. These files carry load-bearing comments; a
+  parse-and-rewrite would eat them silently.
+
+Writes go through a temp file and `os.replace`, or `zola serve` reads a
+half-written file and flashes an error at her for something she did not
+do. Every verb is journalled to `.studio/` with the previous text, so
+**Annuler** takes it back; a deleted photograph goes to `.studio/trash/`
+rather than being unlinked. `.studio/` is git-ignored.
+
+#### Why it is not a hole in her machine
+
+It is a local server that writes to disk, and any page open in her
+browser can send it a request. So: bound to loopback; a token minted at
+startup and required on every request, so a page that cannot read the
+address bar cannot act; cross-site requests refused outright; and every
+path resolved through `verbs.inside()`, which refuses anything that is
+not under `content/`.
+
+`tools/studio/check.py` runs in CI and is mostly a list of what the panel
+**refuses** — paths out of `content/`, a request without the token, a
+cross-site request with one, an unknown verb.
+
+And `content-check.py` asserts the panel's reading of a desk matches the
+HTML the site rendered, because three readings of one set of rules — the
+templates, `look.py`, and now the panel — is how drift starts.
+
 ### What gets deployed, and what does not
 
 Zola copies every photograph sitting beside a content file into the

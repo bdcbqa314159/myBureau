@@ -94,6 +94,27 @@ navigateur ouvre le site.
 **Laisse la fenêtre noire ouverte pendant que tu travailles.** Chaque
 fois que tu enregistres un fichier, la page se recharge toute seule.
 
+### Le panneau
+
+Deux onglets s'ouvrent, pas un : ton site, et **le panneau**.
+
+Le panneau montre tes bureaux comme ils sont vraiment. Tu peux :
+
+- **attraper une icône et la poser** où tu veux — sa place est enregistrée
+  tout de suite, dans les deux langues, et le site bouge à côté
+- **cliquer un projet** pour voir ses photos
+- **déposer des photos** dessus : elles sont numérotées toutes seules.
+  La première est l'icône du projet.
+- **réordonner** les photos en les faisant glisser
+- **Annuler** : reprend la dernière chose faite, même une photo jetée
+
+Tout ce que fait le panneau, tu peux aussi le faire à la main dans les
+fichiers — c'est le même dossier `content/`. Si tu modifies un fichier
+dans TextEdit, le panneau s'en aperçoit et se met à jour.
+
+> Le panneau ne marche que sur ton Mac, pendant que la fenêtre noire est
+> ouverte. Il ne touche jamais au site en ligne.
+
 Pour arrêter : clique dans la fenêtre noire et fais **Ctrl-C**, ou ferme
 simplement la fenêtre.
 

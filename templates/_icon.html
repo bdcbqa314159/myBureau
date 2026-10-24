@@ -131,7 +131,9 @@
   {%- endif -%}
 {%- endfor -%}
 {%- set ac = 12 + (ic_slot % 4) * 25 -%}
-{%- set ar = 20 + ((ic_slot / 4) | round(method="floor")) * 26 -%}
+{#- `round` hands back a float, so the grid used to write --y:20.0%
+    beside a declared --y:70%. Both work; one of them looks like a bug. -#}
+{%- set ar = 20 + ((ic_slot / 4) | round(method="floor") | int) * 26 -%}
 {#- A link off the site opens in a new tab, and gets rel="noopener" so
     the page it opens cannot reach back through window.opener. Detected by
     scheme rather than a regex test, which this Zola's engine does not
