@@ -24,6 +24,9 @@
       style="view-transition-name:vt-{{ here }};
              --wallpaper:url('{{ wall_wide.url }}');
              --wallpaper-narrow:url('{{ wall_narrow.url }}')">
+{#- Nothing on a desk is a heading to look at, but every page has to be
+    able to say what it is. Off-screen, so the desk is unchanged. -#}
+<h1 class="sr-only">{{ section.title }}</h1>
 {% set_global slot = 0 %}
 
   {# FOLDERS — a directory with an _index.md is a bureau of its own.
