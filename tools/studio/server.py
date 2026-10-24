@@ -252,7 +252,10 @@ class Studio(http.server.BaseHTTPRequestHandler):
             if u.path == "/api/upload":
                 into = (q.get("into") or [""])[0]
                 name = (q.get("name") or [""])[0]
-                out = verbs.add_image(into, name, raw)
+                if (q.get("as") or [""])[0] == "wallpaper":
+                    out = verbs.set_wallpaper(into, name, raw)
+                else:
+                    out = verbs.add_image(into, name, raw)
             elif u.path == "/api/do":
                 ask = json.loads(raw.decode("utf-8") or "{}")
                 out = self.verb(ask)

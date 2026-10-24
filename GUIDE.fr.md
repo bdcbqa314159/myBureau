@@ -105,6 +105,8 @@ Tu peux :
   est enregistrée tout de suite, dans les deux langues
 - **changer un nom ou un texte** dans la colonne de droite, une langue à
   la fois
+- **changer le fond d'écran** d'un bureau : dépose une image sur le carré
+  à droite
 - **cliquer un projet** pour voir ses photos
 - **déposer des photos** dessus : elles sont numérotées toutes seules.
   La première est l'icône du projet.

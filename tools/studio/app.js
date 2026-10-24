@@ -71,10 +71,6 @@ function paint() {
   if (!model) return;
   tree.innerHTML = "";
   for (const { o, depth } of all()) {
-    if (o.kind !== "desk" && !model.desks.some((d) => d.path === o.path)) {
-      // a folder appears once as a child and once as a desk of its own;
-      // the child row is the one that can be moved, so keep that
-    }
     const b = document.createElement("button");
     b.className = "row" + (depth === 2 ? " deep" : depth > 2 ? " deeper" : "");
     b.setAttribute("aria-current", String(o.path === chosen));
@@ -116,6 +112,14 @@ function inspect(o) {
     <label>texte (${l})
       <textarea data-body="${l}">${esc(o.bodies[l] || "")}</textarea>
     </label>`).join("");
+  const isDesk = model.desks.some((d) => d.path === o.path);
+  const wall = isDesk ? `
+    <label>fond d'écran
+      <div class="wall" id="wall">${o.wallpaper
+        ? `<img src="${q("/media/" + o.path + "/" + o.wallpaper)}" alt="">`
+        : `<span>hérité du bureau au-dessus</span>`}</div>
+    </label>
+    <p class="drop" data-drop="wallpaper">Dépose une image ici pour changer le fond.</p>` : "";
   const shots = o.photographs.map((n, i) => `
     <li class="shot" draggable="true" data-name="${esc(n)}">
       <img src="${q("/media/" + o.path + "/" + n)}" alt="">
@@ -125,9 +129,9 @@ function inspect(o) {
   look.innerHTML = `
     <h2>${esc(o.titles.fr || o.name)}</h2>
     <p class="what">${kindOf(o)}${o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · sur la grille"}</p>
-    ${titles}${bodies}
-    ${o.gallery || o.kind !== "desk" ? `<ul class="shots">${shots}</ul>
-      <p class="drop">Dépose des photos ici. La première est l'icône.</p>` : ""}`;
+    ${titles}${bodies}${wall}
+    ${isDesk && !o.gallery ? "" : `<ul class="shots">${shots}</ul>
+      <p class="drop" data-drop="photos">Dépose des photos ici. La première est l'icône.</p>`}`;
   wire(o);
 }
 
@@ -175,11 +179,15 @@ look.addEventListener("drop", async (e) => {
   const o = find(chosen);
   if (!o || !e.dataTransfer.files.length) return;
   e.preventDefault();
-  for (const f of [...e.dataTransfer.files]) {
+  // dropped on the wallpaper patch, or anywhere else in the panel
+  const onWall = e.target.closest && e.target.closest('[data-drop="wallpaper"], .wall');
+  const files = [...e.dataTransfer.files];
+  for (const f of (onWall ? files.slice(0, 1) : files)) {
     const out = await ask(
-      `/api/upload?into=${encodeURIComponent(o.path)}&name=${encodeURIComponent(f.name)}`,
+      `/api/upload?into=${encodeURIComponent(o.path)}&name=${encodeURIComponent(f.name)}`
+      + (onWall ? "&as=wallpaper" : ""),
       { method: "POST", body: await f.arrayBuffer() });
-    tell(out ? `${f.name} ajoutée` : `${f.name} refusée`);
+    tell(out ? (onWall ? "fond d'écran changé" : `${f.name} ajoutée`) : `${f.name} refusée`);
   }
 });
 
@@ -244,4 +252,9 @@ el("verify").addEventListener("click", async () => {
   if (out) { health.hidden = false; health.textContent = out.look; tell("vérifié"); }
 });
 
-ask("/api/tree").then(() => tell("prêt"));
+// Open on something. An empty inspector saying "choose something" reads
+// as a label rather than an editor, and the panel looked like a viewer.
+ask("/api/tree").then(() => {
+  if (model && model.desks.length) select(model.desks[0]);
+  tell("prêt");
+});
