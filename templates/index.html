@@ -11,8 +11,13 @@
 {% for item in section.extra.items | default(value=[]) %}
   {% if item.window == "about" %}{% set_global about_name = item.name %}{% endif %}
 {% endfor %}
-<dialog class="win" id="about">
+{#- The brief asks for this one by name: "About me.txt s'ouvre en
+    s'agrandissant simplement comme quand on appuie sur espace sur notre
+    mac et affiche un screen". A screen, not a dialog box — so it opens
+    at the size a photograph does, and holds that size even while the
+    text in it is one line. -#}
+<dialog class="win win-about" id="about">
   <div class="win-bar"><span>{{ about_name }}</span><form method="dialog"><button aria-label="{{ trans(key='window_close', lang=lang) }}">✕</button></form></div>
-  <div class="win-body">{{ section.content | safe }}</div>
+  <div class="win-body about-body">{{ section.content | safe }}</div>
 </dialog>
 {% endblock %}
