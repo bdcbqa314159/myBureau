@@ -25,7 +25,7 @@
       {% set asset = asset | replace(from="/" ~ lang ~ "/", to="/") %}
     {% endif %}
     {% set file = asset | split(pat="/") | last %}
-    {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" %}
+    {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" and file | split(pat=".") | first != "wallpaper" %}
 {# Alt text, when there is any. A photograph in a portfolio is the
          content, not decoration, so alt="" tells a screen-reader user
          nothing was there — but inventing a description for someone
@@ -90,7 +90,7 @@
     {% set asset = asset | replace(from="/" ~ lang ~ "/", to="/") %}
   {% endif %}
   {% set file = asset | split(pat="/") | last %}
-  {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" %}
+  {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" and file | split(pat=".") | first != "wallpaper" %}
     {% set alt = "" %}
     {% if section.extra.alt and section.extra.alt[file] %}{% set alt = section.extra.alt[file] %}{% endif %}
     {% set shape = get_image_metadata(path=asset) %}

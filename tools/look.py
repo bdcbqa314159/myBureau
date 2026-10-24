@@ -55,6 +55,14 @@ def main() -> int:
             lines.append(f'url = "{url}" — no https://, so this points inside the site, not out')
             lines.append(f'   fix: url = "https://{url}"')
 
+        # 3b. a wallpaper line AND a wallpaper file -> the line does nothing
+        if re.search(r"^\s*wallpaper\s*=", fm, re.M):
+            folder = md.parent
+            if any(f.is_file() and f.stem.lower() == "wallpaper" for f in folder.iterdir()):
+                lines.append("wallpaper = … — there is also a wallpaper file in this"
+                             " folder, and the file wins. This line does nothing.")
+                lines.append("   fix: delete the line, or delete the file")
+
         # 3. a wallpaper on the gallery -> the gallery is a dark room
         if 'template = "gallery.html"' in fm and re.search(r"^\s*wallpaper\s*=", fm, re.M):
             lines.append("wallpaper = … — a gallery has no wallpaper, this line does nothing")

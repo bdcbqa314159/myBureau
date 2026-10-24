@@ -6,5 +6,4 @@ template = "section.html"
 icon = "img/icons/folder-rust.svg"
 x = 80
 y = 70
-wallpaper = "img/wall-da.jpg"
 +++

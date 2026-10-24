@@ -214,17 +214,75 @@ def case_untranslated_page(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A desk's background is a file in the desk's own folder.
+
+    It used to be a path typed into the front matter — of BOTH language
+    files, pointing at something in static/. Changing one and not the
+    other left a language on the old picture with nothing to say so, and
+    it was the only thing in this engine that did not live where the
+    content lives.
+    """
+    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    other = (ROOT / "content" / "graphic-design" / "wallpaper.jpg").read_bytes()
+    # a brand new bureau, with nothing but a wallpaper dropped in
+    p = d / "content" / "scenographie"
+    p.mkdir()
+    (p / "_index.md").write_text(FRONT.format(
+        title="scenographie", extra='template = "section.html"\n'))
+    (p / "_index.en.md").write_text(FRONT.format(
+        title="scenography", extra='template = "section.html"\n'))
+    (p / "wallpaper.jpg").write_bytes(photo)
+    q = p / "dedans"
+    q.mkdir()
+    (q / "_index.md").write_text(FRONT.format(
+        title="dedans", extra='template = "section.html"\n'))
+    # and one with nothing at all, anywhere above it
+    n = d / "content" / "nue"
+    n.mkdir()
+    (n / "_index.md").write_text(FRONT.format(
+        title="nue", extra='template = "section.html"\n'))
+    ok, log = build(d)
+
+    def wall(rel: str) -> str:
+        m = re.search(r"--wallpaper:url\('([^']*)", page(d, rel))
+        return m.group(1).split("/")[-1] if m else "none"
+
+    fr, en = wall("scenographie/index.html"), wall("en/scenographie/index.html")
+    return [
+        ("builds", ok),
+        ("dropping the file in is the whole of it", fr.startswith("wallpaper.")),
+        ("and it serves BOTH languages, with nothing edited twice", fr == en),
+        ("a bureau inside it inherits, rather than needing its own copy",
+         wall("scenographie/dedans/index.html") == fr),
+        ("a bureau with no wallpaper anywhere above it still is not black",
+         wall("nue/index.html").startswith("wall-home")),
+        ("the demo's own desks each kept their own",
+         len({wall("da/index.html"), wall("graphic-design/index.html"),
+              wall("travail-selectionne/index.html")}) == 3),
+        ("and a sub-bureau of those follows its parent",
+         wall("da/maison-cosette/index.html") == wall("da/index.html")),
+        ("no front matter in the whole site still types a wallpaper path",
+         not any("wallpaper =" in f.read_text(encoding="utf-8")
+                 for f in (d / "content").rglob("_index*.md"))),
+    ]
+
+
 def case_declared_wallpaper(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """A bureau that declares a wallpaper. This caught a real one: the
-    pellicules gallery declared one for months and it was never rendered,
+    """A bureau that declares a wallpaper the old way, by path.
+
+    Dropping `wallpaper.jpg` into the folder is how this is done now, but
+    the declared form still works and has to keep working — somebody will
+    have it in a branch. This also caught a real one once: the pellicules
+    gallery declared a wallpaper for months and it was never rendered,
     because body.gallery is a deliberate dark room. A line in a content
-    file that quietly does nothing is exactly what this contract exists
-    to prevent."""
+    file that quietly does nothing is what this contract exists to
+    prevent."""
     p = d / "content" / "tapisserie"
     p.mkdir()
     (p / "_index.md").write_text(FRONT.format(
         title="tapisserie",
-        extra='template = "section.html"\n\n[extra]\nwallpaper = "img/wall-da.jpg"\n'))
+        extra='template = "section.html"\n\n[extra]\nwallpaper = "img/wall-home.jpg"\n'))
     ok, log = build(d)
     h = page(d, "tapisserie/index.html")
     used = re.search(r"--wallpaper:url\('([^']+)'\)", h)
@@ -757,6 +815,7 @@ CASES = [
     ("spaces, an apostrophe and an accent", case_awkward_name),
     ("a project with no images", case_empty_project),
     ("a page added in French only", case_untranslated_page),
+    ("the wallpaper lives in the folder", case_wallpaper_lives_in_the_folder),
     ("a bureau that declares a wallpaper", case_declared_wallpaper),
     ("alt text written in front matter", case_alt_text),
     ("a bureau on the home desk goes to its own page", case_top_level_navigates),
