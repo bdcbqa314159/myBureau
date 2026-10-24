@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>myBureau — Panneau</title>
+<!-- the bevels, the typeface and the pointers come from the site itself,
+     so the panel is made of the same material as the thing it edits -->
+<link rel="stylesheet" href="/site.css">
+<link rel="stylesheet" href="/app.css">
+</head>
+<body>
+<div class="panel">
+  <div class="panel-bar">
+    <span>myBureau — Panneau</span>
+    <span class="lamp" id="lamp" title="état"></span>
+  </div>
+
+  <div class="panel-tools">
+    <label>Bureau
+      <select id="which"></select>
+    </label>
+    <button id="site">Voir le site</button>
+    <button id="verify">Vérifier</button>
+    <button id="undo">Annuler</button>
+    <span class="says" id="says">prêt</span>
+  </div>
+
+  <div class="panel-body">
+    <div class="map-wrap">
+      <div class="map" id="map"></div>
+      <p class="hint">Attrape une icône et pose-la où tu veux. Clique dessus
+         pour voir ses photos.</p>
+    </div>
+
+    <div class="well" id="well">
+      <p class="well-none">Clique un projet sur le bureau.</p>
+    </div>
+  </div>
+
+  <pre class="health" id="health"></pre>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -5,6 +5,10 @@
 .env
 .env.*
 
+# the panel's own notebook: what it did, so Annuler can take it back,
+# and what it binned. Generated, never committed.
+/.studio/
+
 # build output (zola)
 /public/
 

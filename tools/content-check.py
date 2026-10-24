@@ -20,6 +20,7 @@ what it expects to SEE.
 from __future__ import annotations
 
 import argparse
+import json
 import pathlib
 import re
 import shutil
@@ -211,6 +212,66 @@ def case_untranslated_page(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("tools/i18n.py names it as missing",
          "da/nouveau" in subprocess.run([sys.executable, str(d / "tools/i18n.py")],
                                         cwd=d, capture_output=True, text=True).stdout),
+    ]
+
+
+def case_the_panel_sees_what_the_site_renders(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """The dashboard must not become a third opinion about the content.
+
+    The templates decide what a desk holds and where. look.py has its own
+    reading. tools/studio/model.py now has a third, and three readings of
+    one set of rules drift — quietly, because each is self-consistent.
+
+    So: whatever the panel says is on a desk, and where, is checked
+    against the HTML the site actually rendered.
+    """
+    ok, log = build(d)
+    r = subprocess.run([sys.executable, "tools/studio/model.py"], cwd=d,
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        return [("builds", ok), ("the model runs at all", False)]
+    tree = json.loads(r.stdout)
+
+    where = {"desk": None}
+    wrong_count, wrong_spot, missing = [], [], []
+    for desk in tree["desks"]:
+        rel = desk["path"][len("content"):].strip("/")
+        html = page(d, (rel + "/index.html") if rel else "index.html")
+        if not html or desk["gallery"]:
+            continue
+        main = re.search(r'<main class="desk".*?</main>', html, re.S)
+        if main is None:
+            continue
+        rendered = {}
+        for m in re.finditer(r'<a class="icon[^"]*"([^>]*)>', main.group(0)):
+            vt = re.search(r'data-vt="([^"]+)"', m.group(1))
+            # a declared position is an integer; the loose grid used to
+            # write a float. Accept either, or this silently matches
+            # nothing and passes by seeing no icons at all.
+            xy = re.search(r'--x:([\d.]+)%; --y:([\d.]+)%', m.group(1))
+            if vt and xy:
+                rendered[vt.group(1)] = (xy.group(1), xy.group(2))
+        # every thing the panel would draw has to be on the real desk
+        for it in desk["on"]:
+            slug = it["path"][len("content/"):].replace("/", "-")
+            if slug not in rendered:
+                missing.append(slug)
+            elif it["x"] is not None and (
+                    float(rendered[slug][0]) != float(it["x"])
+                    or float(rendered[slug][1]) != float(it["y"])):
+                wrong_spot.append((slug, it["x"], it["y"], rendered[slug]))
+        # and the panel must not be missing one the desk shows
+        shown = {s for s in rendered if "-" in s or True}
+        if len(desk["on"]) and len(shown) < len(desk["on"]):
+            wrong_count.append(desk["path"])
+
+    return [
+        ("builds", ok),
+        ("the panel reads every desk the site has",
+         len(tree["desks"]) == len(list((d / "content").rglob("_index.md")))),
+        ("everything it would draw is really on that desk", missing == []),
+        ("and at the position the site actually rendered", wrong_spot == []),
+        ("it is not missing icons the desk shows", wrong_count == []),
     ]
 
 
@@ -815,6 +876,7 @@ CASES = [
     ("spaces, an apostrophe and an accent", case_awkward_name),
     ("a project with no images", case_empty_project),
     ("a page added in French only", case_untranslated_page),
+    ("the panel sees what the site renders", case_the_panel_sees_what_the_site_renders),
     ("the wallpaper lives in the folder", case_wallpaper_lives_in_the_folder),
     ("a bureau that declares a wallpaper", case_declared_wallpaper),
     ("alt text written in front matter", case_alt_text),
