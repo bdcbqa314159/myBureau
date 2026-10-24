@@ -63,6 +63,10 @@ button:disabled { color: #9a9aa2; cursor: default; }
 .row:hover { background: #f0f0f3; }
 .row[aria-current="true"] { background: #e8eefc; font-weight: 600; }
 .row .kind { margin-left: auto; font-size: 11px; color: #9a9aa2; }
+.row.lift { opacity: .45; }
+.row.target { background: #e8eefc; box-shadow: inset 0 0 0 1px #5b86e5; }
+.bin-all { margin-top: .9rem; width: 100%; color: #8a2a22; border-color: #e3c4c0; }
+.bin-all:hover { background: #fdf0ee; }
 .row.deep { padding-left: 1.6rem; }
 .row.deeper { padding-left: 2.6rem; }
 

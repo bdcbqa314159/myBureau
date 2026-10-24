@@ -134,10 +134,44 @@ function paint() {
     b.setAttribute("aria-current", String(o.path === chosen));
     b.innerHTML = `<span>${esc(o.titles.fr || o.name)}</span><span class="kind">${kindOf(o)}</span>`;
     b.addEventListener("click", () => select(o));
+
+    // Drag a row onto a bureau to move the thing into it — the Finder
+    // trip this panel exists to remove. The folder travels whole, so
+    // both language files and every photograph go with it.
+    b.draggable = true;
+    b.dataset.path = o.path;
+    b.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", o.path);
+      dragging = o.path;                 // dragover cannot read the payload
+      b.classList.add("lift");
+    });
+    b.addEventListener("dragend", () => { dragging = null; b.classList.remove("lift"); });
+    b.addEventListener("dragover", (e) => {
+      const from = dragging;
+      if (!from || from === o.path || !isBureau(o)) return;
+      e.preventDefault();
+      b.classList.add("target");
+    });
+    b.addEventListener("dragleave", () => b.classList.remove("target"));
+    b.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      b.classList.remove("target");
+      const from = e.dataTransfer.getData("text/plain") || dragging;
+      if (!from || from === o.path) return;
+      const out = await act({ verb: "move", item: from, into: o.path });
+      if (out && out.did) {
+        tell("déplacé dans " + (o.titles.fr || o.name) + " — son adresse a changé");
+        const moved = find(out.did.moved);
+        if (moved) select(moved);
+      }
+    });
     tree.append(b);
   }
   if (chosen) inspect(find(chosen));
 }
+
+const isBureau = (o) => model.desks.some((d) => d.path === o.path);
+let dragging = null;
 
 const esc = (s) => String(s).replace(/[<>&"]/g, (c) =>
   ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
@@ -209,12 +243,14 @@ function inspect(o) {
       <b>${i + 1}</b><button class="bin" title="jeter">✕</button>
     </li>`).join("");
 
+  const canBin = o.path !== "content";
   look.innerHTML = `
     <h2>${esc(o.titles.fr || o.name)}</h2>
     <p class="what">${kindOf(o)}${o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · sur la grille"}</p>
     ${titles}${bodies}${face}${wall}
     ${isDesk && !o.gallery ? "" : `<ul class="shots">${shots}</ul>
-      <p class="drop" data-drop="photos">Dépose des photos ici. La première est l'icône.</p>`}`;
+      <p class="drop" data-drop="photos">Dépose des photos ici. La première est l'icône.</p>`}
+    ${canBin ? `<button class="bin-all" id="binall">Jeter ${esc(o.titles.fr || o.name)}</button>` : ""}`;
   wire(o);
 }
 
@@ -231,6 +267,13 @@ function wire(o) {
       if (out) tell("texte enregistré");
     });
   });
+  const binAll = look.querySelector("#binall");
+  if (binAll) {
+    binAll.addEventListener("click", async () => {
+      const out = await act({ verb: "throw_away", item: o.path });
+      if (out) { chosen = null; tell("à la corbeille — Annuler la ramène"); paint(); }
+    });
+  }
   const list = look.querySelector(".shots");
   if (!list) return;
   let lifted = null;

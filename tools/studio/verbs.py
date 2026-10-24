@@ -105,6 +105,26 @@ def atomic(p: pathlib.Path, text: str) -> None:
     os.replace(tmp, p)
 
 
+def nudge(folder: pathlib.Path) -> None:
+    """Make `zola serve` notice something it otherwise will not.
+
+    It watches by modification time, and a MOVED file keeps the time it
+    always had — so renaming a directory changes nothing it can see. Left
+    alone it serves the old url happily and never renders the new one,
+    which looks exactly like the panel having done nothing.
+
+    Rewriting each content file with its own bytes is enough: identical
+    content, a new timestamp, one rebuild. Tried before it was written —
+    the move alone showed nothing, the nudge brought the new url up and
+    turned the old one into a 404.
+    """
+    for f in sorted(folder.rglob("*index*.md")):
+        try:
+            atomic(f, f.read_text(encoding="utf-8"))
+        except OSError:
+            pass
+
+
 def set_key(text: str, name: str, value) -> str:
     """Set one key in the front matter, leaving every other byte alone.
 
@@ -182,6 +202,10 @@ def undo() -> str:
     for hold, dst in staged:
         dst.parent.mkdir(parents=True, exist_ok=True)
         os.replace(hold, dst)
+        if dst.is_dir():
+            nudge(dst)          # undoing a move has the same blind spot
+        elif dst.parent.is_dir():
+            nudge(dst.parent)
     JOURNAL.write_text("\n".join(lines[:-1]) + ("\n" if lines[:-1] else ""),
                        encoding="utf-8")
     return entry["verb"]
@@ -359,6 +383,61 @@ def new_bureau(into: str, name: str) -> dict:
     moves.append({"from": "", "to": rel(folder)})
     record("new_bureau", [], moves)
     return {"made": rel(folder)}
+
+
+def move(item: str, into: str) -> dict:
+    """Put a thing in a different bureau.
+
+    The folder moves whole, so every language file, every photograph and
+    anything inside it travels together — which is the point. Doing this
+    in the Finder means knowing that index.md and index.en.md are the same
+    object, and that a bureau carries its children.
+
+    Its url changes with it, because the url is where it sits. Anything
+    anyone had bookmarked to the old one stops working, and nothing here
+    can prevent that — the panel says so before it does it.
+    """
+    src = a_project(item)
+    dst = inside(into)
+    if not any(dst.glob("_index*.md")):
+        raise Refused("things go inside a bureau")
+    if src == dst:
+        raise Refused("it is already there")
+    if dst == src.parent:
+        raise Refused("it is already there")
+    # a folder cannot be put inside itself, nor inside anything it contains
+    try:
+        dst.relative_to(src)
+        raise Refused("a folder cannot be put inside itself")
+    except ValueError:
+        pass
+    dest = _free_folder(dst, src.name)
+    os.replace(src, dest)
+    record("move", [], [{"from": rel(src), "to": rel(dest)}])
+    nudge(dest)                 # or zola keeps serving it where it was
+    return {"moved": rel(dest)}
+
+
+def throw_away(item: str) -> dict:
+    """To the bin, whole, and nothing is unlinked.
+
+    `Annuler` brings it back where it was, so this is a thing she can do
+    without being sure — which is the only way a delete button belongs in
+    a tool for somebody who is not a programmer.
+    """
+    d = a_project(item)
+    if d == CONTENT.resolve():
+        raise Refused("that is the whole site")
+    TRASH.mkdir(parents=True, exist_ok=True)
+    bin_ = TRASH / str(int(time.time() * 1000))
+    bin_.mkdir(exist_ok=True)
+    dest = bin_ / d.name
+    parent = d.parent
+    shutil.move(str(d), str(dest))
+    record("throw_away", [], [{"from": rel(d), "to": rel(dest)}])
+    # nothing inside it is left to nudge, so nudge the bureau it left
+    nudge(parent)
+    return {"binned": d.name}
 
 
 def set_icon(item: str, name: str, data: bytes) -> dict:

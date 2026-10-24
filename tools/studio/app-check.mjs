@@ -159,6 +159,12 @@ if (loaded) {
   check("and a way to look INSIDE a thing rather than at its desk",
     /id="aspage"/.test(markup) && (listeners.get("aspage:click") || []).length > 0);
 
+  check("a thing can be thrown away from the panel",
+    /id="binall"/.test(look.innerHTML));
+  const rows = tree.children;
+  check("the rows can be dragged, which is how a thing changes folder",
+    rows.length > 0 && rows.every((r) => r.draggable === true));
+
   const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
   check("and no rule anywhere hides the editor",
     !/\.look\s*\{[^}]*display:\s*none/.test(css)

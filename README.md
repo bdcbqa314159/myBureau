@@ -1099,8 +1099,23 @@ counter moved twice per edit and every careful rule above was defeated.
 #### What it may do
 
 A closed list in `tools/studio/verbs.py`, not a file manager:
-`new_project`, `new_bureau`, `place`, `retitle`, `set_body`, `set_icon`,
-`set_wallpaper`, `add_image`, `reorder`, `remove_image`, `undo`.
+`new_project`, `new_bureau`, `move`, `throw_away`, `place`, `retitle`,
+`set_body`, `set_icon`, `set_wallpaper`, `add_image`, `reorder`,
+`remove_image`, `undo`.
+
+#### Why `move` has to nudge
+
+`zola serve` watches by modification time, and a **moved** file keeps the
+time it always had. Renaming a directory therefore changes nothing it can
+see: it goes on serving the old url and never renders the new one, which
+looks exactly like the panel having done nothing.
+
+So `move` rewrites each content file in the folder with its own bytes —
+identical content, a fresh timestamp, one rebuild. Tried before it was
+written: the move alone showed nothing; the nudge brought the new url up
+and turned the old one into a 404. `throw_away` nudges the bureau the
+thing left, and `undo` does the same, because undoing a move has exactly
+the same blind spot.
 
 #### Making one, and what it will look like
 

@@ -200,6 +200,53 @@ def main() -> int:
           and not (tmp / "content" / "da" / "icon.jpg").exists())
 
 
+    # ---- moving and throwing away, the two Finder trips -------------
+    verbs.move("content/da/theodora", "content/graphic-design")
+    check("a project moves whole, into another bureau",
+          (tmp / "content/graphic-design/theodora/index.md").exists()
+          and not (tmp / "content/da/theodora").exists())
+    check("and every language went with it",
+          (tmp / "content/graphic-design/theodora/index.en.md").exists())
+    check("as did its photographs",
+          (tmp / "content/graphic-design/theodora/01.jpg").exists())
+    verbs.undo()
+    check("undo puts it back where it was",
+          (tmp / "content/da/theodora/index.md").exists()
+          and not (tmp / "content/graphic-design/theodora").exists())
+
+    verbs.move("content/da/maison-cosette", "content/graphic-design")
+    check("a bureau moves with its children",
+          (tmp / "content/graphic-design/maison-cosette/jojo/index.md").exists())
+    verbs.undo()
+
+    for bad in [("content/da", "content/da/maison-cosette")]:
+        try:
+            verbs.move(*bad)
+            check("a folder cannot be put inside itself", False)
+        except verbs.Refused:
+            check("a folder cannot be put inside itself", True)
+    try:
+        verbs.move("content/da/theodora", "content/da/confidence-glow")
+        check("and not inside a project either", False)
+    except verbs.Refused:
+        check("and not inside a project either", True)
+
+    verbs.throw_away("content/da/theodora")
+    check("throwing a project away takes the whole folder",
+          not (tmp / "content/da/theodora").exists())
+    check("to the bin, not to nowhere",
+          any(p.name == "index.md" for p in verbs.TRASH.rglob("*")))
+    verbs.undo()
+    check("and undo brings all of it back",
+          (tmp / "content/da/theodora/index.md").exists()
+          and (tmp / "content/da/theodora/01.jpg").exists())
+
+    try:
+        verbs.throw_away("content")
+        check("the whole site cannot be thrown away", False)
+    except verbs.Refused:
+        check("the whole site cannot be thrown away", True)
+
     shutil.rmtree(tmp, ignore_errors=True)
 
     serve()

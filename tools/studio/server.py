@@ -295,6 +295,10 @@ class Studio(http.server.BaseHTTPRequestHandler):
             return verbs.new_project(ask["into"], ask["name"], ask.get("kind", "photos"))
         if name == "new_bureau":
             return verbs.new_bureau(ask["into"], ask["name"])
+        if name == "move":
+            return verbs.move(ask["item"], ask["into"])
+        if name == "throw_away":
+            return verbs.throw_away(ask["item"])
         if name == "retitle":
             return verbs.retitle(ask["item"], ask.get("lang", "fr"), ask["title"])
         if name == "set_body":
