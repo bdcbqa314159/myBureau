@@ -223,6 +223,25 @@ const isBureau = (o) => model.desks.some((d) => d.path === o.path);
 
 /* A folder, explained — because its job is where it is, not what it is,
  * and because an empty one behaves like neither until it is filled. */
+/* A film's own parts. Shown when the project already holds a video, and
+ * offered when it was MADE as a film — otherwise there is nowhere to put
+ * the film and the thing can never become what it was created to be.
+ *
+ * Each target takes one kind. A video dropped on the photographs is
+ * refused with where it should have gone, and the same the other way. */
+function reel(o) {
+  const named = (o.titles.fr || "").toLowerCase();
+  const wantsFilm = o.video || /\.(mov|mp4|m4v|webm)$/.test(named);
+  if (o.kind === "desk" || !wantsFilm) return "";
+  return `
+    <label>le film
+      <div class="face wide" data-drop="video">${o.video
+        ? `<span>${esc(o.video)}</span>` : `<span>aucun film pour l'instant</span>`}</div>
+    </label>
+    <p class="drop" data-drop="video">Dépose la vidéo ici (mp4, mov, webm).</p>
+    <p class="drop" data-drop="poster">Et une image ici comme affiche.</p>`;
+}
+
 function folderSays(o) {
   const k = model.desks.find((d) => d.path === o.path);
   if (!k) return "";
@@ -319,7 +338,7 @@ function inspect(o) {
     <p class="what">${kindOf(o)}${o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · pas encore posé"}</p>
     ${isDesk ? `<p class="what">${folderSays(o)}</p>` : ""}
     ${titles}${bodies}${face}${wall}
-    ${isDesk && !o.gallery ? "" : `<ul class="shots">${shots}</ul>
+    ${isDesk && !o.gallery ? "" : reel(o) + `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">Dépose des photos ici. La première est l'icône.</p>`}
     ${canBin ? `<button class="bin-all" id="binall">Jeter ${esc(o.titles.fr || o.name)}</button>` : ""}`;
   wire(o);
@@ -446,13 +465,6 @@ stream.onmessage = async (e) => {
 };
 stream.onerror = () => { lamp.className = "lamp bad"; tell("connexion perdue — relance preview"); };
 
-function bureauFor(o) {
-  // things are made INSIDE a bureau: if a project is chosen, the one it
-  // belongs to is what she means
-  if (!o) return model && model.desks.length ? model.desks[0].path : null;
-  return model.desks.some((d) => d.path === o.path)
-    ? o.path : o.path.split("/").slice(0, -1).join("/");
-}
 
 el("kind").addEventListener("change", sayWillBe);
 el("into").addEventListener("change", sayWillBe);

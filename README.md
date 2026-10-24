@@ -1152,6 +1152,39 @@ do. Every verb is journalled to `.studio/` with the previous text, so
 **Annuler** takes it back; a deleted photograph goes to `.studio/trash/`
 rather than being unlinked. `.studio/` is git-ignored.
 
+#### What a project can be, and what it will accept
+
+A project's behaviour is derived, never stored. There are four shapes and
+one independent decoration:
+
+| it holds | it does |
+|---|---|
+| a video | a **film** — opens the film window; its page plays the video |
+| photographs | a **preview** window; its page is an opener and pairs |
+| photographs, `opens = "page"` | straight to its own page |
+| nothing to show | its own page, which is its text |
+
+and the extension in its **name** picks the drawn icon when there is no
+photograph to take one from — independently of all of the above.
+
+Each part therefore accepts one kind of thing, and a refusal says where
+the file should have gone instead:
+
+| drop target | takes | refusing |
+|---|---|---|
+| les photos | an image | a video → *"dépose-la sur « le film »"* |
+| le film | a video | an image → *"dépose-la sur les photos, ou sur l'affiche"* |
+| l'affiche | an image | a video |
+| l'apparence | an image or svg | a video |
+| le fond d'écran | an image | a video |
+
+A file the site cannot show is refused with **what to do about it**, not
+a list of permitted extensions: a `.pdf` is told to export its pages as
+JPEG, a `.heic` that it came off an iPhone. `tools/studio/check.py` holds
+every one of those to account, including that they are **in French** —
+twenty-nine of thirty-four were not, which is a dead end for somebody who
+does not write code however correct the sentence is.
+
 #### A folder's job is where it is
 
 This is the part of the model that catches people out, so the panel says

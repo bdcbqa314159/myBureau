@@ -125,6 +125,13 @@ Tu peux :
   dossier. Tout part avec — les deux langues, les photos, ce qu'il y a
   dedans. Son adresse change.
 - **jeter** : le bouton rouge en bas à droite. Annuler la ramène.
+- **un film** : dépose la vidéo sur « le film », et une image sur
+  « l'affiche » — c'est l'image qu'on voit avant de lancer.
+
+> Chaque case ne prend qu'une sorte de fichier. Si tu te trompes, le
+> panneau te dit où il fallait la déposer. Et si le site ne sait pas
+> montrer ton fichier — un PDF, un .psd — il te dit quoi faire à la
+> place.
 - **cliquer un projet** pour voir ses photos
 - **déposer des photos** dessus : elles sont numérotées toutes seules.
   La première est l'icône du projet.
