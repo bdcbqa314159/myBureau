@@ -183,11 +183,21 @@ def serve() -> None:
     mostly what it REFUSES.
     """
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="studio-srv-"))
-    for name in ("content", "tools", "static", "config.toml"):
+    # everything zola needs to actually build, because the panel's middle
+    # pane is the real site and a site that cannot build cannot be framed
+    for name in ("content", "templates", "tools", "static", "sass", "config.toml"):
         src = ROOT / name
+        if not src.exists():
+            continue
         (shutil.copytree if src.is_dir() else shutil.copyfile)(src, tmp / name)
-    port = 1197
-    p = subprocess.Popen([sys.executable, "tools/studio/server.py", str(port)],
+    port, site_port = 1197, 1198
+    # a real zola behind it, because the panel's middle pane IS the site
+    subprocess.run(["zola", "build"], cwd=tmp, capture_output=True)
+    site = subprocess.Popen(["zola", "serve", "--interface", "127.0.0.1",
+                             "--port", str(site_port)], cwd=tmp,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    p = subprocess.Popen([sys.executable, "tools/studio/server.py", str(port),
+                          "http://127.0.0.1:{}/".format(site_port)],
                          cwd=tmp, stdout=subprocess.PIPE, text=True)
     try:
         url = p.stdout.readline().strip()
@@ -218,6 +228,15 @@ def serve() -> None:
                 get("/api/tree"); break
             except Exception:                        # noqa: BLE001
                 time.sleep(0.25)
+        # and zola behind it: the proxy answers 502 until the site is up,
+        # which is a real state the panel can be in, not a test artefact
+        for _ in range(80):
+            try:
+                if urllib.request.urlopen(
+                        "http://127.0.0.1:{}/".format(site_port), timeout=5).getcode() == 200:
+                    break
+            except Exception:                        # noqa: BLE001
+                time.sleep(0.5)
 
         tree = json.loads(get("/api/tree").read())["tree"]
         check("the server reads the same desks the model does",
@@ -246,9 +265,19 @@ def serve() -> None:
         check("every one of them loads with NO token, as the browser asks",
               dead == [], str(dead))
 
-        # and the icons app.js names directly, which carry no token either
-        for u in ("/img/icons/folder.svg", "/img/icons/doc.svg"):
-            check("the panel can draw " + u, code_for_plain(port, u) == 200)
+        # the site, proxied onto the panel's own address — this is what
+        # the frame loads, and being same-origin is what lets the panel
+        # reach into the real page at all
+        check("the real site comes through the panel", code_for_plain(port, "/site/") == 200)
+        framed = urllib.request.urlopen(
+            "http://127.0.0.1:{}/site/".format(port), timeout=10).read().decode()
+        check("and nothing in it still points at zola's own address",
+              "127.0.0.1:{}".format(port + 1) not in framed and ":1111" not in framed)
+        check("the framed page is a real desk, with real icons",
+              'data-vt="da"' in framed)
+        inner = sorted({u for u in re.findall(r'(?:href|src)="(/site/[^"]+)"', framed)})
+        broken = [u for u in inner if code_for_plain(port, u) != 200]
+        check("everything the framed page asks for loads too", broken == [], str(broken[:3]))
 
         check("no token, no answer", code_for("/api/tree", "wrong") == 403)
         check("the page itself refuses without the token",
@@ -297,8 +326,8 @@ def serve() -> None:
         except urllib.error.HTTPError as e:
             check("a verb cannot be aimed outside content/", e.code == 400)
     finally:
-        p.terminate()
-        p.wait(timeout=10)
+        p.terminate(); p.wait(timeout=10)
+        site.terminate(); site.wait(timeout=10)
         shutil.rmtree(tmp, ignore_errors=True)
 
 

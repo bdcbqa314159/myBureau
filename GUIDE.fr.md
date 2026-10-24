@@ -98,10 +98,13 @@ fois que tu enregistres un fichier, la page se recharge toute seule.
 
 Deux onglets s'ouvrent, pas un : ton site, et **le panneau**.
 
-Le panneau montre tes bureaux comme ils sont vraiment. Tu peux :
+Au milieu du panneau, **c'est ton site** — la vraie page, pas un dessin.
+Tu peux :
 
-- **attraper une icône et la poser** où tu veux — sa place est enregistrée
-  tout de suite, dans les deux langues, et le site bouge à côté
+- **attraper une icône dans la page et la poser** où tu veux — sa place
+  est enregistrée tout de suite, dans les deux langues
+- **changer un nom ou un texte** dans la colonne de droite, une langue à
+  la fois
 - **cliquer un projet** pour voir ses photos
 - **déposer des photos** dessus : elles sont numérotées toutes seules.
   La première est l'icône du projet.

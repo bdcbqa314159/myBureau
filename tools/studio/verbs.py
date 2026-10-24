@@ -208,6 +208,55 @@ def place(item: str, x: int, y: int) -> dict:
     return {"x": x, "y": y, "files": len(texts)}
 
 
+def retitle(item: str, lang: str, title: str) -> dict:
+    """The name under the icon, in one language.
+
+    One language at a time on purpose — unlike a position, a title is not
+    the same in French and English, and writing both from one box is how a
+    site ends up with English text under a French heading.
+    """
+    d = a_project(item)
+    title = title.strip()
+    if not title:
+        raise Refused("a name cannot be empty")
+    if '"' in title:
+        raise Refused('a name cannot contain a double quote')
+    stem = "_index" if (d / "_index.md").exists() else "index"
+    f = d / ("{}.md".format(stem) if lang in ("", "fr", None)
+             else "{}.{}.md".format(stem, lang))
+    if not f.exists():
+        raise Refused("there is no {} file for this one yet".format(lang))
+    before = f.read_text(encoding="utf-8")
+    after = set_key(before, "title", title)
+    if after != before:
+        atomic(f, after)
+        record("retitle", [{"path": rel(f), "before": before}], [])
+    return {"title": title, "lang": lang}
+
+
+def set_body(item: str, lang: str, body: str) -> dict:
+    """The paragraph under the front matter, in one language.
+
+    Only the part after the closing fence is replaced; the front matter is
+    handed back untouched, comments and all.
+    """
+    d = a_project(item)
+    stem = "_index" if (d / "_index.md").exists() else "index"
+    f = d / ("{}.md".format(stem) if lang in ("", "fr", None)
+             else "{}.{}.md".format(stem, lang))
+    if not f.exists():
+        raise Refused("there is no {} file for this one yet".format(lang))
+    before = f.read_text(encoding="utf-8")
+    parts = before.split("+++")
+    if len(parts) < 3:
+        raise Refused("that file has no front matter")
+    after = "+++".join(parts[:2]) + "+++\n\n" + body.strip() + "\n"
+    if after != before:
+        atomic(f, after)
+        record("set_body", [{"path": rel(f), "before": before}], [])
+    return {"wrote": len(body)}
+
+
 def _next_number(d: pathlib.Path) -> int:
     taken = []
     for f in d.iterdir():
