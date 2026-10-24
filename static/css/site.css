@@ -777,8 +777,29 @@ body.gallery { background: #0d0b0a; }
   columns: 5 14rem; column-gap: .45rem;
   padding: clamp(5rem, 9vw, 8rem) .45rem .45rem;
 }
-.grid img { width: 100%; margin-bottom: .45rem; break-inside: avoid; }
+/* The photograph is wrapped in a link now, so the column rules move to
+   the link — `break-inside: avoid` on the img inside an inline <a> keeps
+   nothing together, and a masonry column would saw a photograph in half
+   across a column break. */
+.grid .shot {
+  display: block; margin-bottom: .45rem; break-inside: avoid;
+  cursor: pointer;
+}
+.grid img { width: 100%; display: block; }
+/* A gallery is a dark room; the only thing that should move is the one
+   you are pointing at. */
+.grid .shot { transition: opacity .2s var(--ease); }
+.grid:hover .shot { opacity: .62; }
+.grid .shot:hover, .grid .shot:focus-visible { opacity: 1; }
+.grid .shot:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
 @media (max-width: 52rem) { .grid { columns: 2 8rem; } }
+/* A touch screen has no hover, so the dimming would be permanent. */
+@media (hover: none) { .grid:hover .shot { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .grid .shot { transition: none; } }
+
+/* A photograph on its own has no page to open and no text under it —
+   just the picture and a way out. */
+.win-shot .preview-body { background: #0d0b0a; }
 
 /* ====================================================================
    author credit — licence §4, do not remove

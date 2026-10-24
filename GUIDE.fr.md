@@ -215,6 +215,14 @@ title = "mon projet.jpg"
 Une série faite en une nuit, à la lumière des phares.
 ```
 
+### La page pellicules
+
+Celle-là n'est pas un bureau : c'est une galerie. Dépose tes photos à
+côté de son `_index.md` et elles apparaissent, en cinq colonnes. Pas de
+`index.md` à écrire, pas de dossier par photo.
+
+Un clic sur une photo l'ouvre en grand dans une fenêtre. Échap la ferme.
+
 ### Ajouter un dossier (un nouveau bureau)
 
 Pareil, mais le fichier s'appelle **`_index.md`** (avec le tiret bas) et
