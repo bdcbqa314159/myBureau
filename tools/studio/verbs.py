@@ -367,11 +367,23 @@ def _languages_of(parent: pathlib.Path, stem: str) -> list:
     return sorted(out)
 
 
+def is_gallery(d: pathlib.Path) -> bool:
+    for f in d.glob("_index*.md"):
+        if 'template = "gallery.html"' in f.read_text(encoding="utf-8", errors="replace"):
+            return True
+    return False
+
+
 def new_project(into: str, name: str, kind: str = "photos") -> dict:
     """A new project in a bureau: a folder, and one file per language."""
     d = inside(into)
     if not any(d.glob("_index*.md")):
         raise Refused("un projet se range dans un bureau.")
+    # A gallery renders its own photographs and nothing else: a project
+    # put inside one would be built and never shown anywhere.
+    if is_gallery(d):
+        raise Refused("une galerie ne montre que ses photos — un projet rangé"
+                      " là ne s'afficherait nulle part.")
     if kind not in NEW_KINDS:
         raise Refused("je ne connais pas ce genre de projet.")
     name = name.strip()
@@ -395,6 +407,9 @@ def new_bureau(into: str, name: str) -> dict:
     d = inside(into)
     if not any(d.glob("_index*.md")):
         raise Refused("un dossier se range dans un bureau.")
+    if is_gallery(d):
+        raise Refused("une galerie ne montre que ses photos — un dossier rangé"
+                      " là ne s'afficherait nulle part.")
     name = name.strip()
     if not name or '"' in name:
         raise Refused("donne-lui un nom, sans guillemets.")
@@ -427,6 +442,9 @@ def move(item: str, into: str) -> dict:
     dst = inside(into)
     if not any(dst.glob("_index*.md")):
         raise Refused("ça se range dans un bureau.")
+    if is_gallery(dst):
+        raise Refused("une galerie ne montre que ses photos — ce que tu déposes"
+                      " là ne s'afficherait nulle part.")
     if src == dst:
         raise Refused("il y est déjà.")
     if dst == src.parent:

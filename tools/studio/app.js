@@ -334,7 +334,9 @@ function inspect(o) {
              : "icône par défaut"}</span>`}</div>
     </label>
     <p class="drop" data-drop="icon">Dépose une image ici pour l'icône.</p>`;
-  const wall = isDesk ? `
+  // A gallery ignores a wallpaper — look.py flags one declared there as a
+  // line that does nothing — so the panel does not offer to set one.
+  const wall = (isDesk && !o.gallery) ? `
     <label>fond d'écran
       <div class="wall" id="wall">${o.wallpaper
         ? `<img src="${q("/media/" + o.path + "/" + o.wallpaper)}" alt="">`
@@ -351,11 +353,15 @@ function inspect(o) {
   const canBin = o.path !== "content";
   look.innerHTML = `
     <h2>${esc(o.titles.fr || o.name)}</h2>
-    <p class="what">${kindOf(o)}${o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · pas encore posé"}</p>
+    <p class="what">${kindOf(o)}${o.gallery ? ` · ${o.photographs.length} photos`
+       : o.holds !== undefined ? ` · ${o.holds} chose${o.holds > 1 ? "s" : ""} dedans` : ""}${
+       o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · pas encore posé"}</p>
     ${isDesk ? `<p class="what">${folderSays(o)}</p>` : ""}
     ${titles}${bodies}${face}${wall}
     ${isDesk && !o.gallery ? "" : reel(o) + `<ul class="shots">${shots}</ul>
-      <p class="drop" data-drop="photos">Dépose des photos ici. La première est l'icône.</p>`}
+      <p class="drop" data-drop="photos">${o.gallery
+        ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."
+        : "Dépose des photos ici. La première est l'icône."}</p>`}
     ${canBin ? `<button class="bin-all" id="binall">Jeter ${esc(o.titles.fr || o.name)}</button>` : ""}`;
   wire(o);
 }
