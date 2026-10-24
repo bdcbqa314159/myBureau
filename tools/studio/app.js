@@ -479,13 +479,57 @@ function arm(doc) {
   }, true);
 }
 
+/* What is under the pointer, other than the thing being dragged — and
+ * only if it is somewhere this thing could actually go.
+ *
+ * The guardrails are the verb's: a gallery shows photographs only, a
+ * project is not a container, and nothing goes inside itself. Those are
+ * refused by the server whatever the panel does; this stops her finding
+ * out by being told no, which is the difference between a tool that
+ * guides and one that scolds. */
+function canTake(targetPath, movingPath) {
+  if (!targetPath || targetPath === movingPath) return false;
+  const k = model && model.desks.find((d) => d.path === targetPath);
+  // asked of the model, not restated here — the server decides, and a
+  // second copy of the rule is a second thing to keep true
+  if (!k || !k.can_receive) return false;
+  if (targetPath.startsWith(movingPath + "/")) return false;  // inside itself
+  if (deskOf({ path: movingPath }) === targetPath) return false;  // already there
+  return true;
+}
+
+function under(doc, e, self) {
+  const seen = doc.elementsFromPoint
+    ? doc.elementsFromPoint(e.clientX, e.clientY) : [];
+  for (const node of seen) {
+    const icon = node.closest && node.closest("a.icon[data-vt]");
+    if (!icon || icon === self) continue;
+    const path = bySlug.get(icon.dataset.vt);
+    return canTake(path, bySlug.get(self.dataset.vt)) ? icon : null;
+  }
+  return null;
+}
+
+/* The folder she is about to drop into, lit up in the real page. */
+function aimAt(doc, icon) {
+  if (!doc.getElementById("studio-aim")) {
+    const s = doc.createElement("style");
+    s.id = "studio-aim";
+    s.textContent = ".studio-aim{outline:3px dashed #3aa76d;outline-offset:6px;border-radius:3px}";
+    (doc.head || doc.documentElement).append(s);
+  }
+  doc.querySelectorAll(".studio-aim").forEach((n) => n.classList.remove("studio-aim"));
+  if (icon) icon.classList.add("studio-aim");
+}
+
 function hook() {
   let doc;
   try { doc = view.contentDocument; } catch (e) { return; }
   if (!doc) return;
   const desk = doc.querySelector(".desk");
   tip.textContent = desk
-    ? "Clique pour modifier · double-clique pour entrer · attrape pour poser"
+    ? "Clique pour modifier · double-clique pour entrer · attrape pour poser,"
+      + " ou lâche sur un dossier pour l'y ranger"
     : "Cette page n'est pas un bureau — rien à déplacer ici.";
   if (!desk) return;
 
@@ -524,14 +568,44 @@ function hook() {
       if (isBureau(o)) { mode = "desk"; setPressed(); chosen = o.path; view.src = urlOf(o); paint(); }
       else setMode("page");
     }, true);
+    // ON THE DESK, or in a folder's window? Inside a window the icons are
+    // a LIST — the site deliberately does not make them draggable, and
+    // their x/y means nothing there. Attaching position-dragging to them
+    // would write a coordinate for something that has none.
+    const onDesk = desk.contains(icon);
+
     let from = null;
     icon.addEventListener("pointerdown", (e) => { from = { x: e.clientX, y: e.clientY }; }, true);
+    if (onDesk) {
+      icon.addEventListener("pointermove", (e) => {
+        if (!from) return;
+        aimAt(doc, under(doc, e, icon));
+      }, true);
+    }
     icon.addEventListener("pointerup", async (e) => {
       const was = from; from = null;
       if (!was) return;
       const moved = Math.abs(e.clientX - was.x) > 3 || Math.abs(e.clientY - was.y) > 3;
       const o = find(path);
-      if (!moved) { if (o) { select(o); mark(doc, icon); } return; }
+      if (!moved || !onDesk) {
+        aimAt(doc, null);
+        if (o) { select(o); mark(doc, icon); }
+        return;
+      }
+      // Dropped ON something? Then she is filing it, not placing it —
+      // the gesture a desktop has always had.
+      const onto = under(doc, e, icon);
+      aimAt(doc, null);
+      if (onto) {
+        const target = bySlug.get(onto.dataset.vt);
+        const out = target && await act({ verb: "move", item: path, into: target });
+        if (out && out.did) {
+          const moved_ = find(out.did.moved);
+          tell("rangé dans " + (find(target) || { name: target }).name);
+          if (moved_) select(moved_);
+        }
+        return;
+      }
       // the site's own desk.js has already moved it, clamped it and
       // walked it clear of its neighbours. Read where it put it.
       const r = icon.getBoundingClientRect(), d = desk.getBoundingClientRect();

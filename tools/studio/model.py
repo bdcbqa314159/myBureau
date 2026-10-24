@@ -160,6 +160,11 @@ def tree() -> dict:
         d["opens_as"] = opens_as(d, d["depth"])
         d["empty"] = not d["on"]
         d["holds"] = len(d["on"])
+        # Whether anything may be filed into it. A gallery renders its own
+        # photographs and nothing else, so a thing put there would be
+        # built and shown nowhere — verbs.move refuses it, and the panel
+        # reads this rather than restating the rule and drifting from it.
+        d["can_receive"] = not d["gallery"]
         desks.append(d)
 
     # ONE FOLDER, ONE SET OF FACTS.
@@ -180,7 +185,8 @@ def tree() -> dict:
             k = known.get(child["path"])
             if k is None:
                 continue                      # a project: not a desk anywhere
-            for field in ("gallery", "depth", "opens_as", "empty", "holds"):
+            for field in ("gallery", "depth", "opens_as", "empty", "holds",
+                          "can_receive"):
                 child[field] = k[field]
     return {"desks": desks}
 

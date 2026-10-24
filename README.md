@@ -1152,6 +1152,33 @@ do. Every verb is journalled to `.studio/` with the previous text, so
 **Annuler** takes it back; a deleted photograph goes to `.studio/trash/`
 rather than being unlinked. `.studio/` is git-ignored.
 
+#### Filing a thing by dropping it on a folder
+
+The gesture a desktop has always had: pick a thing up and drop it **on a
+folder** to put it there. Same drag as moving it about — where you let go
+decides which it was.
+
+The folder under the pointer lights up **in the real page**, and only
+when it would actually take the thing. The rules are the verb's, read
+rather than restated:
+
+| | |
+|---|---|
+| a **galerie** | never a target — it renders photographs and nothing else |
+| its **own inside** | a folder cannot be put into something it contains |
+| where it already is | not a move |
+
+`model.py` publishes `can_receive` and the panel asks it, instead of
+keeping a second copy of the rule that would drift. `check.py` then
+compares, **for every folder in the real tree**, what the panel would
+offer against what `move` actually accepts.
+
+And **icons inside a folder's window are no longer given a position.**
+Inside a window the icons are a list — the site deliberately does not
+make them draggable, and their x/y means nothing there. The panel was
+attaching position-dragging to every icon it could see, so dragging one
+in a window would have written a coordinate for something that has none.
+
 #### A gallery, and why it was inconsistent
 
 A bureau appears **twice** in the model: once as a child of the bureau it

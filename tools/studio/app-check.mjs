@@ -249,6 +249,29 @@ if (loaded) {
   // Choosing a folder must not walk into it. Suppressing the site's own
   // click was correct and made no difference, because the panel then
   // navigated the frame itself — the same outcome by another route.
+  // Filing by dragging onto a folder, and the guardrails that decide
+  // which folders will take it. The rules live in canTake(); the server
+  // refuses the same cases regardless, so this is about not making her
+  // find out by being told no.
+  const src4 = readFileSync(new URL("./app.js", import.meta.url), "utf8");
+  check("dropping a thing onto a folder files it there",
+    /verb: "move", item: path, into: target/.test(src4));
+  // Not "does the source say gallery" — that went stale the moment the
+  // rule moved. What matters is that the panel ASKS the model instead of
+  // carrying its own copy; whether the model is right is checked against
+  // the server in tools/studio/check.py.
+  check("the panel asks the model what may receive, rather than deciding",
+    /!k\.can_receive/.test(src4) && !/k\.gallery\) return false/.test(src4));
+  check("nor is a thing's own inside",
+    /targetPath\.startsWith\(movingPath \+ "\/"\)/.test(src4));
+  check("nor the folder it is already in",
+    /deskOf\(\{ path: movingPath \}\) === targetPath/.test(src4));
+  check("the folder she is aiming at is lit up in the page",
+    /studio-aim/.test(src4));
+  check("icons inside a folder window are not given a position",
+    /const onDesk = desk\.contains\(icon\);/.test(src4)
+    && /if \(!moved \|\| !onDesk\)/.test(src4));
+
   const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
   check("and no rule anywhere hides the editor",
     !/\.look\s*\{[^}]*display:\s*none/.test(css)
