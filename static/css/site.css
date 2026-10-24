@@ -89,6 +89,19 @@
   --dim:  #828282;
   --title:#000082;
 
+  /* How much shadow an icon and its name carry on a wallpaper. Her call,
+     and she has already turned it down once — so it is two values here
+     rather than six scattered through the file.
+
+     The halo is not decoration. Measured on the demo wallpapers: the home
+     one is 64.5% brighter than 200/255, and the patches the labels sit on
+     average 228-243 with peaks at 250. White text on that is invisible
+     without a dark edge. What WAS decoration is the wide soft bloom that
+     used to sit under it — it added the grey cloud she noticed and almost
+     nothing to legibility, so it is gone and the tight edge stayed. */
+  --label-halo: 0 0 2px rgb(0 0 0 / .76), 0 1px 2px rgb(0 0 0 / .88);
+  --icon-lift:  drop-shadow(0 1px 5px rgb(0 0 0 / .24));
+
   --icon-w: clamp(5.5rem, 7.4vw, 9.5rem);
   --pad:    clamp(0.75rem, 1.6vw, 1.6rem);
   --ease:   cubic-bezier(.22,.61,.36,1);
@@ -342,7 +355,7 @@ img.will-fade.is-in { opacity: 1; }
   font-family: var(--font-display);
   font-size: var(--f-2); font-weight: var(--w-bold);
   line-height: var(--lh-tight); letter-spacing: var(--tracking-text);
-  text-shadow: 0 0 2px rgb(0 0 0 / .8), 0 1px 2px rgb(0 0 0 / .95), 0 2px 12px rgb(0 0 0 / .5);
+  text-shadow: var(--label-halo);
   touch-action: none; user-select: none;
   -webkit-user-drag: none;   /* Safari: stop the native link/image drag */
   transition: scale .22s var(--ease);
@@ -363,14 +376,14 @@ img.will-fade.is-in { opacity: 1; }
   margin-inline: auto;
   background: #fff;
   padding: 3px;
-  box-shadow: 0 1px 3px rgb(0 0 0 / .4);
+  box-shadow: 0 1px 2px rgb(0 0 0 / .26);
 }
 /* In a folder window the icons are a list at list size, and the window
    is already a panel — the lift would be a second frame inside a frame. */
 .icon.is-flow img.is-photo {
   max-height: 3.3rem;
   padding: 2px;
-  box-shadow: 0 1px 2px rgb(0 0 0 / .25);
+  box-shadow: 0 1px 2px rgb(0 0 0 / .16);
 }
 
 /* The shadow lives on the ANCHOR, not on the image inside it.
@@ -382,17 +395,18 @@ img.will-fade.is-in { opacity: 1; }
    two, and `will-change` asks for the layer up front rather than at the
    moment of grabbing. */
 .icon {
-  filter: drop-shadow(0 2px 6px rgb(0 0 0 / .35));
+  filter: var(--icon-lift);
   will-change: transform;
   transition: filter .22s var(--ease), scale .22s var(--ease);
 }
 .icon:hover, .icon:focus-visible { scale: 1.045; }
-.icon:hover { filter: drop-shadow(0 6px 16px rgb(0 0 0 / .5)); }
+.icon:hover { filter: drop-shadow(0 4px 12px rgb(0 0 0 / .34)); }
 /* The wallpaper reaches pure white — measured rgb(255,255,255) in the
    clouds on the home desk — so a white ring alone is 1.00:1 there and
    the keyboard user simply cannot see where they are. The labels survive
-   because of their three-layer shadow; an outline has no such thing, so
-   it carries its own dark ring. White against the dark ring and the dark
+   because of their halo — see --label-halo, which is now two layers and
+   not three; an outline has no such thing, so it carries its own dark
+   ring. White against the dark ring and the dark
    ring against anything underneath: whichever the wallpaper is doing,
    one of the two edges is visible. */
 .icon:focus-visible {
@@ -405,7 +419,7 @@ img.will-fade.is-in { opacity: 1; }
 .icon.dragging {
   scale: 1.08; rotate: -1.4deg; transition: none;
 }
-.icon.dragging { filter: drop-shadow(0 14px 28px rgb(0 0 0 / .55)); }
+.icon.dragging { filter: drop-shadow(0 10px 22px rgb(0 0 0 / .4)); }
 
 /* A folder refusing a drop. Icons move freely around a desktop — that is
    not a state change. Putting one inside another is, and there is no such
