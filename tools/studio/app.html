@@ -3,43 +3,33 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>myBureau — Panneau</title>
-<!-- the bevels, the typeface and the pointers come from the site itself,
-     so the panel is made of the same material as the thing it edits -->
-<link rel="stylesheet" href="/site.css">
+<title>myBureau — panneau</title>
 <link rel="stylesheet" href="/app.css">
 </head>
 <body>
-<div class="panel">
-  <div class="panel-bar">
-    <span>myBureau — Panneau</span>
-    <span class="lamp" id="lamp" title="état"></span>
-  </div>
+<header class="bar">
+  <strong>myBureau</strong>
+  <span class="lamp" id="lamp"></span>
+  <span class="says" id="says">…</span>
+  <button id="verify">Vérifier</button>
+  <button id="undo">Annuler</button>
+  <button id="open">Ouvrir dans un onglet</button>
+</header>
 
-  <div class="panel-tools">
-    <label>Bureau
-      <select id="which"></select>
-    </label>
-    <button id="site">Voir le site</button>
-    <button id="verify">Vérifier</button>
-    <button id="undo">Annuler</button>
-    <span class="says" id="says">prêt</span>
-  </div>
+<main class="frame">
+  <nav class="tree" id="tree" aria-label="le contenu"></nav>
 
-  <div class="panel-body">
-    <div class="map-wrap">
-      <div class="map" id="map"></div>
-      <p class="hint">Attrape une icône et pose-la où tu veux. Clique dessus
-         pour voir ses photos.</p>
-    </div>
+  <section class="stage">
+    <!-- the real site, served from this address so the panel can reach
+         into it. Not a drawing of the site: the site. -->
+    <iframe id="view" title="le site" src="/site/"></iframe>
+    <p class="tip" id="tip">Attrape une icône dans la page et pose-la.</p>
+  </section>
 
-    <div class="well" id="well">
-      <p class="well-none">Clique un projet sur le bureau.</p>
-    </div>
-  </div>
+  <aside class="look" id="look" aria-label="détails"></aside>
+</main>
 
-  <pre class="health" id="health"></pre>
-</div>
+<pre class="health" id="health" hidden></pre>
 <script src="/app.js"></script>
 </body>
 </html>

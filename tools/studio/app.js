@@ -1,179 +1,150 @@
 /* The panel.
  *
- * Holds no state worth the name: the server re-reads content/ on every
- * answer and pushes a nudge whenever anything changes on disk, including
- * changes this panel had nothing to do with. So the loop is always
- * "ask, draw" — never "remember what I did".
+ * The middle of the window is the REAL site, served from this address so
+ * that this script can reach into it. Nothing here draws a desk, an icon
+ * or a photograph: zola already did, and a second renderer would drift
+ * from the first within a month.
  *
- * No framework and no build step, for the same reason the site has none.
+ * Editing is therefore an overlay. The site's own desk.js still does the
+ * dragging — with its collision walk and its clamping, which are already
+ * right — and this only writes down where it ended up.
  */
 const TOKEN = new URLSearchParams(location.search).get("t") || "";
 const q = (p) => p + (p.includes("?") ? "&" : "?") + "t=" + encodeURIComponent(TOKEN);
-
 const el = (id) => document.getElementById(id);
-const map = el("map"), well = el("well"), which = el("which");
-const lamp = el("lamp"), says = el("says"), health = el("health");
 
-let site = "";        // where the site is being served, per the server
-let tree = null;      // what the server last told us
-let deskPath = null;  // which desk is on screen
-let pick = null;      // which project is in the well
+const view = el("view"), tree = el("tree"), look = el("look");
+const lamp = el("lamp"), says = el("says"), health = el("health"), tip = el("tip");
+
+let site = "";
+let model = null;
+let chosen = null;          // content path of the thing being inspected
+let bySlug = new Map();     // data-vt in the page -> content path
 
 const tell = (m) => { says.textContent = m; };
-const busy = (on) => lamp.classList.toggle("busy", on);
 
 async function ask(path, opts) {
-  busy(true);
+  lamp.className = "lamp busy";
   try {
     const r = await fetch(q(path), opts);
     const out = await r.json();
-    if (!r.ok) { lamp.classList.add("bad"); tell(out.error || "refusé"); return null; }
-    lamp.classList.remove("bad");
+    if (!r.ok) { lamp.className = "lamp bad"; tell(out.error || "refusé"); return null; }
+    lamp.className = "lamp";
     if (out.site) site = out.site;
-    if (out.tree) { tree = out.tree; draw(); }
+    if (out.tree) { model = out.tree; paint(); }
     return out;
-  } catch (e) { lamp.classList.add("bad"); tell("le panneau a perdu le serveur"); return null; }
-  finally { busy(false); }
+  } catch (e) {
+    lamp.className = "lamp bad"; tell("le panneau a perdu le serveur"); return null;
+  }
 }
-
 const act = (body) => ask("/api/do", {
   method: "POST", headers: { "Content-Type": "application/json" },
   body: JSON.stringify(body),
 });
 
-async function refresh() {
-  const out = await ask("/api/tree");
-  if (out) { tree = out.tree; draw(); }
+/* ---- what kind of thing is this? --------------------------------- */
+/* The engine has more than folders and photographs, and the panel has to
+   say which it is looking at — a gallery has no icons to move, a film is
+   not a set of stills, a shortcut is not in content/ at all. */
+function kindOf(o) {
+  if (o.kind === "desk" || o.kind === "folder") return o.gallery ? "galerie" : "bureau";
+  if (o.video) return "film";
+  if (o.opens === "page") return "projet · page";
+  if (o.photographs.length) return "projet · photos";
+  return "projet · sans image";
 }
 
-/* ---- drawing ---------------------------------------------------- */
-
-function deskNow() {
-  if (!tree) return null;
-  return tree.desks.find((d) => d.path === deskPath) || tree.desks[0];
-}
-
-function draw() {
-  if (!tree) return;
-  const d = deskNow();
-  if (!d) return;
-  deskPath = d.path;
-
-  which.innerHTML = "";
-  for (const k of tree.desks) {
-    const o = document.createElement("option");
-    o.value = k.path;
-    o.textContent = (k.titles.fr || k.name) + (k.gallery ? "  (galerie)" : "");
-    o.selected = k.path === deskPath;
-    which.append(o);
+const all = () => {
+  const out = [];
+  for (const d of model.desks) {
+    out.push({ o: d, depth: d.path.split("/").length - 1 });
+    for (const it of d.on) out.push({ o: it, depth: d.path.split("/").length });
   }
+  return out;
+};
 
-  map.style.backgroundImage = d.wallpaper
-    ? `url("${q("/media/" + d.path + "/" + d.wallpaper)}")` : "";
-  map.innerHTML = "";
+const find = (p) => all().map((r) => r.o).find((o) => o.path === p) || null;
 
-  if (d.gallery) {
-    map.insertAdjacentHTML("beforeend",
-      `<p style="color:#fff;padding:1rem">Une galerie n'a pas d'icônes à poser —
-       ses photos sont simplement dans le dossier.</p>`);
-    return;
+/* ---- the list down the side -------------------------------------- */
+
+function paint() {
+  if (!model) return;
+  tree.innerHTML = "";
+  for (const { o, depth } of all()) {
+    if (o.kind !== "desk" && !model.desks.some((d) => d.path === o.path)) {
+      // a folder appears once as a child and once as a desk of its own;
+      // the child row is the one that can be moved, so keep that
+    }
+    const b = document.createElement("button");
+    b.className = "row" + (depth === 2 ? " deep" : depth > 2 ? " deeper" : "");
+    b.setAttribute("aria-current", String(o.path === chosen));
+    b.innerHTML = `<span>${esc(o.titles.fr || o.name)}</span><span class="kind">${kindOf(o)}</span>`;
+    b.addEventListener("click", () => select(o));
+    tree.append(b);
   }
-
-  d.on.forEach((it, i) => {
-    const pin = document.createElement("div");
-    pin.className = "pin" + (pick === it.path ? " chosen" : "");
-    // no position of its own: the site lays those out on a loose grid,
-    // and this shows the same arithmetic rather than inventing one
-    const x = it.x !== null ? +it.x : 12 + (i % 4) * 25;
-    const y = it.y !== null ? +it.y : 20 + Math.floor(i / 4) * 26;
-    pin.style.left = x + "%";
-    pin.style.top = y + "%";
-    pin.dataset.item = it.path;
-    const face = faceOf(it);
-    pin.innerHTML = `<img src="${face}" alt=""><span>${esc(it.titles.fr || it.name)}</span>`;
-    map.append(pin);
-    drag(pin, it);
-  });
+  if (chosen) inspect(find(chosen));
 }
 
-function faceOf(it) {
-  if (it.icon && !it.icon.includes("/")) return q("/media/" + it.path + "/" + it.icon);
-  if (it.icon) return q("/media/" + it.icon);
-  if (it.kind === "folder") return "/img/icons/folder.svg";
-  if (it.photographs.length) return q("/media/" + it.path + "/" + it.photographs[0]);
-  return "/img/icons/doc.svg";
-}
-
-const esc = (s) => s.replace(/[<>&"]/g, (c) =>
+const esc = (s) => String(s).replace(/[<>&"]/g, (c) =>
   ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
 
-/* ---- moving an icon ---------------------------------------------- */
+/* The url the site serves this thing at — content/da/theodora is /da/theodora/ */
+const urlOf = (o) => "/site/" + o.path.replace(/^content\/?/, "") + (o.path === "content" ? "" : "/");
 
-function drag(pin, it) {
-  let from = null;
-  pin.addEventListener("pointerdown", (e) => {
-    if (e.button !== 0) return;
-    pin.setPointerCapture(e.pointerId);
-    const box = map.getBoundingClientRect();
-    from = { x: e.clientX, y: e.clientY, left: parseFloat(pin.style.left),
-             top: parseFloat(pin.style.top), box, moved: false };
-    pin.classList.add("dragging");
-  });
-  pin.addEventListener("pointermove", (e) => {
-    if (!from) return;
-    const dx = (e.clientX - from.x) / from.box.width * 100;
-    const dy = (e.clientY - from.y) / from.box.height * 100;
-    if (Math.abs(dx) > 0.4 || Math.abs(dy) > 0.4) from.moved = true;
-    // clamped, because the site clamps too: an icon dropped off the edge
-    // would be walked back on and the number would disagree with the desk
-    pin.style.left = Math.max(0, Math.min(100, from.left + dx)) + "%";
-    pin.style.top = Math.max(0, Math.min(100, from.top + dy)) + "%";
-  });
-  const done = async (e) => {
-    if (!from) return;
-    const wasMoved = from.moved;
-    const x = Math.round(parseFloat(pin.style.left));
-    const y = Math.round(parseFloat(pin.style.top));
-    from = null;
-    pin.classList.remove("dragging");
-    if (!wasMoved) { choose(it); return; }
-    const out = await act({ verb: "place", item: it.path, x, y });
-    if (out) tell(`${it.titles.fr || it.name} → ${x}% / ${y}%`);
-  };
-  pin.addEventListener("pointerup", done);
-  pin.addEventListener("pointercancel", done);
+function select(o) {
+  chosen = o.path;
+  const want = urlOf(o);
+  // a desk is shown as itself; a project is shown on the desk it sits on,
+  // because that is where it can be moved
+  const isDesk = model.desks.some((d) => d.path === o.path);
+  const show = isDesk ? want : urlOf({ path: o.path.split("/").slice(0, -1).join("/") });
+  if (!view.src.endsWith(show)) view.src = show;
+  paint();
+  inspect(o);
 }
 
-/* ---- the photographs --------------------------------------------- */
+/* ---- the panel on the right --------------------------------------- */
 
-function choose(it) {
-  pick = it.path;
-  draw();
-  showWell();
-}
-
-function found() {
-  const d = deskNow();
-  return d ? d.on.find((i) => i.path === pick) : null;
-}
-
-function showWell() {
-  const it = found();
-  if (!it) { well.innerHTML = `<p class="well-none">Clique un projet sur le bureau.</p>`; return; }
-  const shots = it.photographs.map((n, i) => `
+function inspect(o) {
+  if (!o) { look.innerHTML = "<p class='what'>Choisis quelque chose à gauche.</p>"; return; }
+  const langs = o.languages.length ? o.languages : ["fr"];
+  const titles = langs.map((l) => `
+    <label>nom (${l})
+      <input type="text" data-title="${l}" value="${esc(o.titles[l] || "")}">
+    </label>`).join("");
+  const bodies = langs.map((l) => `
+    <label>texte (${l})
+      <textarea data-body="${l}">${esc(o.bodies[l] || "")}</textarea>
+    </label>`).join("");
+  const shots = o.photographs.map((n, i) => `
     <li class="shot" draggable="true" data-name="${esc(n)}">
-      <img src="${q("/media/" + it.path + "/" + n)}" alt="">
-      <b>${i + 1}</b><button class="bin" title="à la corbeille">✕</button>
+      <img src="${q("/media/" + o.path + "/" + n)}" alt="">
+      <b>${i + 1}</b><button class="bin" title="jeter">✕</button>
     </li>`).join("");
-  well.innerHTML = `
-    <h3>${esc(it.titles.fr || it.name)}</h3>
-    <ul class="shots">${shots || ""}</ul>
-    <p class="drop">Dépose des photos ici.<br><small>La première est l'icône.</small></p>`;
-  wire(it);
+
+  look.innerHTML = `
+    <h2>${esc(o.titles.fr || o.name)}</h2>
+    <p class="what">${kindOf(o)}${o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · sur la grille"}</p>
+    ${titles}${bodies}
+    ${o.gallery || o.kind !== "desk" ? `<ul class="shots">${shots}</ul>
+      <p class="drop">Dépose des photos ici. La première est l'icône.</p>` : ""}`;
+  wire(o);
 }
 
-function wire(it) {
-  const list = well.querySelector(".shots");
+function wire(o) {
+  look.querySelectorAll("[data-title]").forEach((i) => {
+    i.addEventListener("change", async () => {
+      const out = await act({ verb: "retitle", item: o.path, lang: i.dataset.title, title: i.value });
+      if (out) tell("nom enregistré");
+    });
+  });
+  look.querySelectorAll("[data-body]").forEach((t) => {
+    t.addEventListener("change", async () => {
+      const out = await act({ verb: "set_body", item: o.path, lang: t.dataset.body, body: t.value });
+      if (out) tell("texte enregistré");
+    });
+  });
+  const list = look.querySelector(".shots");
   if (!list) return;
   let lifted = null;
   list.querySelectorAll(".shot").forEach((li) => {
@@ -188,59 +159,89 @@ function wire(it) {
     li.addEventListener("drop", async (e) => {
       e.preventDefault();
       const names = [...list.querySelectorAll(".shot")].map((n) => n.dataset.name);
-      const out = await act({ verb: "reorder", item: it.path, names });
-      if (out) tell("ordre enregistré — la première est l'icône");
+      if (await act({ verb: "reorder", item: o.path, names })) tell("ordre enregistré");
     });
     li.querySelector(".bin").addEventListener("click", async () => {
-      const out = await act({ verb: "remove_image", item: it.path, name: li.dataset.name });
-      if (out) tell(li.dataset.name + " est à la corbeille — Annuler la ramène");
+      if (await act({ verb: "remove_image", item: o.path, name: li.dataset.name }))
+        tell(li.dataset.name + " jetée — Annuler la ramène");
     });
   });
 }
 
-/* ---- dropping files in ------------------------------------------- */
-
 ["dragenter", "dragover"].forEach((k) =>
-  well.addEventListener(k, (e) => { e.preventDefault(); well.classList.add("over"); }));
-["dragleave", "drop"].forEach((k) =>
-  well.addEventListener(k, () => well.classList.remove("over")));
-
-well.addEventListener("drop", async (e) => {
-  const it = found();
-  if (!it || !e.dataTransfer.files.length) return;
+  look.addEventListener(k, (e) => { e.preventDefault(); look.classList.add("over"); }));
+["dragleave", "drop"].forEach((k) => look.addEventListener(k, () => look.classList.remove("over")));
+look.addEventListener("drop", async (e) => {
+  const o = find(chosen);
+  if (!o || !e.dataTransfer.files.length) return;
   e.preventDefault();
-  // one file per request, in order, so the numbering is the order she
-  // dropped them and a failure names the file that failed
   for (const f of [...e.dataTransfer.files]) {
     const out = await ask(
-      `/api/upload?into=${encodeURIComponent(it.path)}&name=${encodeURIComponent(f.name)}`,
+      `/api/upload?into=${encodeURIComponent(o.path)}&name=${encodeURIComponent(f.name)}`,
       { method: "POST", body: await f.arrayBuffer() });
-    tell(out ? `${f.name} → ${(out.did && out.did.named) || "ajoutée"}`
-             : `${f.name} refusée`);
+    tell(out ? `${f.name} ajoutée` : `${f.name} refusée`);
   }
 });
 
-/* ---- the bar ------------------------------------------------------ */
+/* ---- moving a real icon, in the real page ------------------------- */
 
-which.addEventListener("change", () => { deskPath = which.value; pick = null; draw(); showWell(); });
-el("site").addEventListener("click", () =>
-  window.open(site || "http://127.0.0.1:1111/", "mybureau-site"));
+function hook() {
+  let doc;
+  try { doc = view.contentDocument; } catch (e) { return; }
+  if (!doc) return;
+  const desk = doc.querySelector(".desk");
+  tip.textContent = desk
+    ? "Attrape une icône dans la page et pose-la. Clique pour l'inspecter."
+    : "Cette page n'est pas un bureau — rien à déplacer ici.";
+  if (!desk) return;
+
+  bySlug = new Map();
+  for (const { o } of all()) {
+    bySlug.set(o.path.replace(/^content\//, "").replace(/\//g, "-"), o.path);
+  }
+
+  doc.querySelectorAll("a.icon[data-vt]").forEach((icon) => {
+    const path = bySlug.get(icon.dataset.vt);
+    if (!path) return;                       // a window or a shortcut: not a folder
+    let from = null;
+    icon.addEventListener("pointerdown", (e) => { from = { x: e.clientX, y: e.clientY }; }, true);
+    icon.addEventListener("pointerup", async (e) => {
+      const was = from; from = null;
+      if (!was) return;
+      const moved = Math.abs(e.clientX - was.x) > 3 || Math.abs(e.clientY - was.y) > 3;
+      const o = find(path);
+      if (!moved) { if (o) select(o); return; }
+      // the site's own desk.js has already moved it, clamped it and
+      // walked it clear of its neighbours. Read where it put it.
+      const r = icon.getBoundingClientRect(), d = desk.getBoundingClientRect();
+      const x = Math.round((r.left - d.left) / d.width * 100);
+      const y = Math.round((r.top - d.top) / d.height * 100);
+      if (await act({ verb: "place", item: path, x, y })) tell(`posé à ${x}% / ${y}%`);
+    }, true);
+  });
+}
+
+view.addEventListener("load", hook);
+
+/* ---- staying in step ---------------------------------------------- */
+
+const stream = new EventSource(q("/api/events"));
+stream.onmessage = async () => {
+  await ask("/api/tree");
+  // the frame is a real page: let it rebuild, then re-attach
+  const here = view.src;
+  view.src = here;
+};
+stream.onerror = () => { lamp.className = "lamp bad"; tell("connexion perdue — relance preview"); };
+
+el("open").addEventListener("click", () => window.open(site || "/site/", "mybureau-site"));
 el("undo").addEventListener("click", async () => {
   const out = await act({ verb: "undo" });
-  // never reach blindly into the answer: an exception inside a click
-  // handler looks, from the outside, exactly like a button that does
-  // nothing at all
-  if (out) { tell("annulé : " + ((out.did && out.did.undid) || "")); showWell(); }
+  if (out) tell("annulé : " + ((out.did && out.did.undid) || ""));
 });
 el("verify").addEventListener("click", async () => {
   const out = await ask("/api/look");
-  if (out) { health.textContent = out.look; tell("vérifié"); }
+  if (out) { health.hidden = false; health.textContent = out.look; tell("vérifié"); }
 });
 
-/* ---- the perpetual bit -------------------------------------------- */
-
-const stream = new EventSource(q("/api/events"));
-stream.onmessage = () => { refresh().then(showWell); };
-stream.onerror = () => { lamp.classList.add("bad"); tell("connexion perdue — relance preview"); };
-
-refresh().then(showWell);
+ask("/api/tree").then(() => tell("prêt"));

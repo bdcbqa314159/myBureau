@@ -1039,41 +1039,48 @@ python3 tools/prune.py --check   # what the built site carries and never asks fo
 
 ### The panel
 
-`preview.command` starts two things now: `zola serve` as before, and
-`tools/studio/server.py` — a dashboard that edits `content/` by hand
-rather than by typing.
+`preview.command` starts two things: `zola serve` as before, and
+`tools/studio/server.py` — a panel for editing `content/` by hand.
 
 ```
 double-click preview.command
    ├── studio   127.0.0.1:1112   python stdlib, writes content/
-   └── zola     127.0.0.1:1111   watches content/, rebuilds, reloads
+   └── zola     127.0.0.1:1111   builds the site, watches content/
 ```
 
-**Neither knows about the other.** The panel writes a line; zola notices
-and rebuilds; zola's own live-reload moves the site. Kill the panel and
-preview is exactly what it always was.
+#### The middle of the panel is the site
 
-**Nothing new is installed.** `http.server` from the standard library —
-python3 was already a hard requirement of `preview.sh`. The page is plain
-HTML, CSS and JS with no build step, and it loads the site's own
-`site.css` so the panel is made of the same bevels, typeface and pointers
-as the thing it edits.
+Not a drawing of it. The panel **proxies zola onto its own address** and
+frames the result, so the page in the middle is the page zola built —
+same wallpaper, same icons, same layout, because it is the same renderer.
 
-The live half is **Server-Sent Events**, not a WebSocket: one-way is all
-that is needed, `EventSource` is native, and a stdlib WebSocket would
-have been a handshake written by hand for nothing. A watcher thread
-notices anything that changes in `content/` — including edits the panel
-had nothing to do with — and the page re-reads. **The panel holds no
-state: the filesystem wins, always.**
+Being same-origin is the point: the panel can reach into the real page,
+find the icons it really rendered, and let you move them. **The site's own
+`desk.js` still does the dragging** — with the collision walk and the
+clamping that are already correct — and the panel only writes down where
+it ended up. There is one renderer in this project and one dragger, and
+neither of them is in the panel.
+
+Every absolute url is rewritten on the way through, not just the links:
+the page carries `default-src 'self'`, and once the document sits on the
+panel's address, `self` means the panel. A stylesheet still pointing at
+zola's port would be blocked by the site's own policy.
+
+The cost is zola's live-reload, whose socket no longer finds its way
+home. The panel's watcher notices content changing and reloads the frame
+itself — one mechanism rather than two.
 
 #### What it may do
 
 A closed list in `tools/studio/verbs.py`, not a file manager: `place`,
-`add_image`, `reorder`, `remove_image`, `undo`. Two rules in that file
-are not negotiable, because both have bitten this project:
+`retitle`, `set_body`, `add_image`, `reorder`, `remove_image`, `undo`.
+Two rules in that file are not negotiable, because both have bitten this
+project:
 
 - **every verb touching a project touches every language file it has** —
-  a position written to one and not the other is the oldest trap here
+  a position written to one and not the other is the oldest trap here.
+  A *title* is the exception and is deliberately per-language: French and
+  English names are not the same words.
 - **front matter is edited surgically**, one line by regex, leaving the
   rest byte for byte. These files carry load-bearing comments; a
   parse-and-rewrite would eat them silently.
@@ -1084,22 +1091,39 @@ do. Every verb is journalled to `.studio/` with the previous text, so
 **Annuler** takes it back; a deleted photograph goes to `.studio/trash/`
 rather than being unlinked. `.studio/` is git-ignored.
 
+#### What kind of thing is this?
+
+The engine has more objects than folders and photographs, and the panel
+names which it is looking at, because they do not behave alike:
+
+| | |
+|---|---|
+| **bureau** | a wallpaper and icons you can move |
+| **galerie** | photographs in columns; no icons to move |
+| **projet · photos** | opens as a preview; first photograph is the icon |
+| **projet · page** | `opens = "page"`; goes straight to its own page |
+| **film** | a video, with the photographs under it |
+| *(window / shortcut)* | declared in `config.toml`, not a folder — the panel shows them on the desk because the site does, and leaves them alone |
+
 #### Why it is not a hole in her machine
 
-It is a local server that writes to disk, and any page open in her
-browser can send it a request. So: bound to loopback; a token minted at
-startup and required on every request, so a page that cannot read the
-address bar cannot act; cross-site requests refused outright; and every
-path resolved through `verbs.inside()`, which refuses anything that is
-not under `content/`.
+Bound to loopback. A token minted at startup and required on every
+request that reads or writes her work — `/api/*`, `/media/*`, `/site/*` —
+so a page that cannot read the address bar cannot act. Cross-site
+requests refused even with a token. Every path through `verbs.inside()`,
+which resolves symlinks and refuses anything outside `content/`.
 
-`tools/studio/check.py` runs in CI and is mostly a list of what the panel
-**refuses** — paths out of `content/`, a request without the token, a
-cross-site request with one, an unknown verb.
+The panel's own `app.css` and `app.js` are served **without** a token,
+because a `<link>` and a `<script>` cannot carry one — the browser asks
+for exactly the url in the markup. That was once a bug: with the token
+required there, the page loaded naked and every button was dead.
+`tools/studio/check.py` now fetches the page, parses out every `href` and
+`src`, and requests each one the way a browser would.
 
-And `content-check.py` asserts the panel's reading of a desk matches the
-HTML the site rendered, because three readings of one set of rules — the
-templates, `look.py`, and now the panel — is how drift starts.
+`tools/studio/app-check.mjs` runs `app.js` in a stubbed DOM — the trick
+`desk-check.mjs` uses for `desk.js` — and takes the element ids **from
+app.html**, so a renamed element fails the check instead of silently
+breaking the panel.
 
 ### What gets deployed, and what does not
 

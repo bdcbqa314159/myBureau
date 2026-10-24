@@ -30,24 +30,33 @@ const node = (id = "") => ({
   innerHTML: "", textContent: "", value: "",
   append() {}, insertAdjacentHTML() {}, setPointerCapture() {},
   getBoundingClientRect: () => ({ left: 0, top: 0, width: 800, height: 450 }),
+  hidden: false, src: "", contentDocument: null,
   querySelector: () => null,
   querySelectorAll: () => [],
+  matchAll() { return []; },
   addEventListener(kind, fn) {
     const key = id + ":" + kind;
     listeners.set(key, (listeners.get(key) || []).concat(fn));
   },
 });
 
-const byId = new Map(
-  ["map", "well", "which", "lamp", "says", "health", "site", "verify", "undo"]
-    .map((id) => [id, node(id)]),
-);
+// THE IDS COME FROM app.html, not from a list kept by hand. A list by
+// hand goes stale the moment an element is renamed, and then this check
+// fails for the wrong reason — or worse, passes while the real page is
+// missing something the script reaches for.
+const markup = readFileSync(new URL("./app.html", import.meta.url), "utf8");
+const ids = [...markup.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
+const byId = new Map(ids.map((id) => [id, node(id)]));
+const missing = [];
 
 let fetched = [];
 const sandbox = {
   console,
   document: {
-    getElementById: (id) => byId.get(id) || null,
+    getElementById: (id) => {
+      if (!byId.has(id)) missing.push(id);     // app.js asked for something
+      return byId.get(id) || null;             // the markup does not have
+    },
     createElement: () => node(),
     querySelectorAll: () => [],
     addEventListener() {},
@@ -78,6 +87,8 @@ try {
   why = String(e && e.stack ? e.stack.split("\n")[0] : e);
 }
 check("the panel's script survives being loaded", loaded, why);
+check("every element it reaches for exists in app.html", missing.length === 0,
+  "app.js wants #" + missing.join(", #"));
 
 if (loaded) {
   check("it carries the token out of the address bar",
@@ -88,7 +99,9 @@ if (loaded) {
   check("it opens the live stream", typeof sandbox.EventSource === "function");
 
   // the complaint was "the buttons do not do anything"
-  for (const id of ["site", "verify", "undo"]) {
+  const buttons = [...markup.matchAll(/<button[^>]*\bid="([^"]+)"/g)].map((m) => m[1]);
+  check("app.html actually has buttons", buttons.length >= 2);
+  for (const id of buttons) {
     check(`the ${id} button has a handler`, (listeners.get(id + ":click") || []).length > 0);
   }
   const before = fetched.length;

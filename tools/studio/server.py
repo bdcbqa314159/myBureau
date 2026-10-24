@@ -27,7 +27,9 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
 import urllib.parse
+import urllib.request
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -125,29 +127,16 @@ class Studio(http.server.BaseHTTPRequestHandler):
 
         # ---- the shell, served without a token -----------------------
         # A <link> and a <script> in the page cannot carry one: the browser
-        # asks for exactly the url written in the markup. These hold no
-        # content — the panel's own code, the site's stylesheet, and the
-        # drawn icons and pointers that are public on the live site anyway.
-        # The token still guards everything that reads or writes HER work:
-        # /api/* and /media/*.
+        # asks for exactly the url written in the markup. These two hold no
+        # content of hers — they are the panel's own code. The token still
+        # guards everything that reads or writes HER work: /api/*, /media/*
+        # and /site/*.
         if path == "/app.css":
             return self.file(HERE / "app.css", "text/css; charset=utf-8")
         if path == "/app.js":
             return self.file(HERE / "app.js", "text/javascript; charset=utf-8")
-        if path == "/site.css":
-            # the dashboard wears the bevels of the thing it edits
-            return self.file(ROOT / "static" / "css" / "site.css",
-                             "text/css; charset=utf-8")
-        if path.startswith("/img/"):
-            # site.css asks for ../img/cursors/… relative to itself, so the
-            # dashboard gets the real pointers and the real drawn icons
-            f = (ROOT / "static" / "img" / path[len("/img/"):]).resolve()
-            try:
-                f.relative_to((ROOT / "static" / "img").resolve())
-            except ValueError:
-                return self.oops(403, "no")
-            return self.file(f, mimetypes.guess_type(f.name)[0] or "image/png")
-
+        if path == "/site" or path.startswith("/site/"):
+            return self.proxy(path[len("/site"):] or "/")
         # ---- everything past here is her work, or acts on it ---------
         if not self.allowed(q):
             return self.oops(403, "no")
@@ -180,6 +169,40 @@ class Studio(http.server.BaseHTTPRequestHandler):
             return self.oops(404, "no such file")
         kind = mimetypes.guess_type(f.name)[0] or "application/octet-stream"
         self.send(200, f.read_bytes(), kind)
+
+    def proxy(self, rest: str) -> None:
+        """The real site, served from the panel's own address.
+
+        Not a screenshot and not a second renderer: this IS the page zola
+        built, fetched and handed on. Which means the panel can reach into
+        it — same origin — and make the icons it really rendered draggable.
+        There is one renderer in this project and it stays that way.
+
+        EVERY absolute url is rewritten, not just the links. The page
+        carries `default-src 'self'`, and once the document sits on this
+        address `self` means THIS address — so a stylesheet still pointing
+        at zola's port would be blocked by the site's own policy. Rewriting
+        all of it keeps the page whole and its policy honest.
+
+        The cost is zola's live-reload, whose socket no longer finds its
+        way home. The panel reloads the frame itself when the watcher says
+        content changed, which is one mechanism instead of two.
+        """
+        site = STATE["site"].rstrip("/")
+        if not site:
+            return self.oops(503, "the site is not running")
+        try:
+            with urllib.request.urlopen(site + rest, timeout=20) as r:
+                kind = r.headers.get("Content-Type", "application/octet-stream")
+                body = r.read()
+        except urllib.error.HTTPError as e:
+            return self.send(e.code, b"", "text/plain")
+        except Exception as exc:                    # noqa: BLE001
+            return self.oops(502, "the site did not answer: {}".format(exc))
+        if kind.split(";")[0] in ("text/html", "text/css", "application/javascript",
+                                  "text/javascript", "application/json"):
+            body = body.decode("utf-8", "replace").replace(site, "/site").encode("utf-8")
+        self.send(200, body, kind)
 
     def stream(self) -> None:
         self.send_response(200)
@@ -239,6 +262,10 @@ class Studio(http.server.BaseHTTPRequestHandler):
         name = ask.get("verb")
         if name == "place":
             return verbs.place(ask["item"], ask["x"], ask["y"])
+        if name == "retitle":
+            return verbs.retitle(ask["item"], ask.get("lang", "fr"), ask["title"])
+        if name == "set_body":
+            return verbs.set_body(ask["item"], ask.get("lang", "fr"), ask.get("body", ""))
         if name == "reorder":
             return verbs.reorder(ask["item"], ask["names"])
         if name == "remove_image":
