@@ -349,6 +349,30 @@ img.will-fade.is-in { opacity: 1; }
 }
 .icon img { width: 100%; pointer-events: none; -webkit-user-drag: none; }
 
+/* A photograph icon is the WORK, so it keeps the shape the work is —
+   a tall poster stays tall, a wide screenshot stays wide. Held inside a
+   square of the icon's own width rather than stretched to fill it:
+   `width: 100%` on a portrait photograph makes one icon twice the height
+   of its neighbours and the desk stops reading as a desk.
+
+   The white edge is the polaroid in her prototype, and it is what keeps
+   a dark photograph from dissolving into a dark wallpaper. */
+.icon img.is-photo {
+  width: auto; max-width: 100%;
+  max-height: var(--icon-w);
+  margin-inline: auto;
+  background: #fff;
+  padding: 3px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / .4);
+}
+/* In a folder window the icons are a list at list size, and the window
+   is already a panel — the lift would be a second frame inside a frame. */
+.icon.is-flow img.is-photo {
+  max-height: 3.3rem;
+  padding: 2px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .25);
+}
+
 /* The shadow lives on the ANCHOR, not on the image inside it.
    A filtered element is rasterised to a bitmap at its own size. With the
    filter on the <img> and the transform on its parent, the parent's

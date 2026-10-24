@@ -62,13 +62,24 @@
   {%- endif -%}
 {%- endif -%}
 {#- Which picture. Most explicit wins:
-      1. a file named icon.* sitting in the project folder  (she drew it)
+      1. a file named icon.* sitting in the project folder  (she chose it)
       2. an icon = "..." path declared in the front matter
       3. folders get a folder
-      4. otherwise the extension in the TITLE decides, the way a real
+      4. A PROJECT IS ITS OWN FIRST PICTURE. The prototype has no generic
+         icons anywhere: every one of them is the work — the calendar, the
+         cover of the brochure, the poster. The work is already in the
+         folder as 01.jpg, so nothing needs to be drawn, named or
+         remembered for this to be true.
+      5. otherwise the extension in the TITLE decides, the way a real
          desktop works: june's cry.mov gets a film strip, 12 regards.pdf
          gets a document, theodora.jpeg gets a photograph
-      5. a document, when nothing else applies                         -#}
+      6. a document, when nothing else applies
+
+    `ic_photo` says the picture is a PHOTOGRAPH rather than one of our
+    square SVGs. It changes two things: the real proportions go on the
+    <img> so nothing reflows when it lands, and the CSS reins a tall one
+    in by its height instead of stretching it to the icon's width.      -#}
+{%- set_global ic_photo = false -%}
 {%- set ext = ic_title | split(pat=".") | last | lower -%}
 {%- if ext in ["mov", "mp4", "m4v", "avi", "webm"] -%}
   {%- set_global ic_pic = get_url(path="img/icons/movie.svg") -%}
@@ -80,10 +91,37 @@
 {%- if ic_kind == "folder" -%}
   {%- set_global ic_pic = get_url(path="img/icons/folder.svg") -%}
 {%- endif -%}
-{%- if ic_declared -%}{%- set_global ic_pic = get_url(path=ic_declared) -%}{%- endif -%}
+{#- the first photograph in the folder, for a project that has one. A
+    folder keeps its folder: a folder that looks like a photograph stops
+    reading as somewhere you can go in. -#}
+{%- if ic_kind != "folder" -%}
+  {%- set_global ic_first = "" -%}
+  {%- for a in ic_assets -%}
+    {%- set leaf = a | split(pat="/") | last -%}
+    {%- if ic_first == "" and leaf | split(pat=".") | last | lower in config.extra.image_types
+           and leaf | split(pat=".") | first != "icon" -%}
+      {%- set_global ic_first = a -%}
+    {%- endif -%}
+  {%- endfor -%}
+  {%- if ic_first != "" -%}
+    {#- 360 wide covers the largest an icon is ever drawn, twice over for
+        a retina screen, and is a fraction of the photograph itself. -#}
+    {%- set thumb = resize_image(path=ic_first, width=360, op="fit_width", format="webp", quality=74) -%}
+    {%- set_global ic_pic = thumb.url -%}
+    {%- set_global ic_photo = true -%}
+    {%- set_global ic_shape = get_image_metadata(path=ic_first) -%}
+  {%- endif -%}
+{%- endif -%}
+{#- Both of these are her saying so, and both win over the picture we
+    picked — including over the first photograph. -#}
+{%- if ic_declared -%}
+  {%- set_global ic_pic = get_url(path=ic_declared) -%}
+  {%- set_global ic_photo = false -%}
+{%- endif -%}
 {%- for a in ic_assets -%}
   {%- if a | split(pat="/") | last | split(pat=".") | first == "icon" -%}
     {%- set_global ic_pic = get_url(path=a) -%}
+    {%- set_global ic_photo = false -%}
   {%- endif -%}
 {%- endfor -%}
 {%- set ac = 12 + (ic_slot % 4) * 25 -%}
@@ -103,9 +141,11 @@
    data-vt="{{ ic_path | slugify }}"
    {%- if ic_kind == "folder" %} data-folder{% endif -%}
    {%- if ic_window %} data-window="{{ ic_window }}"{% endif %}>
-  {# The SVGs are square. Declaring it means the icon box is the right
-     size before the picture arrives, so nothing reflows under the labels
-     and a measurement taken early is not a measurement taken wrong. #}
-  <img src="{{ ic_pic }}" width="160" height="160" alt="">
+  {# Declaring the size means the icon box is right BEFORE the picture
+     arrives, so nothing reflows under the labels and a measurement taken
+     early is not a measurement taken wrong. The SVGs are square; a
+     photograph is whatever shape the work is, and says so. #}
+  {% if ic_photo %}<img class="is-photo" src="{{ ic_pic }}" width="{{ ic_shape.width }}" height="{{ ic_shape.height }}" alt="" decoding="async">
+  {% else %}<img src="{{ ic_pic }}" width="160" height="160" alt="">{% endif %}
   <span>{{ ic_title }}</span>
 </a>
