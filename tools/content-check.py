@@ -225,6 +225,17 @@ def case_the_panel_sees_what_the_site_renders(d: pathlib.Path) -> list[tuple[str
     So: whatever the panel says is on a desk, and where, is checked
     against the HTML the site actually rendered.
     """
+    # An EMPTY folder inside a bureau: the one case where the rule bites.
+    # It would open as a window if it had anything in it, and opens a
+    # page because it does not. Without this in the tree the clause never
+    # fires and the guard below cannot tell whether the panel knows.
+    vide = d / "content" / "da" / "vide"
+    vide.mkdir()
+    (vide / "_index.md").write_text(FRONT.format(
+        title="vide", extra='template = "section.html"\n'))
+    (vide / "_index.en.md").write_text(FRONT.format(
+        title="empty", extra='template = "section.html"\n'))
+
     ok, log = build(d)
     r = subprocess.run([sys.executable, "tools/studio/model.py"], cwd=d,
                        capture_output=True, text=True)
@@ -265,10 +276,35 @@ def case_the_panel_sees_what_the_site_renders(d: pathlib.Path) -> list[tuple[str
         if len(desk["on"]) and len(shown) < len(desk["on"]):
             wrong_count.append(desk["path"])
 
+    # What the panel SAYS a folder will do, against what the site did.
+    # The rule has a clause that catches people out — an empty folder
+    # opens a page wherever it is — so a panel that got this wrong would
+    # promise a window and deliver a page.
+    lied = []
+    by_path = {k["path"]: k for k in tree["desks"]}
+    for desk in tree["desks"]:
+        rel = desk["path"][len("content"):].strip("/")
+        html = page(d, (rel + "/index.html") if rel else "index.html")
+        if not html:
+            continue
+        for child in desk["on"]:
+            k = by_path.get(child["path"])
+            if k is None:                       # not a folder
+                continue
+            slug = child["path"][len("content/"):].replace("/", "-")
+            windowed = 'data-window="folder-{}"'.format(slug) in html
+            said = k["opens_as"]
+            if windowed != (said == "window"):
+                lied.append((child["path"], said, "window" if windowed else "page"))
+
     return [
         ("builds", ok),
         ("the panel reads every desk the site has",
          len(tree["desks"]) == len(list((d / "content").rglob("_index.md")))),
+        ("and what it says a folder will do is what the site does",
+         lied == []),
+        ("including the empty one, which opens a page where a window would be",
+         by_path.get("content/da/vide", {}).get("opens_as") == "page"),
         ("everything it would draw is really on that desk", missing == []),
         ("and at the position the site actually rendered", wrong_spot == []),
         ("it is not missing icons the desk shows", wrong_count == []),

@@ -84,6 +84,7 @@ const sandbox = {
         tree: {
           desks: [{
             kind: "desk", path: "content/da", name: "da", gallery: false,
+            depth: 1, opens_as: "page", empty: false,
             titles: { fr: "DA", en: "art direction" },
             bodies: { fr: "Un texte.", en: "Some text." },
             x: null, y: null, opens: null, icon: null, wallpaper: "wallpaper.jpg",
@@ -158,6 +159,13 @@ if (loaded) {
     /<button[^>]*id="make"/.test(markup) && /<select[^>]*id="kind"/.test(markup));
   check("and a way to look INSIDE a thing rather than at its desk",
     /id="aspage"/.test(markup) && (listeners.get("aspage:click") || []).length > 0);
+
+  check("the panel says where a new thing is going",
+    /<select[^>]*id="into"/.test(markup) && byId.get("into").children.length > 0);
+  check("and what it will do once it is there",
+    byId.get("willbe").innerHTML.length > 10, byId.get("willbe").innerHTML);
+  check("a folder's job is explained, because it depends on where it is",
+    /propre page|fenêtre|bandeau/.test(look.innerHTML), look.innerHTML.slice(0, 120));
 
   check("a thing can be thrown away from the panel",
     /id="binall"/.test(look.innerHTML));

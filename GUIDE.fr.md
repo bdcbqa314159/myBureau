@@ -110,8 +110,15 @@ Tu peux :
 - **changer l'apparence** de n'importe quoi : dépose une image sur le
   petit carré « apparence ». C'est la seule façon de donner une tête à un
   dossier.
-- **créer** un projet ou un dossier : en bas à gauche, choisis quoi
-  (des photos, un film, un document, une page), donne un nom, Créer
+- **créer** un projet ou un dossier : en bas à gauche, choisis **dans
+  quel dossier**, puis quoi (des photos, un film, un document, une page,
+  un dossier), donne un nom, Créer. Le panneau te dit ce que ça va faire
+  avant de le faire.
+
+> **Un dossier ne fait pas la même chose partout.** Sur la page
+> d'accueil, il a sa propre page et une place dans le bandeau. Rangé dans
+> un autre dossier, il s'ouvre comme une fenêtre. Et tant qu'il est vide,
+> il ouvre sa page — c'est normal, mets quelque chose dedans.
 - **regarder** une chose plutôt que le bureau où elle est posée : le
   bouton « regarder » au-dessus de la page
 - **ranger** : attrape une ligne dans la liste de gauche et pose-la sur un

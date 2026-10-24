@@ -105,7 +105,13 @@ function reframe() {
    say which it is looking at — a gallery has no icons to move, a film is
    not a set of stills, a shortcut is not in content/ at all. */
 function kindOf(o) {
-  if (o.kind === "desk" || o.kind === "folder") return o.gallery ? "galerie" : "bureau";
+  if (o.kind === "desk" || o.kind === "folder") {
+    if (o.gallery) return "galerie";
+    const k = model.desks.find((d) => d.path === o.path);
+    // a folder's job is not a property of the folder: it is where it is
+    if (!k) return "dossier";
+    return k.opens_as === "window" ? "dossier · fenêtre" : "dossier · page";
+  }
   if (o.video) return "film";
   if (o.opens === "page") return "projet · page";
   if (o.photographs.length) return "projet · photos";
@@ -125,8 +131,51 @@ const find = (p) => all().map((r) => r.o).find((o) => o.path === p) || null;
 
 /* ---- the list down the side -------------------------------------- */
 
+/* What a folder put HERE would do, in her words, including the clause
+ * that catches people out: a folder with nothing in it opens a page
+ * wherever it is, so a brand new one always does until she fills it. */
+function wouldBe(intoPath, kind) {
+  const into = model.desks.find((d) => d.path === intoPath);
+  if (!into) return "";
+  const here = into.titles.fr || into.name;
+  if (kind !== "bureau") {
+    return `Un projet dans <b>${esc(here)}</b>. Il s'ouvrira sur ce bureau.`;
+  }
+  const deep = (into.depth || 0) >= 1;
+  return deep
+    ? `Un dossier dans <b>${esc(here)}</b>. Il s'ouvrira comme une
+       <b>fenêtre</b> sur ce bureau — mais tant qu'il est vide il ouvrira
+       sa propre page.`
+    : `Un dossier sur la <b>page d'accueil</b>. Il aura sa propre page,
+       son fond d'écran, et une place dans le bandeau du haut.`;
+}
+
+function sayWillBe() {
+  const el_ = el("willbe");
+  if (!el_ || !model) return;
+  el_.innerHTML = wouldBe(el("into").value, el("kind").value);
+}
+
+function paintInto() {
+  const sel = el("into");
+  if (!sel || !model) return;
+  const keep = sel.value;
+  sel.innerHTML = "";
+  for (const d of model.desks) {
+    if (d.gallery) continue;              // a galerie holds photographs, not things
+    const o = document.createElement("option");
+    o.value = d.path;
+    o.textContent = "  ".repeat(d.depth || 0) + (d.titles.fr || d.name);
+    sel.append(o);
+  }
+  sel.value = keep && model.desks.some((d) => d.path === keep)
+    ? keep : (model.desks[0] && model.desks[0].path);
+  sayWillBe();
+}
+
 function paint() {
   if (!model) return;
+  paintInto();
   tree.innerHTML = "";
   for (const { o, depth } of all()) {
     const b = document.createElement("button");
@@ -171,6 +220,22 @@ function paint() {
 }
 
 const isBureau = (o) => model.desks.some((d) => d.path === o.path);
+
+/* A folder, explained — because its job is where it is, not what it is,
+ * and because an empty one behaves like neither until it is filled. */
+function folderSays(o) {
+  const k = model.desks.find((d) => d.path === o.path);
+  if (!k) return "";
+  if (k.gallery) return "Une galerie : ses photos sont dans le dossier, il n'y a rien à poser dessus.";
+  if (k.empty) {
+    return (k.depth || 0) >= 1
+      ? "Vide pour l'instant, donc il ouvre sa propre page. Mets quelque chose dedans et il s'ouvrira comme une fenêtre."
+      : "Vide pour l'instant. Il a déjà sa page et sa place dans le bandeau.";
+  }
+  return k.opens_as === "window"
+    ? "Il s'ouvre comme une fenêtre sur le bureau où il est posé."
+    : "Il a sa propre page, son fond d'écran, et une place dans le bandeau.";
+}
 let dragging = null;
 
 const esc = (s) => String(s).replace(/[<>&"]/g, (c) =>
@@ -198,6 +263,11 @@ function frameFor(o) {
 
 function select(o) {
   chosen = o.path;
+  const sel = el("into");
+  if (sel) {
+    const home = isBureau(o) ? o.path : o.path.split("/").slice(0, -1).join("/");
+    if (model.desks.some((d) => d.path === home)) { sel.value = home; sayWillBe(); }
+  }
   const show = frameFor(o);
   if (!view.src.endsWith(show)) view.src = show;
   paint();
@@ -246,7 +316,8 @@ function inspect(o) {
   const canBin = o.path !== "content";
   look.innerHTML = `
     <h2>${esc(o.titles.fr || o.name)}</h2>
-    <p class="what">${kindOf(o)}${o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · sur la grille"}</p>
+    <p class="what">${kindOf(o)}${o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · pas encore posé"}</p>
+    ${isDesk ? `<p class="what">${folderSays(o)}</p>` : ""}
     ${titles}${bodies}${face}${wall}
     ${isDesk && !o.gallery ? "" : `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">Dépose des photos ici. La première est l'icône.</p>`}
@@ -383,10 +454,13 @@ function bureauFor(o) {
     ? o.path : o.path.split("/").slice(0, -1).join("/");
 }
 
+el("kind").addEventListener("change", sayWillBe);
+el("into").addEventListener("change", sayWillBe);
+
 el("make").addEventListener("click", async () => {
   const name = el("newname").value.trim();
   if (!name) { tell("donne-lui un nom"); return; }
-  const into = bureauFor(find(chosen));
+  const into = el("into").value;            // said out loud, not inferred
   if (!into) return;
   const kind = el("kind").value;
   const out = kind === "bureau"
@@ -394,9 +468,16 @@ el("make").addEventListener("click", async () => {
     : await act({ verb: "new_project", into, name, kind });
   if (out) {
     el("newname").value = "";
-    tell("créé dans " + into.replace("content/", ""));
     const made = out.did && out.did.made;
-    if (made) { const o = find(made); if (o) select(o); }
+    if (made) {
+      const o = find(made);
+      if (o) select(o);
+      // it has no place of its own yet: the loose grid put it somewhere.
+      // Dragging it in the page is how it gets one.
+      tell(kind === "bureau"
+        ? "dossier créé — attrape-le dans la page pour le poser"
+        : "créé — attrape-le dans la page pour le poser");
+    }
   }
 });
 
