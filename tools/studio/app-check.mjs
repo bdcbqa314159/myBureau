@@ -183,6 +183,20 @@ if (loaded) {
   check("and somewhere for its affiche",
     /data-drop="poster"/.test(look.innerHTML));
 
+  // Clicking in the frame must EDIT, not fire the site's own dynamics.
+  // Those belong to a visitor; while she is arranging a desk they carry
+  // her away from the thing she just touched.
+  const src2 = readFileSync(new URL("./app.js", import.meta.url), "utf8");
+  check("a click in the page is caught before the site acts on it",
+    /addEventListener\("click"[\s\S]{0,260}stopImmediatePropagation/.test(src2));
+  check("and double-click is how she goes in on purpose",
+    /addEventListener\("dblclick"/.test(src2));
+  check("what she chose is outlined in the real page",
+    /studio-chosen/.test(src2));
+  check("throwing a thing away lands her on the desk it was on, not nowhere",
+    /const home = o\.path\.split\("\/"\)\.slice\(0, -1\)/.test(src2)
+    && /const back = find\(home\)/.test(src2));
+
   const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
   check("and no rule anywhere hides the editor",
     !/\.look\s*\{[^}]*display:\s*none/.test(css)

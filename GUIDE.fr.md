@@ -99,6 +99,11 @@ fois que tu enregistres un fichier, la page se recharge toute seule.
 Deux onglets s'ouvrent, pas un : ton site, et **le panneau**.
 
 Au milieu du panneau, **c'est ton site** — la vraie page, pas un dessin.
+
+> Dans le panneau, **un clic sert à modifier**, pas à ouvrir. Clique une
+> icône : elle s'entoure de bleu et ses réglages apparaissent à droite.
+> **Double-clique** pour entrer dedans. Attrape-la pour la déplacer.
+
 Tu peux :
 
 - **attraper une icône dans la page et la poser** où tu veux — sa place

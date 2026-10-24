@@ -1152,6 +1152,32 @@ do. Every verb is journalled to `.studio/` with the previous text, so
 **Annuler** takes it back; a deleted photograph goes to `.studio/trash/`
 rather than being unlinked. `.studio/` is git-ignored.
 
+#### Inside the panel, a click edits
+
+The framed page is the real site, so it carries the real dynamics: a
+folder opens a window, a project opens a preview. Those belong to a
+**visitor**. While she is arranging a desk they carry her away from the
+thing she just touched, which is the opposite of what she asked for.
+
+So the panel catches the click before the site sees it:
+
+| | |
+|---|---|
+| click | choose it — the inspector fills, and the icon is **outlined in the real page** |
+| double-click | go in, on purpose |
+| drag | give it its place |
+
+The outline matters more than it sounds. Without it the only sign a
+click did anything is a column on the far side of the window changing,
+which does not read as *"I selected this."*
+
+An icon the panel cannot edit — `about me.txt`, `contact`, declared in
+`config.toml` — says so on hover rather than silently doing nothing.
+
+And **throwing a thing away lands her on the desk it was on.** It used to
+leave the frame pointing at a page that no longer existed: a blank room
+with no way out.
+
 #### What a project can be, and what it will accept
 
 A project's behaviour is derived, never stored. There are four shapes and

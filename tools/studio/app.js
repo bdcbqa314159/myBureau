@@ -360,8 +360,18 @@ function wire(o) {
   const binAll = look.querySelector("#binall");
   if (binAll) {
     binAll.addEventListener("click", async () => {
+      // Where to land afterwards, worked out BEFORE the thing is gone.
+      // Throwing away whatever is on screen used to leave the frame
+      // pointing at a page that no longer exists — a blank room with no
+      // way out but the back button.
+      const home = o.path.split("/").slice(0, -1).join("/");
       const out = await act({ verb: "throw_away", item: o.path });
-      if (out) { chosen = null; tell("à la corbeille — Annuler la ramène"); paint(); }
+      if (!out) return;
+      tell("à la corbeille — Annuler la ramène");
+      const back = find(home) || (model.desks[0] || null);
+      chosen = null;
+      if (back) select(back);
+      else { paint(); inspect(null); }
     });
   }
   const list = look.querySelector(".shots");
@@ -413,13 +423,28 @@ look.addEventListener("drop", async (e) => {
 
 /* ---- moving a real icon, in the real page ------------------------- */
 
+/* The thing she last touched, outlined in the real page. Without it the
+ * only sign a click did anything is a column on the other side of the
+ * window changing, which does not read as "I selected this". */
+function mark(doc, icon) {
+  if (!doc.getElementById("studio-mark")) {
+    const s = doc.createElement("style");
+    s.id = "studio-mark";
+    s.textContent = `.studio-chosen{outline:2px solid #5b86e5;outline-offset:6px;
+      border-radius:3px}.icon{cursor:pointer}`;
+    (doc.head || doc.documentElement).append(s);
+  }
+  doc.querySelectorAll(".studio-chosen").forEach((n) => n.classList.remove("studio-chosen"));
+  if (icon) icon.classList.add("studio-chosen");
+}
+
 function hook() {
   let doc;
   try { doc = view.contentDocument; } catch (e) { return; }
   if (!doc) return;
   const desk = doc.querySelector(".desk");
   tip.textContent = desk
-    ? "Attrape une icône dans la page et pose-la. Clique pour l'inspecter."
+    ? "Clique pour modifier · double-clique pour entrer · attrape pour poser"
     : "Cette page n'est pas un bureau — rien à déplacer ici.";
   if (!desk) return;
 
@@ -427,10 +452,40 @@ function hook() {
   for (const { o } of all()) {
     bySlug.set(o.path.replace(/^content\//, "").replace(/\//g, "-"), o.path);
   }
+  // the frame is rebuilt often; put the outline back on whatever is chosen
+  if (chosen) {
+    const slug = chosen.replace(/^content\//, "").replace(/\//g, "-");
+    mark(doc, doc.querySelector(`a.icon[data-vt="${slug}"]`));
+  }
+
+  // IN HERE, A CLICK EDITS. The page's own dynamics — a folder opening a
+  // window, a project opening a preview — are the visitor's, and firing
+  // them while she is arranging the desk carries her away from the thing
+  // she just touched. Captured and stopped before the site's own handler
+  // ever sees it; double-click is how she goes in on purpose.
+  doc.addEventListener("click", (e) => {
+    const icon = e.target.closest && e.target.closest("a.icon[data-vt]");
+    if (!icon) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+  }, true);
 
   doc.querySelectorAll("a.icon[data-vt]").forEach((icon) => {
     const path = bySlug.get(icon.dataset.vt);
-    if (!path) return;                       // a window or a shortcut: not a folder
+    if (!path) {
+      // a window or a shortcut: declared in config.toml, nothing to edit
+      icon.title = "déclaré dans config.toml — pas modifiable ici";
+      return;
+    }
+    icon.addEventListener("dblclick", (e) => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const o = find(path);
+      if (!o) return;
+      // going in: a bureau becomes the desk shown, anything else is looked at
+      if (isBureau(o)) { mode = "desk"; setPressed(); chosen = o.path; view.src = urlOf(o); paint(); }
+      else setMode("page");
+    }, true);
     let from = null;
     icon.addEventListener("pointerdown", (e) => { from = { x: e.clientX, y: e.clientY }; }, true);
     icon.addEventListener("pointerup", async (e) => {
@@ -438,7 +493,7 @@ function hook() {
       if (!was) return;
       const moved = Math.abs(e.clientX - was.x) > 3 || Math.abs(e.clientY - was.y) > 3;
       const o = find(path);
-      if (!moved) { if (o) select(o); return; }
+      if (!moved) { if (o) { select(o); mark(doc, icon); } return; }
       // the site's own desk.js has already moved it, clamped it and
       // walked it clear of its neighbours. Read where it put it.
       const r = icon.getBoundingClientRect(), d = desk.getBoundingClientRect();
@@ -493,10 +548,14 @@ el("make").addEventListener("click", async () => {
   }
 });
 
+function setPressed() {
+  el("asdesk").setAttribute("aria-pressed", String(mode === "desk"));
+  el("aspage").setAttribute("aria-pressed", String(mode === "page"));
+}
+
 const setMode = (m) => {
   mode = m;
-  el("asdesk").setAttribute("aria-pressed", String(m === "desk"));
-  el("aspage").setAttribute("aria-pressed", String(m === "page"));
+  setPressed();
   const o = find(chosen);
   if (o) select(o);
 };
