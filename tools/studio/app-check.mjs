@@ -41,6 +41,7 @@ const node = (id = "") => ({
   addEventListener(kind, fn) {
     const key = id + ":" + kind;
     listeners.set(key, (listeners.get(key) || []).concat(fn));
+    if (kind === "click") this.__click = fn;   // so one row can be clicked
   },
 });
 
@@ -93,13 +94,29 @@ const sandbox = {
         did: { undid: "place" },
         site: "http://127.0.0.1:1111/",
         n: 1,
+        // Shaped like the real tree: a bureau appears BOTH as a child of
+        // its parent and as a desk of its own. Without the nesting the
+        // check cannot ask where choosing a folder puts the frame.
         tree: {
           desks: [{
+            kind: "desk", path: "content", name: "content", gallery: false,
+            depth: 0, opens_as: "page", empty: false,
+            titles: { fr: "myBureau", en: "myBureau" },
+            bodies: { fr: "", en: "" },
+            x: null, y: null, opens: null, icon: null, wallpaper: null,
+            photographs: [], video: null, languages: ["en", "fr"],
+            on: [{
+              kind: "folder", path: "content/da", name: "da",
+              titles: { fr: "DA", en: "art direction" }, bodies: { fr: "", en: "" },
+              x: "66", y: "66", opens: null, icon: null, wallpaper: "wallpaper.jpg",
+              photographs: [], video: null, languages: ["en", "fr"],
+            }],
+          }, {
             kind: "desk", path: "content/da", name: "da", gallery: false,
             depth: 1, opens_as: "page", empty: false,
             titles: { fr: "DA", en: "art direction" },
             bodies: { fr: "Un texte.", en: "Some text." },
-            x: null, y: null, opens: null, icon: null, wallpaper: "wallpaper.jpg",
+            x: "66", y: "66", opens: null, icon: null, wallpaper: "wallpaper.jpg",
             photographs: [], video: null, languages: ["en", "fr"],
             on: [{
               kind: "project", path: "content/da/theodora", name: "theodora",
@@ -164,6 +181,17 @@ if (loaded) {
   // here noticed, because nothing here had ever asked.
   const tree = byId.get("tree"), look = byId.get("look");
   check("the list down the side actually gets rows", tree.children.length > 0);
+
+  // Choosing a folder must not walk into it. Asked of the BEHAVIOUR,
+  // not of the source: suppressing the site's own click was correct and
+  // changed nothing, because the panel then navigated the frame itself.
+  const daRow = tree.children.find((r) => /DA/.test(r.innerHTML));
+  byId.get("view").src = "/site/";
+  if (daRow && daRow.__click) daRow.__click();
+  await new Promise((r) => setTimeout(r, 20));
+  check("choosing a folder keeps the frame on the desk it sits on",
+    byId.get("view").src === "/site/",
+    "frame went to " + byId.get("view").src);
   check("something is chosen as soon as it opens, so the editor is not blank",
     look.innerHTML.length > 0 && !/Choisis quelque chose/.test(look.innerHTML),
     JSON.stringify(look.innerHTML.slice(0, 60)));
@@ -218,6 +246,9 @@ if (loaded) {
     /const home = o\.path\.split\("\/"\)\.slice\(0, -1\)/.test(src2)
     && /const back = find\(home\)/.test(src2));
 
+  // Choosing a folder must not walk into it. Suppressing the site's own
+  // click was correct and made no difference, because the panel then
+  // navigated the frame itself — the same outcome by another route.
   const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
   check("and no rule anywhere hides the editor",
     !/\.look\s*\{[^}]*display:\s*none/.test(css)
