@@ -227,13 +227,41 @@ an SVG diff in a pull request is readable, a binary diff is two blobs.
 
 Wallpapers are SVG too — a duotone wash, film grain from
 `feTurbulence`, and a vignette. Under 1 KB each instead of ~380 KB, and
-the grain is computed rather than compressed, so it never bands. Point a
-section at a photograph instead whenever you have one:
+the grain is computed rather than compressed, so it never bands.
 
-```toml
-[extra]
-wallpaper = "img/my-photo.jpg"
+### A desk's wallpaper
+
+**Drop a file called `wallpaper.*` beside the bureau's `_index.md`.**
+That is the whole of it — the same way an icon is `icon.png` in the
+project folder and a film's still is `poster.jpg` beside it.
+
 ```
+content/da/
+    _index.md
+    _index.en.md
+    wallpaper.jpg     ← the desk's background
+```
+
+It serves **every language**, because one photograph has no language.
+And a bureau **inside** that one inherits it, so `maison cosette` looks
+like the `da` it sits in without carrying its own copy of the same
+picture. Declare one of its own to break the inheritance.
+
+Most explicit wins: the file, then `wallpaper = "..."` in the front
+matter (a path under `static/`, still supported), then the home desk's,
+so a new bureau is never a black rectangle. Having both the file and the
+line is a line that does nothing, and `look.py` says so.
+
+This used to be the one thing in the engine that did not live where the
+content lives: a path typed into **both** `_index.md` and `_index.en.md`,
+pointing at `static/img/`. Changing one and forgetting the other left a
+language on the old picture, silently.
+
+> A photograph's built url is derived from its PATH, not its contents.
+> Replace `wallpaper.jpg` with a different picture and the url does not
+> change — so a browser that already has it keeps showing the old one
+> until its cache expires. Not a bug to fix here, but the reason "I
+> changed it and it still looks the same" is usually a hard refresh away.
 
 ### Folders and files
 

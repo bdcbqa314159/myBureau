@@ -15,7 +15,64 @@
    on the home desk — hence the explicit test. Without it the home desk
    is named `vt-` in every language, and two desks that should morph
    into each other carry different names. #}
-{%- set wall_path = section.extra.wallpaper | default(value='img/wall-home.jpg') -%}
+{#- WHERE THE WALLPAPER COMES FROM. Most explicit wins:
+
+      1. a file called `wallpaper.*` sitting beside this `_index.md`
+      2. `wallpaper = "..."` in the front matter, a path under static/
+      3. the home desk's, so a new bureau is never a black rectangle
+
+    (1) is the one that matters, and it is the only one of the three that
+    behaves like the rest of this engine: a desk's background is a file in
+    the desk's own folder, the way an icon is `icon.png` and a film's
+    still is `poster.jpg`. Nothing to type, no path to get right, and —
+    because one file serves every translation — nothing to remember to
+    change twice. Declaring the path meant editing `_index.md` AND
+    `_index.en.md`, and editing only one left the other language on the
+    old picture with nothing to say so.
+
+    A translated section reports its assets under /<lang>/, but a
+    photograph has no language: one file sits beside the default-language
+    page and serves them all. Strip the prefix or the image pipeline
+    looks for a file that was never there — the same fix gallery.html
+    needs for the same reason. -#}
+{%- set_global wall_path = "" -%}
+{%- for a in section.assets -%}
+  {%- if a | split(pat="/") | last | split(pat=".") | first == "wallpaper" -%}
+    {%- if lang != config.default_language -%}
+      {%- set_global wall_path = a | replace(from="/" ~ lang ~ "/", to="/") -%}
+    {%- else -%}
+      {%- set_global wall_path = a -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+{%- if wall_path == "" -%}
+  {%- set_global wall_path = section.extra.wallpaper | default(value="") -%}
+{%- endif -%}
+{#- Still nothing: take the bureau this one sits in. A sub-bureau looks
+    like the bureau it is inside unless it says otherwise, which is both
+    what a real desk does and what stops `maison cosette` needing its own
+    copy of the same photograph. Walked from the nearest ancestor
+    outwards, so the closest one wins. -#}
+{%- if wall_path == "" -%}
+  {%- for up in section.ancestors | reverse -%}
+    {%- if wall_path == "" -%}
+      {%- set parent = get_section(path=up) -%}
+      {%- for a in parent.assets -%}
+        {%- if a | split(pat="/") | last | split(pat=".") | first == "wallpaper" -%}
+          {%- if lang != config.default_language -%}
+            {%- set_global wall_path = a | replace(from="/" ~ lang ~ "/", to="/") -%}
+          {%- else -%}
+            {%- set_global wall_path = a -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {%- if wall_path == "" and parent.extra.wallpaper -%}
+        {%- set_global wall_path = parent.extra.wallpaper -%}
+      {%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+{%- endif -%}
+{%- if wall_path == "" %}{% set_global wall_path = "img/wall-home.jpg" %}{% endif -%}
 {%- set wall_wide = resize_image(path=wall_path, width=2000, op="fit_width", format="webp", quality=72) -%}
 {%- set wall_narrow = resize_image(path=wall_path, width=1280, op="fit_width", format="webp", quality=72) -%}
 {%- set here = section.path | slugify -%}

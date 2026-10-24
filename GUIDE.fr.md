@@ -247,6 +247,26 @@ Il apparaît sur le bureau **et** dans le bandeau du haut, tout seul.
 > Un dossier rangé *à l'intérieur* d'un de ceux-là ouvre une **fenêtre**
 > sur le bureau où il est posé, sans quitter la page.
 
+### Changer le fond d'écran d'un bureau
+
+Dépose une image appelée **`wallpaper.jpg`** à côté du `_index.md` du
+bureau. C'est tout.
+
+```
+content/da/
+    _index.md
+    _index.en.md
+    wallpaper.jpg     ← le fond de ce bureau
+```
+
+Rien à écrire, aucun chemin à taper. Elle sert **les deux langues**, et
+les dossiers rangés à l'intérieur de ce bureau la reprennent aussi — sauf
+si tu leur en donnes une à eux.
+
+> Si tu remplaces une image par une autre et que tu vois encore
+> l'ancienne : ton navigateur l'a gardée en mémoire. Recharge en appuyant
+> sur **⌘-Maj-R**, ou attends quelques minutes.
+
 ### Décider où une icône se pose
 
 Optionnel. Sans rien, elle se range sur une grille :
