@@ -107,6 +107,13 @@ Tu peux :
   la fois
 - **changer le fond d'écran** d'un bureau : dépose une image sur le carré
   à droite
+- **changer l'apparence** de n'importe quoi : dépose une image sur le
+  petit carré « apparence ». C'est la seule façon de donner une tête à un
+  dossier.
+- **créer** un projet ou un dossier : en bas à gauche, choisis quoi
+  (des photos, un film, un document, une page), donne un nom, Créer
+- **regarder** une chose plutôt que le bureau où elle est posée : le
+  bouton « regarder » au-dessus de la page
 - **cliquer un projet** pour voir ses photos
 - **déposer des photos** dessus : elles sont numérotées toutes seules.
   La première est l'icône du projet.

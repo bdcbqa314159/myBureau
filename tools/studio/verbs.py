@@ -280,6 +280,121 @@ def add_image(item: str, name: str, data: bytes) -> dict:
     return {"named": dest.name}
 
 
+# What a new thing is called before she renames it, and what the engine
+# will draw for it. The extension is not decoration: it is how a project
+# with no photograph yet gets a face at all — see _icon.html.
+NEW_KINDS = {
+    "photos":  {"suffix": ".jpg", "what": "des photos"},
+    "film":    {"suffix": ".mov", "what": "un film"},
+    "document": {"suffix": ".pdf", "what": "un document"},
+    "page":    {"suffix": "",     "what": "une page"},
+}
+
+
+def _free_folder(parent: pathlib.Path, wanted: str) -> pathlib.Path:
+    """A folder name nobody is using, derived from what she typed."""
+    base = re.sub(r"[^a-z0-9]+", "-", wanted.lower().strip()).strip("-") or "nouveau"
+    name, n = base, 2
+    while (parent / name).exists():
+        name = "{}-{}".format(base, n)
+        n += 1
+    return parent / name
+
+
+def _languages_of(parent: pathlib.Path, stem: str) -> list:
+    """Make the new thing in exactly the languages its neighbours have.
+
+    A project born in French only, on a site that is also in English, is a
+    half-translated site by construction — and nothing would say so until
+    somebody switched language and found the French.
+    """
+    out = set()
+    for f in parent.rglob(stem + "*.md"):
+        bits = f.name[len(stem):-3].strip(".")
+        out.add(bits or "")
+    if not out:
+        out = {""}
+    return sorted(out)
+
+
+def new_project(into: str, name: str, kind: str = "photos") -> dict:
+    """A new project in a bureau: a folder, and one file per language."""
+    d = inside(into)
+    if not any(d.glob("_index*.md")):
+        raise Refused("a project goes inside a bureau")
+    if kind not in NEW_KINDS:
+        raise Refused("unknown kind")
+    name = name.strip()
+    if not name or '"' in name:
+        raise Refused("give it a name, without quotes")
+    folder = _free_folder(d, name)
+    folder.mkdir()
+    title = name + NEW_KINDS[kind]["suffix"]
+    moves = []
+    for lang in _languages_of(d, "_index"):
+        f = folder / ("index.md" if not lang else "index.{}.md".format(lang))
+        f.write_text('+++\ntitle = "{}"\n+++\n\n\n'.format(title), encoding="utf-8")
+        moves.append({"from": "", "to": rel(f)})
+    moves.append({"from": "", "to": rel(folder)})
+    record("new_project", [], moves)
+    return {"made": rel(folder), "title": title}
+
+
+def new_bureau(into: str, name: str) -> dict:
+    """A new bureau inside another one."""
+    d = inside(into)
+    if not any(d.glob("_index*.md")):
+        raise Refused("a bureau goes inside a bureau")
+    name = name.strip()
+    if not name or '"' in name:
+        raise Refused("give it a name, without quotes")
+    folder = _free_folder(d, name)
+    folder.mkdir()
+    moves = []
+    for lang in _languages_of(d, "_index"):
+        f = folder / ("_index.md" if not lang else "_index.{}.md".format(lang))
+        f.write_text('+++\ntitle = "{}"\ntemplate = "section.html"\n+++\n\n\n'.format(name),
+                     encoding="utf-8")
+        moves.append({"from": "", "to": rel(f)})
+    moves.append({"from": "", "to": rel(folder)})
+    record("new_bureau", [], moves)
+    return {"made": rel(folder)}
+
+
+def set_icon(item: str, name: str, data: bytes) -> dict:
+    """What this thing LOOKS like on the desk.
+
+    Written as `icon.<ext>` beside its content file, which is the
+    engine's own rule and the only one that works for a bureau — a
+    bureau has no photographs to take a face from, so until now its
+    appearance could not be changed from the panel at all.
+
+    A picture called icon is never shown among a project's photographs,
+    so this does not quietly add one to the page.
+    """
+    d = a_project(item)
+    ext = pathlib.Path(name).suffix.lower()
+    if ext not in IMAGE and ext != ".svg":
+        raise Refused("an icon is a picture")
+    if not data:
+        raise Refused("that file is empty")
+    moves = []
+    for old in sorted(d.iterdir()):
+        if old.is_file() and old.stem.lower() == "icon":
+            TRASH.mkdir(parents=True, exist_ok=True)
+            bin_ = TRASH / str(int(time.time() * 1000))
+            bin_.mkdir(exist_ok=True)
+            shutil.move(str(old), str(bin_ / old.name))
+            moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
+    dest = d / ("icon" + ext)
+    tmp = dest.with_name(dest.name + ".studio-tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, dest)
+    moves.append({"from": "", "to": rel(dest)})
+    record("set_icon", [], moves)
+    return {"icon": dest.name}
+
+
 def set_wallpaper(item: str, name: str, data: bytes) -> dict:
     """The photograph behind a bureau.
 

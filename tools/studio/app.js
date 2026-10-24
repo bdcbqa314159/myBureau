@@ -87,13 +87,26 @@ const esc = (s) => String(s).replace(/[<>&"]/g, (c) =>
 /* The url the site serves this thing at — content/da/theodora is /da/theodora/ */
 const urlOf = (o) => "/site/" + o.path.replace(/^content\/?/, "") + (o.path === "content" ? "" : "/");
 
+/* Two ways to look at a thing, because they answer different questions.
+ *
+ *   "sur le bureau"  where it sits, and where it can be moved to
+ *   "regarder"       the thing itself — its page, its photographs, its
+ *                    film playing
+ *
+ * A project has no desk of its own, so arranging it means looking at the
+ * bureau it belongs to; and a bureau looked AT is its own desk. One
+ * toggle covers both without either mode being a special case. */
+let mode = "desk";
+
+function frameFor(o) {
+  const isDesk = model.desks.some((d) => d.path === o.path);
+  if (mode === "page") return urlOf(o);
+  return isDesk ? urlOf(o) : urlOf({ path: o.path.split("/").slice(0, -1).join("/") });
+}
+
 function select(o) {
   chosen = o.path;
-  const want = urlOf(o);
-  // a desk is shown as itself; a project is shown on the desk it sits on,
-  // because that is where it can be moved
-  const isDesk = model.desks.some((d) => d.path === o.path);
-  const show = isDesk ? want : urlOf({ path: o.path.split("/").slice(0, -1).join("/") });
+  const show = frameFor(o);
   if (!view.src.endsWith(show)) view.src = show;
   paint();
   inspect(o);
@@ -113,11 +126,23 @@ function inspect(o) {
       <textarea data-body="${l}">${esc(o.bodies[l] || "")}</textarea>
     </label>`).join("");
   const isDesk = model.desks.some((d) => d.path === o.path);
+  // What it looks like on the desk. A bureau has no photograph to take a
+  // face from, so without this its appearance could not be changed at all.
+  const face = `
+    <label>apparence
+      <div class="face" data-drop="icon">${o.icon && !o.icon.includes("/")
+        ? `<img src="${q("/media/" + o.path + "/" + o.icon)}" alt="">`
+        : `<span>${o.icon ? "déclarée dans le texte"
+             : o.photographs.length ? "la première photo"
+             : "icône par défaut"}</span>`}</div>
+    </label>
+    <p class="drop" data-drop="icon">Dépose une image ici pour l'icône.</p>`;
   const wall = isDesk ? `
     <label>fond d'écran
       <div class="wall" id="wall">${o.wallpaper
         ? `<img src="${q("/media/" + o.path + "/" + o.wallpaper)}" alt="">`
-        : `<span>hérité du bureau au-dessus</span>`}</div>
+        : `<span>${o.path === "content" ? "celui par défaut"
+                                        : "hérité du bureau au-dessus"}</span>`}</div>
     </label>
     <p class="drop" data-drop="wallpaper">Dépose une image ici pour changer le fond.</p>` : "";
   const shots = o.photographs.map((n, i) => `
@@ -129,7 +154,7 @@ function inspect(o) {
   look.innerHTML = `
     <h2>${esc(o.titles.fr || o.name)}</h2>
     <p class="what">${kindOf(o)}${o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · sur la grille"}</p>
-    ${titles}${bodies}${wall}
+    ${titles}${bodies}${face}${wall}
     ${isDesk && !o.gallery ? "" : `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">Dépose des photos ici. La première est l'icône.</p>`}`;
   wire(o);
@@ -180,14 +205,18 @@ look.addEventListener("drop", async (e) => {
   if (!o || !e.dataTransfer.files.length) return;
   e.preventDefault();
   // dropped on the wallpaper patch, or anywhere else in the panel
-  const onWall = e.target.closest && e.target.closest('[data-drop="wallpaper"], .wall');
+  const hit = e.target.closest && e.target.closest("[data-drop]");
+  const as = hit ? hit.dataset.drop : "photos";
   const files = [...e.dataTransfer.files];
-  for (const f of (onWall ? files.slice(0, 1) : files)) {
+  // a wallpaper and an icon are one each; photographs are a pile
+  for (const f of (as === "photos" ? files : files.slice(0, 1))) {
     const out = await ask(
       `/api/upload?into=${encodeURIComponent(o.path)}&name=${encodeURIComponent(f.name)}`
-      + (onWall ? "&as=wallpaper" : ""),
+      + (as === "photos" ? "" : `&as=${as}`),
       { method: "POST", body: await f.arrayBuffer() });
-    tell(out ? (onWall ? "fond d'écran changé" : `${f.name} ajoutée`) : `${f.name} refusée`);
+    const said = { wallpaper: "fond d'écran changé", icon: "apparence changée" }[as]
+                 || `${f.name} ajoutée`;
+    tell(out ? said : `${f.name} refusée`);
   }
 });
 
@@ -241,6 +270,41 @@ stream.onmessage = async () => {
   view.src = here;
 };
 stream.onerror = () => { lamp.className = "lamp bad"; tell("connexion perdue — relance preview"); };
+
+function bureauFor(o) {
+  // things are made INSIDE a bureau: if a project is chosen, the one it
+  // belongs to is what she means
+  if (!o) return model && model.desks.length ? model.desks[0].path : null;
+  return model.desks.some((d) => d.path === o.path)
+    ? o.path : o.path.split("/").slice(0, -1).join("/");
+}
+
+el("make").addEventListener("click", async () => {
+  const name = el("newname").value.trim();
+  if (!name) { tell("donne-lui un nom"); return; }
+  const into = bureauFor(find(chosen));
+  if (!into) return;
+  const kind = el("kind").value;
+  const out = kind === "bureau"
+    ? await act({ verb: "new_bureau", into, name })
+    : await act({ verb: "new_project", into, name, kind });
+  if (out) {
+    el("newname").value = "";
+    tell("créé dans " + into.replace("content/", ""));
+    const made = out.did && out.did.made;
+    if (made) { const o = find(made); if (o) select(o); }
+  }
+});
+
+const setMode = (m) => {
+  mode = m;
+  el("asdesk").setAttribute("aria-pressed", String(m === "desk"));
+  el("aspage").setAttribute("aria-pressed", String(m === "page"));
+  const o = find(chosen);
+  if (o) select(o);
+};
+el("asdesk").addEventListener("click", () => setMode("desk"));
+el("aspage").addEventListener("click", () => setMode("page"));
 
 el("open").addEventListener("click", () => window.open(site || "/site/", "mybureau-site"));
 el("undo").addEventListener("click", async () => {

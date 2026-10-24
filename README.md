@@ -1072,9 +1072,28 @@ itself — one mechanism rather than two.
 
 #### What it may do
 
-A closed list in `tools/studio/verbs.py`, not a file manager: `place`,
-`retitle`, `set_body`, `add_image`, `reorder`, `remove_image`,
-`set_wallpaper`, `undo`.
+A closed list in `tools/studio/verbs.py`, not a file manager:
+`new_project`, `new_bureau`, `place`, `retitle`, `set_body`, `set_icon`,
+`set_wallpaper`, `add_image`, `reorder`, `remove_image`, `undo`.
+
+#### Making one, and what it will look like
+
+A new project is a folder and **one file per language its neighbours
+have** — a project born in French only, on a bilingual site, is a
+half-translated site by construction, and nothing would say so until
+somebody switched language.
+
+The kind picked when making it is written into the name as an extension,
+because that is how the engine gives a face to a project with no
+photograph yet: `.jpg` a photo, `.mov` a film strip, `.pdf` a document,
+nothing at all a page. It is a starting point, not a decision — the
+appearance can be replaced with her own artwork at any time, and a
+project with photographs wears its first one regardless.
+
+`set_icon` writes `icon.<ext>` beside the content file. It is the only
+way a **bureau** can be given a face: a bureau has no photographs to take
+one from, so until this verb existed its appearance could not be changed
+from the panel at all.
 Two rules in that file are not negotiable, because both have bitten this
 project:
 
