@@ -38,7 +38,31 @@ JOURNAL = STUDIO / "journal.jsonl"
 TRASH = STUDIO / "trash"
 
 IMAGE = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"}
+VIDEO = {".mp4", ".webm", ".mov", ".m4v"}
 SPOKEN_FOR = {"icon", "poster", "wallpaper"}
+
+# What to say when she hands over something the site cannot show. A list
+# of permitted extensions is not an answer — it does not say what to do
+# with the file in her hand.
+NO_USE_FOR = {
+    ".pdf": "le site n'affiche pas les PDF. Exporte les pages en JPEG et"
+            " dépose-les : elles deviendront les images du projet.",
+    ".psd": "un .psd ne s'affiche pas. Exporte en JPEG.",
+    ".ai":  "un .ai ne s'affiche pas. Exporte en JPEG ou en PNG.",
+    ".tif": "un .tif ne s'affiche pas. Réexporte en JPEG.",
+    ".tiff": "un .tiff ne s'affiche pas. Réexporte en JPEG.",
+    ".heic": "un .heic vient de l'iPhone et ne s'affiche pas. Réexporte en JPEG.",
+    ".mp3": "le site ne joue pas de son tout seul — seulement la bande d'un film.",
+    ".zip": "une archive ne s'affiche pas.",
+}
+
+
+def unusable(ext: str, wanted: str) -> str:
+    """The most useful sentence we can offer about a file we refuse."""
+    if ext in NO_USE_FOR:
+        return NO_USE_FOR[ext]
+    return "le site ne sait pas montrer un {} ici — il attend {}.".format(
+        ext.lstrip(".") or "fichier sans extension", wanted)
 
 
 class Refused(Exception):
@@ -71,16 +95,16 @@ def inside(p: "pathlib.Path | str") -> pathlib.Path:
     try:
         q.relative_to(CONTENT.resolve())
     except ValueError:
-        raise Refused("that is not in content/")
+        raise Refused("ce n'est pas dans le dossier du site.")
     return q
 
 
 def a_project(p: "pathlib.Path | str") -> pathlib.Path:
     d = inside(p)
     if not d.is_dir():
-        raise Refused("there is no folder there")
+        raise Refused("il n'y a pas de dossier à cet endroit.")
     if not any(d.glob("index*.md")) and not any(d.glob("_index*.md")):
-        raise Refused("that folder is not a project or a bureau")
+        raise Refused("ce dossier n'est ni un projet ni un bureau.")
     return d
 
 
@@ -135,7 +159,7 @@ def set_key(text: str, name: str, value) -> str:
     """
     parts = text.split("+++")
     if len(parts) < 3:
-        raise Refused("that file has no front matter")
+        raise Refused("ce fichier n'a pas d'en-tête entre les +++.")
     fm = parts[1]
     line = "{} = {}".format(name, value if isinstance(value, int)
                             else '"{}"'.format(value))
@@ -169,12 +193,12 @@ def record(verb: str, texts: list, moves: list) -> None:
 
 def undo() -> str:
     if not JOURNAL.exists():
-        raise Refused("nothing to take back")
+        raise Refused("il n'y a rien à annuler.")
     lines = JOURNAL.read_text(encoding="utf-8").splitlines()
     while lines and not lines[-1].strip():
         lines.pop()
     if not lines:
-        raise Refused("nothing to take back")
+        raise Refused("il n'y a rien à annuler.")
     entry = json.loads(lines[-1])
     for t in entry["texts"]:
         atomic(ROOT / t["path"], t["before"])
@@ -219,7 +243,7 @@ def place(item: str, x: int, y: int) -> dict:
     d = a_project(item)
     x, y = int(x), int(y)
     if not (0 <= x <= 100 and 0 <= y <= 100):
-        raise Refused("a position is a percentage of the desk, 0 to 100")
+        raise Refused("une position est un pourcentage du bureau, de 0 à 100.")
     texts = []
     for f in language_files(d):
         before = f.read_text(encoding="utf-8")
@@ -242,14 +266,14 @@ def retitle(item: str, lang: str, title: str) -> dict:
     d = a_project(item)
     title = title.strip()
     if not title:
-        raise Refused("a name cannot be empty")
+        raise Refused("il faut un nom.")
     if '"' in title:
-        raise Refused('a name cannot contain a double quote')
+        raise Refused('un nom ne peut pas contenir de guillemet droit.')
     stem = "_index" if (d / "_index.md").exists() else "index"
     f = d / ("{}.md".format(stem) if lang in ("", "fr", None)
              else "{}.{}.md".format(stem, lang))
     if not f.exists():
-        raise Refused("there is no {} file for this one yet".format(lang))
+        raise Refused("il n'y a pas encore de version {} pour celui-ci.".format(lang))
     before = f.read_text(encoding="utf-8")
     after = set_key(before, "title", title)
     if after != before:
@@ -269,11 +293,11 @@ def set_body(item: str, lang: str, body: str) -> dict:
     f = d / ("{}.md".format(stem) if lang in ("", "fr", None)
              else "{}.{}.md".format(stem, lang))
     if not f.exists():
-        raise Refused("there is no {} file for this one yet".format(lang))
+        raise Refused("il n'y a pas encore de version {} pour celui-ci.".format(lang))
     before = f.read_text(encoding="utf-8")
     parts = before.split("+++")
     if len(parts) < 3:
-        raise Refused("that file has no front matter")
+        raise Refused("ce fichier n'a pas d'en-tête entre les +++.")
     after = "+++".join(parts[:2]) + "+++\n\n" + body.strip() + "\n"
     if after != before:
         atomic(f, after)
@@ -292,10 +316,12 @@ def _next_number(d: pathlib.Path) -> int:
 def add_image(item: str, name: str, data: bytes) -> dict:
     d = a_project(item)
     ext = pathlib.Path(name).suffix.lower()
+    if ext in VIDEO:
+        raise Refused("c'est une vidéo — dépose-la sur « le film », pas sur les photos.")
     if ext not in IMAGE:
-        raise Refused("the site shows " + ", ".join(sorted(e[1:] for e in IMAGE)))
+        raise Refused(unusable(ext, "une image"))
     if not data:
-        raise Refused("that file is empty")
+        raise Refused("ce fichier est vide.")
     dest = d / "{:02d}{}".format(_next_number(d), ext)
     tmp = dest.with_name(dest.name + ".studio-tmp")
     tmp.write_bytes(data)
@@ -345,12 +371,12 @@ def new_project(into: str, name: str, kind: str = "photos") -> dict:
     """A new project in a bureau: a folder, and one file per language."""
     d = inside(into)
     if not any(d.glob("_index*.md")):
-        raise Refused("a project goes inside a bureau")
+        raise Refused("un projet se range dans un bureau.")
     if kind not in NEW_KINDS:
-        raise Refused("unknown kind")
+        raise Refused("je ne connais pas ce genre de projet.")
     name = name.strip()
     if not name or '"' in name:
-        raise Refused("give it a name, without quotes")
+        raise Refused("donne-lui un nom, sans guillemets.")
     folder = _free_folder(d, name)
     folder.mkdir()
     title = name + NEW_KINDS[kind]["suffix"]
@@ -368,10 +394,10 @@ def new_bureau(into: str, name: str) -> dict:
     """A new bureau inside another one."""
     d = inside(into)
     if not any(d.glob("_index*.md")):
-        raise Refused("a bureau goes inside a bureau")
+        raise Refused("un dossier se range dans un bureau.")
     name = name.strip()
     if not name or '"' in name:
-        raise Refused("give it a name, without quotes")
+        raise Refused("donne-lui un nom, sans guillemets.")
     folder = _free_folder(d, name)
     folder.mkdir()
     moves = []
@@ -400,15 +426,15 @@ def move(item: str, into: str) -> dict:
     src = a_project(item)
     dst = inside(into)
     if not any(dst.glob("_index*.md")):
-        raise Refused("things go inside a bureau")
+        raise Refused("ça se range dans un bureau.")
     if src == dst:
-        raise Refused("it is already there")
+        raise Refused("il y est déjà.")
     if dst == src.parent:
-        raise Refused("it is already there")
+        raise Refused("il y est déjà.")
     # a folder cannot be put inside itself, nor inside anything it contains
     try:
         dst.relative_to(src)
-        raise Refused("a folder cannot be put inside itself")
+        raise Refused("un dossier ne peut pas être rangé dans lui-même.")
     except ValueError:
         pass
     dest = _free_folder(dst, src.name)
@@ -427,7 +453,7 @@ def throw_away(item: str) -> dict:
     """
     d = a_project(item)
     if d == CONTENT.resolve():
-        raise Refused("that is the whole site")
+        raise Refused("c'est le site entier.")
     TRASH.mkdir(parents=True, exist_ok=True)
     bin_ = TRASH / str(int(time.time() * 1000))
     bin_.mkdir(exist_ok=True)
@@ -438,6 +464,72 @@ def throw_away(item: str) -> dict:
     # nothing inside it is left to nudge, so nudge the bureau it left
     nudge(parent)
     return {"binned": d.name}
+
+
+def add_video(item: str, name: str, data: bytes) -> dict:
+    """The film itself.
+
+    A project holding a video IS a film, whatever its name says — that is
+    the engine's rule, and it means dropping a video here changes what
+    the thing does. One video: the engine takes the first it finds, so a
+    second would sit there doing nothing. The one already present goes to
+    the bin, which `Annuler` undoes.
+    """
+    d = a_project(item)
+    ext = pathlib.Path(name).suffix.lower()
+    if ext in IMAGE:
+        raise Refused("c'est une image — dépose-la sur les photos, ou sur l'affiche.")
+    if ext not in VIDEO:
+        raise Refused(unusable(ext, "une vidéo (mp4, mov, webm, m4v)"))
+    if not data:
+        raise Refused("ce fichier est vide.")
+    moves = []
+    for old in sorted(d.iterdir()):
+        if old.is_file() and old.suffix.lower() in VIDEO:
+            TRASH.mkdir(parents=True, exist_ok=True)
+            bin_ = TRASH / str(int(time.time() * 1000))
+            bin_.mkdir(exist_ok=True)
+            shutil.move(str(old), str(bin_ / old.name))
+            moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
+    dest = d / ("film" + ext)
+    tmp = dest.with_name(dest.name + ".studio-tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, dest)
+    moves.append({"from": "", "to": rel(dest)})
+    record("add_video", [], moves)
+    return {"video": dest.name}
+
+
+def set_poster(item: str, name: str, data: bytes) -> dict:
+    """The still shown before a film is played.
+
+    `poster.<ext>` beside it, which the engine reads and which is never
+    counted among the project's photographs — so this does not quietly
+    add a picture to the page.
+    """
+    d = a_project(item)
+    ext = pathlib.Path(name).suffix.lower()
+    if ext in VIDEO:
+        raise Refused("une affiche est une image, pas une vidéo.")
+    if ext not in IMAGE:
+        raise Refused(unusable(ext, "une image"))
+    if not data:
+        raise Refused("ce fichier est vide.")
+    moves = []
+    for old in sorted(d.iterdir()):
+        if old.is_file() and old.stem.lower() == "poster":
+            TRASH.mkdir(parents=True, exist_ok=True)
+            bin_ = TRASH / str(int(time.time() * 1000))
+            bin_.mkdir(exist_ok=True)
+            shutil.move(str(old), str(bin_ / old.name))
+            moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
+    dest = d / ("poster" + ext)
+    tmp = dest.with_name(dest.name + ".studio-tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, dest)
+    moves.append({"from": "", "to": rel(dest)})
+    record("set_poster", [], moves)
+    return {"poster": dest.name}
 
 
 def set_icon(item: str, name: str, data: bytes) -> dict:
@@ -453,10 +545,12 @@ def set_icon(item: str, name: str, data: bytes) -> dict:
     """
     d = a_project(item)
     ext = pathlib.Path(name).suffix.lower()
+    if ext in VIDEO:
+        raise Refused("une icône est une image fixe, pas une vidéo.")
     if ext not in IMAGE and ext != ".svg":
-        raise Refused("an icon is a picture")
+        raise Refused(unusable(ext, "une image"))
     if not data:
-        raise Refused("that file is empty")
+        raise Refused("ce fichier est vide.")
     moves = []
     for old in sorted(d.iterdir()):
         if old.is_file() and old.stem.lower() == "icon":
@@ -485,12 +579,14 @@ def set_wallpaper(item: str, name: str, data: bytes) -> dict:
     """
     d = inside(item)
     if not any(d.glob("_index*.md")):
-        raise Refused("only a bureau has a wallpaper")
+        raise Refused("seul un bureau a un fond d'écran.")
     ext = pathlib.Path(name).suffix.lower()
+    if ext in VIDEO:
+        raise Refused("un fond d'écran est une image fixe, pas une vidéo.")
     if ext not in IMAGE:
-        raise Refused("a wallpaper is a picture")
+        raise Refused(unusable(ext, "une image"))
     if not data:
-        raise Refused("that file is empty")
+        raise Refused("ce fichier est vide.")
     moves = []
     for old in sorted(d.iterdir()):
         if old.is_file() and old.stem.lower() == "wallpaper":
@@ -520,7 +616,7 @@ def reorder(item: str, names: list) -> dict:
             if f.is_file() and f.suffix.lower() in IMAGE
             and f.stem.lower() not in SPOKEN_FOR]
     if sorted(names) != sorted(have):
-        raise Refused("that is not the same set of photographs")
+        raise Refused("ce ne sont pas les mêmes photos.")
     moves = []
     staged = []
     for i, n in enumerate(names, start=1):
@@ -541,7 +637,7 @@ def remove_image(item: str, name: str) -> dict:
     d = a_project(item)
     f = inside(pathlib.Path(item) / name)
     if not f.is_file():
-        raise Refused("there is no such photograph")
+        raise Refused("cette photo n'existe pas.")
     TRASH.mkdir(parents=True, exist_ok=True)
     bin_ = TRASH / str(int(time.time() * 1000))
     bin_.mkdir()

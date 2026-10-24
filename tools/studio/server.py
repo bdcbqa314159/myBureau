@@ -267,6 +267,10 @@ class Studio(http.server.BaseHTTPRequestHandler):
                     out = verbs.set_wallpaper(into, name, raw)
                 elif how == "icon":
                     out = verbs.set_icon(into, name, raw)
+                elif how == "video":
+                    out = verbs.add_video(into, name, raw)
+                elif how == "poster":
+                    out = verbs.set_poster(into, name, raw)
                 else:
                     out = verbs.add_image(into, name, raw)
             elif u.path == "/api/do":

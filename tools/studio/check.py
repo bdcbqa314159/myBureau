@@ -200,6 +200,70 @@ def main() -> int:
           and not (tmp / "content" / "da" / "icon.jpg").exists())
 
 
+    # ---- she reads these, and she reads French ----------------------
+    # Twenty-nine of thirty-four refusals were in English. A panel that
+    # answers "that folder is not a project or a bureau" to somebody who
+    # does not write code is a dead end, however correct it is.
+    import re as _re
+    source = (HERE / "verbs.py").read_text(encoding="utf-8")
+    english = set("that this file folder empty name site only there is are"
+                  " cannot inside goes photograph photographs unknown kind"
+                  " position percentage desk project bureau quote".split())
+    offenders = []
+    for m in _re.finditer(r'Refused\(\s*"([^"]+)"', source):
+        words = set(_re.findall(r"[a-zA-Z']+", m.group(1).lower()))
+        # a French sentence will not be mostly English words
+        if words and len(words & english) >= max(2, len(words) // 2):
+            offenders.append(m.group(1))
+    check("every refusal she can meet is in her language", offenders == [],
+          "; ".join(offenders[:3]))
+
+    # ---- a film can receive a film ----------------------------------
+    clip = b"\x00\x00\x00\x18ftypmp42" + b"0" * 200
+    pixels = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    out = verbs.new_project("content/da", "Nuit", "film")
+    film = out["made"]
+    verbs.add_video(film, "whatever.mp4", clip)
+    check("a film project can be given a film",
+          (tmp / film / "film.mp4").exists())
+    verbs.set_poster(film, "still.jpg", pixels)
+    check("and an affiche, which is not one of its photographs",
+          (tmp / film / "poster.jpg").exists())
+    verbs.add_video(film, "second.mov", clip)
+    check("a second film replaces the first — the engine only reads one",
+          (tmp / film / "film.mov").exists() and not (tmp / film / "film.mp4").exists())
+    verbs.undo()
+    check("and undo brings the first film back",
+          (tmp / film / "film.mp4").exists())
+
+    # ---- each thing receives its own kind ----------------------------
+    def refused(fn, *a):
+        try:
+            fn(*a)
+            return ""
+        except verbs.Refused as exc:
+            return str(exc)
+
+    say = refused(verbs.add_image, film, "clip.mp4", clip)
+    check("a video dropped on the photographs is refused, and told where to go",
+          "vidéo" in say and "film" in say, say)
+    say = refused(verbs.add_video, film, "photo.jpg", pixels)
+    check("an image dropped on the film is refused, and told where to go",
+          "image" in say and ("photos" in say or "affiche" in say), say)
+    say = refused(verbs.set_poster, film, "clip.mp4", clip)
+    check("an affiche refuses a video", "image" in say, say)
+    say = refused(verbs.set_wallpaper, "content/da", "clip.mp4", clip)
+    check("a wallpaper refuses a video", "image" in say, say)
+    say = refused(verbs.set_icon, "content/da", "clip.mp4", clip)
+    check("an icon refuses a video", "image" in say, say)
+
+    # the refusal has to say what to DO, not list extensions
+    say = refused(verbs.add_image, film, "brochure.pdf", b"%PDF-1.4")
+    check("a PDF is refused with what to do about it, not a list of formats",
+          "JPEG" in say and "PDF" in say, say)
+    say = refused(verbs.add_image, film, "photo.heic", pixels)
+    check("and so is an iPhone .heic", "JPEG" in say, say)
+
     # ---- moving and throwing away, the two Finder trips -------------
     verbs.move("content/da/theodora", "content/graphic-design")
     check("a project moves whole, into another bureau",

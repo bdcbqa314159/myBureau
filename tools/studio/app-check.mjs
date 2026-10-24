@@ -94,7 +94,7 @@ const sandbox = {
               titles: { fr: "theodora.jpeg", en: "theodora.jpeg" },
               bodies: { fr: "", en: "" },
               x: "32", y: "12", opens: null, icon: null, wallpaper: null,
-              photographs: ["01.jpg", "02.jpg"], video: null, languages: ["en", "fr"],
+              photographs: ["01.jpg", "02.jpg"], video: "film.mp4", languages: ["en", "fr"],
             }],
           }],
         },
@@ -172,6 +172,16 @@ if (loaded) {
   const rows = tree.children;
   check("the rows can be dragged, which is how a thing changes folder",
     rows.length > 0 && rows.every((r) => r.draggable === true));
+
+  // Selecting the PROJECT rather than the desk. Rows are created
+  // elements with no id, so every row handler lands under ":click" —
+  // running them all ends on the last row, which is the project.
+  for (const fn of listeners.get(":click") || []) fn();
+  await new Promise((r) => setTimeout(r, 20));
+  check("a film offers somewhere to put the film",
+    /data-drop="video"/.test(look.innerHTML), look.innerHTML.slice(0, 120));
+  check("and somewhere for its affiche",
+    /data-drop="poster"/.test(look.innerHTML));
 
   const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
   check("and no rule anywhere hides the editor",
