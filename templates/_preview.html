@@ -25,7 +25,7 @@
   {% set leaf = a | split(pat="/") | last %}
   {% if leaf | split(pat=".") | last | lower in config.extra.video_types %}
     {% set_global pv_clip = a %}
-  {% elif leaf | split(pat=".") | last | lower in config.extra.image_types and leaf | split(pat=".") | first != "icon" %}
+  {% elif leaf | split(pat=".") | last | lower in config.extra.image_types and leaf | split(pat=".") | first != "icon" and leaf | split(pat=".") | first != "poster" %}
     {% set_global pv_still = true %}
   {% endif %}
 {% endfor %}
@@ -43,7 +43,7 @@
   <div class="win-body preview-body">
     {% for asset in fp.assets %}
       {% set file = asset | split(pat="/") | last %}
-      {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" %}
+      {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" and file | split(pat=".") | first != "poster" %}
         {% set alt = "" %}
         {% if fp.extra.alt and fp.extra.alt[file] %}{% set alt = fp.extra.alt[file] %}{% endif %}
         {% set shape = get_image_metadata(path=asset) %}

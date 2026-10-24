@@ -14,7 +14,10 @@
   {% if ext in config.extra.video_types %}{% set_global clip = a %}{% endif %}
   {% if a | split(pat="/") | last | split(pat=".") | first == "poster" %}{% set_global still = a %}{% endif %}
 {% endfor %}
-{% if clip %}
+{#- Not when she has asked for the page. A dialog nobody opens is dead
+    markup, and this one carries a <video preload="metadata"> that would
+    still go and fetch something. -#}
+{% if clip and ff.extra.opens != "page" %}
 <dialog class="win win-film" id="film-{{ ff.path | slugify }}">
   <div class="win-bar">
     <span>{{ ff.title }}</span>

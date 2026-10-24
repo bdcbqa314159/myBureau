@@ -25,10 +25,38 @@
       and closed inside the loop with a flag. `paired` is the flag. -#}
   {% set_global shown = 0 %}
   {% set_global paired = false %}
-  {# every image in the folder, in filename order; icon.png is the desktop icon, not content #}
+
+  {#- THE FILM, where there is one. A project page rendered a folder's
+      photographs and silently ignored its video, which left two holes:
+      `opens = "page"` on a film sent you to a page with no film on it,
+      and a visitor with no JavaScript — for whom this page IS the film
+      window — never saw it either.
+
+      It opens the page, so the first photograph joins the pairs below
+      rather than competing with it. -#}
+  {% set_global reel = "" %}
+  {% set_global sheet = "" %}
+  {% for a in page.assets %}
+    {% set leaf = a | split(pat="/") | last %}
+    {% if leaf | split(pat=".") | last | lower in config.extra.video_types %}{% set_global reel = a %}{% endif %}
+    {% if leaf | split(pat=".") | first == "poster" %}{% set_global sheet = a %}{% endif %}
+  {% endfor %}
+  {% if reel %}
+    <figure class="proj-open proj-reel">
+      <video controls playsinline preload="metadata"
+             {% if sheet %}poster="{{ get_url(path=sheet) }}"{% endif %}>
+        <source src="{{ get_url(path=reel) }}">
+      </video>
+    </figure>
+    {% set_global shown = 1 %}
+  {% endif %}
+  {# every image in the folder, in filename order. icon.* is the desktop
+     icon and poster.* is the film's still — neither is one of the
+     project's photographs, and showing the poster under the film it
+     belongs to is showing the same frame twice. #}
   {% for asset in page.assets %}
     {% set file = asset | split(pat="/") | last %}
-    {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" %}
+    {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" and file | split(pat=".") | first != "poster" %}
       {# the first picture is the page; everything below it can arrive later.
          Resized at build time, with the original proportions declared so
          nothing shifts as each one lands. #}

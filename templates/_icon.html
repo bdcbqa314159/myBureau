@@ -19,6 +19,7 @@
 {#- WHAT THIS ICON DOES, decided here so it cannot disagree with what the
     icon LOOKS like.
 
+      opens = "page"          its own page — nothing opens here
       a video in the folder   the film window, on the desk
       anything else           a PREVIEW window, on the desk
 
@@ -55,9 +56,14 @@
       {%- set_global ic_still = true -%}
     {%- endif -%}
   {%- endfor -%}
-  {%- if ic_clip != "" -%}
+  {#- `opens = "page"` is tested FIRST, so it means the same thing
+      everywhere. It used to sit below the video test, which made it the
+      one override that silently did nothing on the one kind of project
+      most likely to want a page — a film with a lot to say about it. -#}
+  {%- if ic_opens == "page" -%}
+  {%- elif ic_clip != "" -%}
     {%- set_global ic_window = "film-" ~ (ic_path | slugify) -%}
-  {%- elif ic_still and ic_opens != "page" -%}
+  {%- elif ic_still -%}
     {%- set_global ic_window = "preview-" ~ (ic_path | slugify) -%}
   {%- endif -%}
 {%- endif -%}
