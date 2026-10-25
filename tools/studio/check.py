@@ -491,6 +491,25 @@ def doc_cases(tmp: pathlib.Path) -> None:
     check("a dossier cannot be made in a gallery",
           refused(verbs.new_project, "content/pellicules", "x", "document") != "")
 
+    # ---- the one that ate her text ----------------------------------
+    # The route defaulted a missing `body` to "", so a request that
+    # spelled the field wrong replaced the paragraph with nothing and
+    # answered {"wrote": 0}. Found by driving the real server with the
+    # wrong key, which is how a typo in anything calling it would look.
+    home = tmp / "content" / "_index.md"
+    had = home.read_text(encoding="utf-8")
+    verbs.set_body("content", "fr", "Je suis directrice artistique.")
+    check("writing the text keeps the front matter, comments and all",
+          home.read_text(encoding="utf-8").split("+++")[1] == had.split("+++")[1])
+    check("and the text is what she typed",
+          home.read_text(encoding="utf-8").split("+++")[2].strip()
+          == "Je suis directrice artistique.")
+    verbs.undo()
+    check("undo puts her old text back", home.read_text(encoding="utf-8") == had)
+    check("clearing it on purpose is still allowed",
+          verbs.set_body("content", "fr", "")["wrote"] == 0)
+    verbs.undo()
+
 
 def identity_cases(tmp: pathlib.Path) -> None:
     """The portrait in `about me.txt`, and the two words in the top bar."""
@@ -755,11 +774,31 @@ def serve() -> None:
         check("undo over HTTP puts it back",
               "x = 71" not in (tmp / "content/da/theodora/index.md").read_text(encoding="utf-8"))
 
+        # THE ONE THAT ATE HER TEXT. `body` was defaulted to "", so a
+        # request naming the field anything else replaced the paragraph
+        # with nothing and answered 200 {"wrote": 0}.
+        home = tmp / "content" / "_index.md"
+        had = home.read_text(encoding="utf-8")
+        try:
+            post("/api/do", {"verb": "set_body", "item": "content",
+                             "lang": "fr", "text": "pas le bon champ"})
+            check("a set_body with no body is refused, not obeyed", False)
+        except urllib.error.HTTPError as e:
+            check("a set_body with no body is refused, not obeyed", e.code == 400)
+        check("and her text is still there", home.read_text(encoding="utf-8") == had)
+        out = post("/api/do", {"verb": "set_body", "item": "content",
+                               "lang": "fr", "body": "Directrice artistique."})
+        check("with the right field it writes",
+              "Directrice artistique." in home.read_text(encoding="utf-8"))
+        post("/api/do", {"verb": "undo"})
+
         try:
             post("/api/do", {"verb": "rm", "item": "content"})
             check("an unknown verb is refused", False)
         except urllib.error.HTTPError as e:
             check("an unknown verb is refused", e.code == 400)
+            check("and refused in French, like every other refusal",
+                  "action" in (e.read().decode("utf-8") if hasattr(e, "read") else ""))
 
         try:
             post("/api/do", {"verb": "place", "item": "../../etc", "x": 1, "y": 1})

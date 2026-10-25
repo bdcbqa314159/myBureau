@@ -118,6 +118,7 @@ function reframe(expect) {
    say which it is looking at — a gallery has no icons to move, a film is
    not a set of stills, a shortcut is not in content/ at all. */
 function kindOf(o) {
+  if (o.kind === "about") return "présentation";
   if (o.kind === "desk" || o.kind === "folder") {
     if (o.gallery) return "galerie";
     const k = model.desks.find((d) => d.path === o.path);
@@ -142,7 +143,13 @@ const all = () => {
   return out;
 };
 
-const find = (p) => all().map((r) => r.o).find((o) => o.path === p) || null;
+/* What `chosen` holds. Every row used to be its path, and that was the
+ * same thing — until about me.txt, which is a window declared in
+ * [extra.items] and writes the home desk's own file. Two rows, one path,
+ * so the path alone can no longer say which is selected. */
+const keyOf = (o) => (o.kind === "about" ? "about" : o.path);
+
+const find = (p) => all().map((r) => r.o).find((o) => keyOf(o) === p) || null;
 
 /* ---- the list down the side -------------------------------------- */
 
@@ -210,14 +217,14 @@ function paint() {
   for (const { o, depth } of all()) {
     const b = document.createElement("button");
     b.className = "row" + (depth === 2 ? " deep" : depth > 2 ? " deeper" : "");
-    b.setAttribute("aria-current", String(o.path === chosen));
+    b.setAttribute("aria-current", String(keyOf(o) === chosen));
     b.innerHTML = `<span>${esc(o.titles.fr || o.name)}</span><span class="kind">${kindOf(o)}</span>`;
     b.addEventListener("click", () => select(o));
 
     // Drag a row onto a bureau to move the thing into it — the Finder
     // trip this panel exists to remove. The folder travels whole, so
     // both language files and every photograph go with it.
-    b.draggable = true;
+    b.draggable = o.kind !== "about";
     b.dataset.path = o.path;
     b.addEventListener("dragstart", (e) => {
       e.dataTransfer.setData("text/plain", o.path);
@@ -262,7 +269,13 @@ const isBureau = (o) => model.desks.some((d) => d.path === o.path);
 /* What a project is waiting for, said in the empty space rather than
  * left for her to guess from a generic "drop photos here". */
 function waitingFor(o) {
-  if (o.kind === "desk" || o.gallery) return "";
+  // ONLY A PROJECT WAITS FOR A FILE. This used to exclude "desk", which
+  // is what the home desk and a bureau looked at as themselves are
+  // called — but a bureau sitting on another desk is a row of kind
+  // "folder", and those fell straight through. So every folder with no
+  // photographs of its own announced "Rien dedans pour l'instant."
+  // directly under a line saying it holds four things.
+  if (o.kind !== "project" || o.gallery) return "";
   const named = (o.titles.fr || "").toLowerCase();
   const isFilm = o.video || /\.(mov|mp4|m4v|webm)$/.test(named);
   const isDoc = /\.pdf$/.test(named);
@@ -361,9 +374,9 @@ function frameFor(o) {
 }
 
 function select(o) {
-  chosen = o.path;
+  chosen = keyOf(o);
   const sel = el("into");
-  if (sel) {
+  if (sel && o.kind !== "about") {
     const home = isBureau(o) ? o.path : o.path.split("/").slice(0, -1).join("/");
     if (model.desks.some((d) => d.path === home)) { sel.value = home; sayWillBe(); }
   }
@@ -375,8 +388,37 @@ function select(o) {
 
 /* ---- the panel on the right --------------------------------------- */
 
+/* about me.txt, on its own.
+ *
+ * Its two things are a photograph and some words, and nothing else — no
+ * name to type (the label is declared in [extra.items]), no wallpaper, no
+ * photographs, nothing to throw away. It used to be a block inside the
+ * home desk's pane, below that desk's OWN name and text, which read as
+ * though those were the ones it meant.
+ */
+function inspectAbout(o) {
+  const langs = o.languages.length ? o.languages : ["fr"];
+  look.innerHTML = `
+    <h2>about me.txt</h2>
+    <p class="what">présentation · la fenêtre de la page d'accueil</p>
+    <label>ta photo
+      <div class="face wide" data-drop="about">${o.about
+        ? `<img src="${q("/media/" + o.path + "/" + o.about)}" alt="">`
+        : `<span>aucune photo pour l'instant</span>`}</div>
+    </label>
+    <p class="drop" data-drop="about">Dépose ta photo ici.</p>
+    ${langs.map((l) => `
+      <label>ton texte (${l})
+        <textarea data-body="${l}">${esc(o.bodies[l] || "")}</textarea>
+      </label>`).join("")}
+    <p class="hintline">La photo s'affiche en haut de la fenêtre, le texte
+       juste en dessous.</p>`;
+  wire(o);
+}
+
 function inspect(o) {
   if (!o) { look.innerHTML = "<p class='what'>Choisis quelque chose à gauche.</p>"; return; }
+  if (o.kind === "about") return inspectAbout(o);
   const langs = o.languages.length ? o.languages : ["fr"];
   const titles = langs.map((l) => `
     <label>nom (${l})
@@ -419,16 +461,10 @@ function inspect(o) {
         : "Le site est encore en démonstration — ce nom-ci est celui de la"
           + " démo, et le vrai prend sa place le jour de la mise en ligne."}</p>
     </fieldset>` : "";
-  const about = o.path === "content" ? `
-    <fieldset class="about">
-      <legend>about me.txt</legend>
-      <div class="face wide" data-drop="about">${o.about
-        ? `<img src="${q("/media/" + o.path + "/" + o.about)}" alt="">`
-        : `<span>aucune photo pour l'instant</span>`}</div>
-      <p class="drop" data-drop="about">Dépose ta photo ici.</p>
-      <p class="hintline">Le texte est celui d'en dessous — c'est ce qui
-         s'affiche sous la photo.</p>
-    </fieldset>` : "";
+  // about me.txt has its own row and its own pane now — see
+  // inspectAbout. Here, it put a photograph and a text box underneath the
+  // home desk's OWN name and text, and the hint meant to tell them apart
+  // pointed at the wrong ones.
   const wall = (isDesk && !o.gallery) ? `
     <label>fond d'écran
       <div class="wall" id="wall">${o.wallpaper
@@ -451,7 +487,7 @@ function inspect(o) {
        o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · pas encore posé"}</p>
     ${isDesk ? `<p class="what">${folderSays(o)}</p>` : ""}
     ${waitingFor(o) ? `<p class="waiting">${esc(waitingFor(o))}</p>` : ""}
-    ${titles}${bodies}${bandeau}${about}${face}${wall}
+    ${titles}${bodies}${bandeau}${face}${wall}
     ${isDesk && !o.gallery ? "" : dossier(o) + reel(o) + `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">${o.gallery
         ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."
@@ -663,14 +699,23 @@ function hook() {
   arm(doc);
   if (!model) return;
 
+  // data-vt in the page -> the row's key, and back. about me.txt is a
+  // declared window, so its slug comes from the name she typed in
+  // [extra.items] rather than from a path — clicking it used to find
+  // nothing in here and select nothing at all, which is what "there is
+  // no possibility to choose anything" was.
   bySlug = new Map();
+  const slugOf = new Map();
   for (const { o } of all()) {
-    bySlug.set(o.path.replace(/^content\//, "").replace(/\//g, "-"), o.path);
+    const slug = o.kind === "about"
+      ? "about-me-txt"
+      : o.path.replace(/^content\//, "").replace(/\//g, "-");
+    bySlug.set(slug, keyOf(o));
+    slugOf.set(keyOf(o), slug);
   }
   // the frame is rebuilt often; put the outline back on whatever is chosen
-  if (chosen) {
-    const slug = chosen.replace(/^content\//, "").replace(/\//g, "-");
-    mark(doc, doc.querySelector(`a.icon[data-vt="${slug}"]`));
+  if (chosen && slugOf.has(chosen)) {
+    mark(doc, doc.querySelector(`a.icon[data-vt="${slugOf.get(chosen)}"]`));
   }
 
   doc.querySelectorAll("a.icon[data-vt]").forEach((icon) => {
@@ -685,6 +730,15 @@ function hook() {
       e.stopImmediatePropagation();
       const o = find(path);
       if (!o) return;
+      // about me.txt: show her the window she is editing. Opening the
+      // <dialog> directly rather than letting the site's click through,
+      // because the click is suppressed by arm() — and it has to stay
+      // suppressed, or choosing anything on the desk navigates.
+      if (o.kind === "about") {
+        const win = doc.getElementById("about");
+        if (win && win.showModal && !win.open) win.showModal();
+        return;
+      }
       // going in: a bureau becomes the desk shown, anything else is looked at
       if (isBureau(o)) { mode = "desk"; setPressed(); chosen = o.path; view.src = urlOf(o); paint(); }
       else setMode("page");
@@ -693,7 +747,11 @@ function hook() {
     // a LIST — the site deliberately does not make them draggable, and
     // their x/y means nothing there. Attaching position-dragging to them
     // would write a coordinate for something that has none.
-    const onDesk = desk.contains(icon);
+    // `about me.txt` is on the desk, but its position lives in
+    // [extra.items] and no verb writes there — so a drag must not try to
+    // place it. Treated like an icon in a window: a click chooses it, a
+    // drag does nothing.
+    const onDesk = desk.contains(icon) && (find(path) || {}).kind !== "about";
 
     let from = null;
     icon.addEventListener("pointerdown", (e) => { from = { x: e.clientX, y: e.clientY }; }, true);

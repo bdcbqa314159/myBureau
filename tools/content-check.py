@@ -273,7 +273,13 @@ def case_the_panel_sees_what_the_site_renders(d: pathlib.Path) -> list[tuple[str
                 rendered[vt.group(1)] = (xy.group(1), xy.group(2))
         # every thing the panel would draw has to be on the real desk
         for it in desk["on"]:
-            slug = it["path"][len("content/"):].replace("/", "-")
+            # about me.txt is a window declared in [extra.items], so it
+            # has no path of its own and carries the home desk's. Zola
+            # slugifies the NAME she typed there. If that name is ever
+            # changed and the panel is not, this is where it shows up: the
+            # row would point at an icon the desk does not render.
+            slug = ("about-me-txt" if it["kind"] == "about"
+                    else it["path"][len("content/"):].replace("/", "-"))
             if slug not in rendered:
                 missing.append(slug)
             elif it["x"] is not None and (
@@ -315,6 +321,9 @@ def case_the_panel_sees_what_the_site_renders(d: pathlib.Path) -> list[tuple[str
         ("including the empty one, which opens a page where a window would be",
          by_path.get("content/da/vide", {}).get("opens_as") == "page"),
         ("everything it would draw is really on that desk", missing == []),
+        ("about me.txt is one of the things it draws, and the desk has it",
+         any(c["kind"] == "about" for c in by_path["content"]["on"])
+         and "about-me-txt" not in missing),
         ("and at the position the site actually rendered", wrong_spot == []),
         ("it is not missing icons the desk shows", wrong_count == []),
     ]

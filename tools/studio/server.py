@@ -326,14 +326,22 @@ class Studio(http.server.BaseHTTPRequestHandler):
         if name == "retitle":
             return verbs.retitle(ask["item"], ask.get("lang", "fr"), ask["title"])
         if name == "set_body":
-            return verbs.set_body(ask["item"], ask.get("lang", "fr"), ask.get("body", ""))
+            # NOT ask.get("body", ""). An absent key defaulted to the
+            # empty string, so any request that forgot it — or spelled it
+            # "text" — silently erased the paragraph it was meant to
+            # change. Undo brings it back, but nothing said it had gone.
+            # An empty body SENT on purpose is still allowed: clearing the
+            # text is a thing she may want.
+            if "body" not in ask:
+                raise verbs.Refused("il manque le texte à écrire.")
+            return verbs.set_body(ask["item"], ask.get("lang", "fr"), ask["body"])
         if name == "reorder":
             return verbs.reorder(ask["item"], ask["names"])
         if name == "remove_image":
             return verbs.remove_image(ask["item"], ask["name"])
         if name == "undo":
             return {"undid": verbs.undo()}
-        raise verbs.Refused("there is no such action")
+        raise verbs.Refused("cette action n'existe pas.")
 
 
 def main() -> int:
