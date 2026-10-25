@@ -26,7 +26,7 @@ CONTENT = ROOT / "content"
 IMAGE = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"}
 VIDEO = {".mp4", ".webm", ".mov", ".m4v"}
 # a file the engine gives a job to, so it is never one of the photographs
-SPOKEN_FOR = {"icon", "poster", "wallpaper"}
+SPOKEN_FOR = {"icon", "poster", "wallpaper", "about"}
 
 
 def front(p: pathlib.Path) -> str:
@@ -104,6 +104,7 @@ def thing(folder: pathlib.Path, stem: str, kind: str) -> dict:
         "opens": key(first, "opens"),
         "icon": special(folder, "icon") or key(first, "icon"),
         "wallpaper": special(folder, "wallpaper"),
+        "about": special(folder, "about"),
         "photographs": photographs(folder),
         "video": video(folder),
         # which language files exist, so the dashboard can say "English is
@@ -151,6 +152,21 @@ def opens_as(d: dict, depth: int) -> str:
     return "page" if depth <= 1 else "window"
 
 
+def identity() -> dict:
+    """What the top bar says, and which of the two blocks is in use."""
+    text = (ROOT / "config.toml").read_text(encoding="utf-8")
+    which = "real" if re.search(r'^\s*live\s*=\s*true', text, re.M) else "demo"
+    block = re.search(r'^\[extra\.' + which + r'\]\s*$(.*?)(?=^\[|\Z)',
+                      text, re.M | re.S)
+    out = {"block": which, "owner": "", "studio": "", "live": which == "real"}
+    if block:
+        for key in ("owner", "studio"):
+            got = re.search(r'^\s*' + key + r'\s*=\s*"(.*)"', block.group(1), re.M)
+            if got:
+                out[key] = got.group(1)
+    return out
+
+
 def tree() -> dict:
     desks = []
     for f in sorted(CONTENT.rglob("_index.md")):
@@ -188,7 +204,7 @@ def tree() -> dict:
             for field in ("gallery", "depth", "opens_as", "empty", "holds",
                           "can_receive"):
                 child[field] = k[field]
-    return {"desks": desks}
+    return {"desks": desks, "identity": identity()}
 
 
 if __name__ == "__main__":

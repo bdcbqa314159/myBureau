@@ -684,6 +684,13 @@ def case_about_is_a_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     t = home.read_text(encoding="utf-8")
     home.write_text(t.replace("Texte de présentation à venir.",
                               "Je suis directrice artistique. MARQUEUR-ABOUT."))
+    # A PORTRAIT, the way every other colocated file works: a file called
+    # about.* beside _index.md, nothing declared. One file for both
+    # languages, so the English window has to find it too — a translated
+    # section reports its assets under /en/, and reaching for a file that
+    # was never there is how the wallpaper broke twice.
+    shutil.copyfile(ROOT / "content/da/theodora/01.jpg",
+                    d / "content" / "about.jpg")
     ok, log = build(d)
     h = page(d, "index.html")
     win = re.search(r'<dialog class="win win-about" id="about">.*?</dialog>', h, re.S)
@@ -699,6 +706,19 @@ def case_about_is_a_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
          bool(win) and "MARQUEUR-ABOUT" in win.group(0)),
         ("the English desk has its own, with the English text",
          bool(en) and "MARQUEUR-ABOUT" not in en.group(0)),
+        ("her portrait is in the window", bool(win) and "about-face" in win.group(0)),
+        ("and ABOVE the words, not after them",
+         bool(win) and win.group(0).index("about-face")
+                     < win.group(0).index("MARQUEUR-ABOUT")),
+        ("it went through the image pipeline rather than at full size",
+         bool(win) and "processed_images" in re.search(
+             r'about-face.*?</figure>', win.group(0), re.S).group(0)),
+        ("the English window shows the same portrait",
+         bool(en) and "about-face" in en.group(0)),
+        ("and does not reach for it under /en/, where it is not",
+         "/en/about." not in page(d, "en/index.html")),
+        ("it is not also sitting on the desk as an icon",
+         'about.jpg' not in re.sub(r'<dialog.*?</dialog>', '', h, flags=re.S)),
     ]
 
 

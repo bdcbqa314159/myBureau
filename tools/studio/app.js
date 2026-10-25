@@ -64,7 +64,10 @@ async function act(body) {
   });
   if (out) {
     if (typeof out.n === "number") seen = out.n;      // we know about this one
-    if (!NOTHING_TO_SEE.has(body.verb)) reframe();
+    // the bandeau is the one change that needs the page checked rather
+    // than merely reached — see reframe()
+    if (!NOTHING_TO_SEE.has(body.verb))
+      reframe(body.verb === "set_identity" ? body.studio : null);
   }
   return out;
 }
@@ -72,7 +75,14 @@ async function act(body) {
 /* Reload the frame — but only once things have settled, and only once the
  * page is actually there. Debounced, so dropping four photographs is one
  * reload and not four. */
-function reframe() {
+/* `expect`: a string that must be IN the rebuilt page before reloading.
+ *
+ * The wait below is written for a content change, where zola answers 404
+ * while it rebuilds — so "not 404" means "ready". A CONFIG change is not
+ * like that: zola keeps serving the old page, happily, with a 200, for
+ * about three seconds. Reloading on that shows the name she just typed
+ * over, and the panel looks broken in exactly the way it has before. */
+function reframe(expect) {
   clearTimeout(waiting);
   waiting = setTimeout(async () => {
     const url = view.src;
@@ -85,8 +95,11 @@ function reframe() {
     // 404, and reloading into that is the blank flash
     const until = Date.now() + 15000;
     while (Date.now() < until) {
-      try { if ((await fetch(url, { cache: "no-store" })).ok) break; }
-      catch (e) { /* still coming up */ }
+      try {
+        const r = await fetch(url, { cache: "no-store" });
+        if (r.ok && !expect) break;
+        if (r.ok && (await r.text()).includes(expect)) break;
+      } catch (e) { /* still coming up */ }
       await new Promise((r) => setTimeout(r, 80));
     }
     view.addEventListener("load", function back() {
@@ -367,6 +380,35 @@ function inspect(o) {
     <p class="drop" data-drop="icon">Dépose une image ici pour l'icône.</p>`;
   // A gallery ignores a wallpaper — look.py flags one declared there as a
   // line that does nothing — so the panel does not offer to set one.
+  // `about me.txt` is the home desk's own window: its portrait and its
+  // words. It used to be reachable only by knowing that the home desk's
+  // "texte" was the about text, and there was no way to give it a face
+  // at all.
+  const me = (model && model.identity) || { owner: "", studio: "", live: false };
+  const bandeau = o.path === "content" ? `
+    <fieldset class="about">
+      <legend>le bandeau, en haut de chaque page</legend>
+      <label>avant le nom
+        <input type="text" id="who" value="${esc(me.owner)}" maxlength="60">
+      </label>
+      <label>le nom du studio
+        <input type="text" id="studio" value="${esc(me.studio)}" maxlength="60">
+      </label>
+      <p class="hintline">${me.live
+        ? "Le site est en ligne : c'est ce nom que voient les visiteurs."
+        : "Le site est encore en démonstration — ce nom-ci est celui de la"
+          + " démo, et le vrai prend sa place le jour de la mise en ligne."}</p>
+    </fieldset>` : "";
+  const about = o.path === "content" ? `
+    <fieldset class="about">
+      <legend>about me.txt</legend>
+      <div class="face wide" data-drop="about">${o.about
+        ? `<img src="${q("/media/" + o.path + "/" + o.about)}" alt="">`
+        : `<span>aucune photo pour l'instant</span>`}</div>
+      <p class="drop" data-drop="about">Dépose ta photo ici.</p>
+      <p class="hintline">Le texte est celui d'en dessous — c'est ce qui
+         s'affiche sous la photo.</p>
+    </fieldset>` : "";
   const wall = (isDesk && !o.gallery) ? `
     <label>fond d'écran
       <div class="wall" id="wall">${o.wallpaper
@@ -389,7 +431,7 @@ function inspect(o) {
        o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · pas encore posé"}</p>
     ${isDesk ? `<p class="what">${folderSays(o)}</p>` : ""}
     ${waitingFor(o) ? `<p class="waiting">${esc(waitingFor(o))}</p>` : ""}
-    ${titles}${bodies}${face}${wall}
+    ${titles}${bodies}${bandeau}${about}${face}${wall}
     ${isDesk && !o.gallery ? "" : reel(o) + `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">${o.gallery
         ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."
@@ -399,6 +441,20 @@ function inspect(o) {
 }
 
 function wire(o) {
+  // The two words in the top bar, offered on the home desk. They belong
+  // to no desk — they are on every page — but the bar's own wordmark
+  // links here, and this is the screen she starts on. The empty pane
+  // would have been a quieter place to put them and nobody would ever
+  // have seen it: the panel always has something chosen.
+  if (el("who")) {
+    const send = async () => {
+      const out = await act({ verb: "set_identity",
+                              owner: el("who").value, studio: el("studio").value });
+      if (out) tell("bandeau enregistré");
+    };
+    el("who").addEventListener("change", send);
+    el("studio").addEventListener("change", send);
+  }
   look.querySelectorAll("[data-title]").forEach((i) => {
     i.addEventListener("change", async () => {
       const out = await act({ verb: "retitle", item: o.path, lang: i.dataset.title, title: i.value });
@@ -469,7 +525,8 @@ look.addEventListener("drop", async (e) => {
       `/api/upload?into=${encodeURIComponent(o.path)}&name=${encodeURIComponent(f.name)}`
       + (as === "photos" ? "" : `&as=${as}`),
       { method: "POST", body: await f.arrayBuffer() });
-    const said = { wallpaper: "fond d'écran changé", icon: "apparence changée" }[as]
+    const said = { wallpaper: "fond d'écran changé", icon: "apparence changée",
+                   about: "ta photo de présentation est en place" }[as]
                  || `${f.name} ajoutée`;
     tell(out ? said : `${f.name} refusée`);
   }

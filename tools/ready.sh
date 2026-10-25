@@ -120,7 +120,23 @@ else
   need "the 'site by' credit is gone from templates/base.html — LICENSE §4 requires it"
 fi
 
-# ---- 6. and the things that are already checked elsewhere ------------
+# ---- 6. is about me.txt actually about her? --------------------------
+# Both halves are silent when missing: the window opens, looks right, and
+# says nothing. Nobody notices until a visitor does.
+if ls content/about.* >/dev/null 2>&1; then
+  good "about me.txt has her portrait"
+else
+  need "no portrait in about me.txt"
+  note "fix: drop content/about.jpg — or the home desk in the panel"
+fi
+if grep -q 'à venir' content/_index.md; then
+  need "the about text is still the placeholder one"
+  note "fix: the words under the +++ in content/_index.md, and _index.en.md"
+else
+  good "the about text has been written"
+fi
+
+# ---- 7. and the things that are already checked elsewhere ------------
 printf '\n'
 python3 tools/look.py | sed 's/^/  /'
 

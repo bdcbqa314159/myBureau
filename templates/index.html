@@ -18,6 +18,32 @@
     text in it is one line. -#}
 <dialog class="win win-about" id="about">
   <div class="win-bar"><span>{{ about_name }}</span><form method="dialog"><button aria-label="{{ trans(key='window_close', lang=lang) }}">✕</button></form></div>
-  <div class="win-body about-body">{{ section.content | safe }}</div>
+  {#- A PORTRAIT, then the words. The brief shows `about me.txt` as a
+      polaroid, and a page about a person that is only prose is not what
+      she drew.
+
+      A file called `about.*` beside this `_index.md` — the same
+      convention as `icon.*`, `poster.*` and `wallpaper.*`: drop it in,
+      nothing to declare. One file serves every language, so the prefix a
+      translated section reports has to be stripped, exactly as the
+      wallpaper does. -#}
+  {%- set_global face = "" -%}
+  {%- for a in section.assets -%}
+    {%- if a | split(pat="/") | last | split(pat=".") | first == "about" -%}
+      {%- if lang != config.default_language -%}
+        {%- set_global face = a | replace(from="/" ~ lang ~ "/", to="/") -%}
+      {%- else -%}{%- set_global face = a -%}{%- endif -%}
+    {%- endif -%}
+  {%- endfor -%}
+  <div class="win-body about-body">
+    {%- if face -%}
+      {%- set shape = get_image_metadata(path=face) -%}
+      {%- set shown = resize_image(path=face, width=900, op="fit_width", format="webp", quality=80) -%}
+      <figure class="about-face"><img src="{{ shown.url }}"
+        width="{{ shape.width }}" height="{{ shape.height }}" alt=""
+        loading="lazy" decoding="async"></figure>
+    {%- endif -%}
+    {{ section.content | safe }}
+  </div>
 </dialog>
 {% endblock %}

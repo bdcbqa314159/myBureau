@@ -525,6 +525,14 @@ img.will-fade.is-in { opacity: 1; }
   max-width: 54ch;
 }
 .about-body p + p { margin-top: 1em; }
+/* The portrait above the words. A white edge and a small lift, which is
+   the polaroid in her prototype; bounded by height so a tall photograph
+   does not push the text off the bottom of the window. */
+.about-face { margin: 0 0 1.1rem; }
+.about-face img {
+  display: block; width: auto; max-width: 100%; max-height: 38vh;
+  background: #fff; padding: 5px; box-shadow: 0 1px 4px rgb(0 0 0 / .22);
+}
 .preview-body {
   padding: 0;
   max-height: 78vh; overflow-y: auto;

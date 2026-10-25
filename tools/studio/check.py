@@ -39,8 +39,13 @@ def check(what: str, held: bool, detail: str = "") -> None:
 
 def sandbox(tmp: pathlib.Path) -> pathlib.Path:
     shutil.copytree(ROOT / "content", tmp / "content")
+    # config.toml too, and not only so the identity cases have something
+    # to edit: set_identity is the one verb that writes outside content/,
+    # so without this line a test run would edit the real file.
+    shutil.copy2(ROOT / "config.toml", tmp / "config.toml")
     verbs.ROOT = tmp
     verbs.CONTENT = tmp / "content"
+    verbs.CONFIG = tmp / "config.toml"
     verbs.STUDIO = tmp / ".studio"
     verbs.JOURNAL = verbs.STUDIO / "journal.jsonl"
     verbs.TRASH = verbs.STUDIO / "trash"
@@ -391,6 +396,8 @@ def main() -> int:
     except verbs.Refused:
         check("the whole site cannot be thrown away", True)
 
+    identity_cases(tmp)
+
     shutil.rmtree(tmp, ignore_errors=True)
 
     serve()
@@ -402,6 +409,91 @@ def main() -> int:
     return 0
 
 
+
+
+def identity_cases(tmp: pathlib.Path) -> None:
+    """The portrait in `about me.txt`, and the two words in the top bar."""
+    print("\n  -- about me.txt, and the bandeau --\n")
+    pixels = (ROOT / "content/da/theodora/01.jpg").read_bytes()
+
+    def refused(fn, *a, **k):
+        try:
+            fn(*a, **k)
+        except verbs.Refused as why:
+            return str(why)
+        return ""
+
+    verbs.set_about("content", "moi.JPG", pixels)
+    face = tmp / "content" / "about.jpg"
+    check("a portrait lands beside _index.md, named about.jpg",
+          face.is_file() and face.read_bytes() == pixels)
+    # By the name the filesystem reports, not by .exists() — macOS is
+    # case-insensitive, so about.JPG "exists" either way and the check
+    # would pass without the lowering it is there to prove.
+    check("and the extension is lowered, so the template's test matches",
+          [f.name for f in (tmp / "content").iterdir()
+           if f.stem.lower() == "about"] == ["about.jpg"])
+
+    verbs.set_about("content", "autre.png", pixels)
+    check("a second one replaces the first rather than sitting next to it",
+          sorted(f.name for f in (tmp / "content").iterdir()
+                 if f.stem == "about") == ["about.png"])
+
+    check("a portrait is refused on any desk but the home one",
+          "accueil" in refused(verbs.set_about, "content/da", "x.jpg", pixels))
+    check("a video is refused, and says why",
+          "vidéo" in refused(verbs.set_about, "content", "x.mov", b"\x00"))
+    check("a PDF is refused as a portrait",
+          refused(verbs.set_about, "content", "x.pdf", b"%PDF") != "")
+    check("an empty file is refused",
+          refused(verbs.set_about, "content", "x.jpg", b"") != "")
+
+    verbs.undo()
+    check("undo puts the first portrait back",
+          (tmp / "content" / "about.jpg").is_file()
+          and not (tmp / "content" / "about.png").exists())
+
+    # ---- the bandeau ------------------------------------------------
+    cfg = tmp / "config.toml"
+    before = cfg.read_text(encoding="utf-8")
+    comments = before.count("#")
+    verbs.set_identity("le studio de", "VALENTINA")
+    now = cfg.read_text(encoding="utf-8")
+    check("the bandeau is written into the block that is actually in use",
+          re.search(r'\[extra\.demo\][^\[]*owner\s*=\s*"le studio de"', now, re.S)
+          is not None)
+    check("and the other block is left exactly as it was",
+          re.search(r'\[extra\.real\][^\[]*owner\s*=\s*"valentina for"', now, re.S)
+          is not None)
+    check("config.toml keeps every one of its comments",
+          now.count("#") == comments, "{} -> {}".format(comments, now.count("#")))
+    check("and every other line of it",
+          len(now.splitlines()) == len(before.splitlines()))
+
+    check("an empty studio name is refused",
+          refused(verbs.set_identity, "x", "   ") != "")
+    check("a quote is refused, because it would end the TOML string",
+          refused(verbs.set_identity, 'a "b', "S") != "")
+    check("a newline is refused for the same reason",
+          refused(verbs.set_identity, "a\nb", "S") != "")
+    check("sixty-one characters is refused",
+          refused(verbs.set_identity, "x" * 61, "S") != "")
+
+    verbs.undo()
+    check("undo restores config.toml byte for byte",
+          cfg.read_text(encoding="utf-8") == before)
+
+    # live = true has to send it to the other block, or launch day puts
+    # the demo name on her site and nothing says so
+    cfg.write_text(before.replace("live = false", "live = true"), encoding="utf-8")
+    verbs.set_identity("valentina pour", "STUDIO S")
+    now = cfg.read_text(encoding="utf-8")
+    check("with live = true it writes [extra.real] instead",
+          re.search(r'\[extra\.real\][^\[]*owner\s*=\s*"valentina pour"', now, re.S)
+          is not None
+          and re.search(r'\[extra\.demo\][^\[]*owner\s*=\s*"a demo of"', now, re.S)
+          is not None)
+    cfg.write_text(before, encoding="utf-8")
 
 
 def serve() -> None:
