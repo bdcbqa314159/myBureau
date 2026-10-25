@@ -33,13 +33,14 @@ import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 CONTENT = ROOT / "content"
+CONFIG = ROOT / "config.toml"
 STUDIO = ROOT / ".studio"
 JOURNAL = STUDIO / "journal.jsonl"
 TRASH = STUDIO / "trash"
 
 IMAGE = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"}
 VIDEO = {".mp4", ".webm", ".mov", ".m4v"}
-SPOKEN_FOR = {"icon", "poster", "wallpaper"}
+SPOKEN_FOR = {"icon", "poster", "wallpaper", "about"}
 
 # What to say when she hands over something the site cannot show. A list
 # of permitted extensions is not an answer — it does not say what to do
@@ -584,6 +585,78 @@ def set_icon(item: str, name: str, data: bytes) -> dict:
     moves.append({"from": "", "to": rel(dest)})
     record("set_icon", [], moves)
     return {"icon": dest.name}
+
+
+def set_identity(owner: str, studio: str) -> dict:
+    """The two words in the top bar. The only verb that leaves content/.
+
+    They are not content — they are the site's identity, and they live in
+    `config.toml` under `[extra.demo]` and `[extra.real]`, one of which is
+    chosen by `live`. Written to WHICHEVER ONE IS IN USE, because writing
+    to the other would be a change she cannot see, and the next person to
+    flip `live` inherits it without knowing.
+
+    Surgical, inside that block only, for the usual reason: config.toml is
+    four hundred lines of comments explaining itself.
+    """
+    owner, studio = owner.strip(), studio.strip()
+    if not studio:
+        raise Refused("le nom du studio ne peut pas être vide.")
+    if len(owner) > 60 or len(studio) > 60:
+        raise Refused("c'est trop long pour le bandeau — 60 caractères au plus.")
+    if "\n" in owner or "\n" in studio or '"' in owner or '"' in studio:
+        raise Refused("pas de guillemets ni de retour à la ligne ici.")
+    text = CONFIG.read_text(encoding="utf-8")
+    which = "real" if re.search(r'^\s*live\s*=\s*true', text, re.M) else "demo"
+    block = re.search(r'^\[extra\.' + which + r'\]\s*$(.*?)(?=^\[|\Z)',
+                      text, re.M | re.S)
+    if block is None:
+        raise Refused("config.toml n'a pas de bloc [extra.{}].".format(which))
+    body = block.group(1)
+    fixed = body
+    for key, value in (("owner", owner), ("studio", studio)):
+        line = re.compile(r'^(\s*' + key + r'\s*=\s*)".*"', re.M)
+        if not line.search(fixed):
+            raise Refused("config.toml n'a pas de ligne {} ici.".format(key))
+        fixed = line.sub(lambda m: m.group(1) + '"' + value + '"', fixed, count=1)
+    whole = text[:block.start(1)] + fixed + text[block.end(1):]
+    record("set_identity", [{"path": rel(CONFIG), "before": text}], [])
+    atomic(CONFIG, whole)
+    return {"owner": owner, "studio": studio, "block": which}
+
+
+def set_about(item: str, name: str, data: bytes) -> dict:
+    """The portrait in `about me.txt`.
+
+    `about.<ext>` beside the home desk's `_index.md`. Only there: the
+    about window is built on the home page and nowhere else, so offering
+    it on another bureau would be offering something that is never shown.
+    """
+    d = inside(item)
+    if d.resolve() != CONTENT.resolve():
+        raise Refused("la présentation est sur la page d'accueil.")
+    ext = pathlib.Path(name).suffix.lower()
+    if ext in VIDEO:
+        raise Refused("une présentation montre une image fixe, pas une vidéo.")
+    if ext not in IMAGE:
+        raise Refused(unusable(ext, "une image"))
+    if not data:
+        raise Refused("ce fichier est vide.")
+    moves = []
+    for old in sorted(d.iterdir()):
+        if old.is_file() and old.stem.lower() == "about":
+            TRASH.mkdir(parents=True, exist_ok=True)
+            bin_ = TRASH / str(int(time.time() * 1000))
+            bin_.mkdir(exist_ok=True)
+            shutil.move(str(old), str(bin_ / old.name))
+            moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
+    dest = d / ("about" + ext)
+    tmp = dest.with_name(dest.name + ".studio-tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, dest)
+    moves.append({"from": "", "to": rel(dest)})
+    record("set_about", [], moves)
+    return {"about": dest.name}
 
 
 def set_wallpaper(item: str, name: str, data: bytes) -> dict:

@@ -64,6 +64,7 @@ const frameDoc = {
 const markup = readFileSync(new URL("./app.html", import.meta.url), "utf8");
 const ids = [...markup.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
 const byId = new Map(ids.map((id) => [id, node(id)]));
+const made = new Map();          // elements the panel drew for itself
 const missing = [];
 
 let fetched = [];
@@ -73,8 +74,18 @@ const sandbox = {
   setTimeout, clearTimeout, setInterval, clearInterval, Promise, Date,
   document: {
     getElementById: (id) => {
-      if (!byId.has(id)) missing.push(id);     // app.js asked for something
-      return byId.get(id) || null;             // the markup does not have
+      if (byId.has(id)) return byId.get(id);
+      // Not in app.html — but the panel writes fields into the editing
+      // pane itself, and in a browser those are real elements the moment
+      // the innerHTML lands. Without this the stub answered null, the
+      // fields were never wired, and the check could not tell the
+      // difference between "not wired" and "not there".
+      if (made.has(id)) return made.get(id);
+      const written = [...byId.values()].some(
+        (n) => typeof n.innerHTML === "string" && n.innerHTML.includes('id="' + id + '"'));
+      if (written) { made.set(id, node(id)); return made.get(id); }
+      missing.push(id);                        // app.js asked for something
+      return null;                             // nothing has ever drawn
     },
     createElement: () => node(),
     querySelectorAll: () => [],
@@ -98,12 +109,19 @@ const sandbox = {
         // its parent and as a desk of its own. Without the nesting the
         // check cannot ask where choosing a folder puts the frame.
         tree: {
+          // What the bar says, and which of config.toml's two blocks is
+          // in use. Left out of this fixture, the panel drew the bandeau
+          // fields from a default and the checks below passed while the
+          // real answer was never read.
+          identity: { block: "demo", owner: "a demo of", studio: "myBureau",
+                      live: false },
           desks: [{
             kind: "desk", path: "content", name: "content", gallery: false,
             depth: 0, opens_as: "page", empty: false,
             titles: { fr: "myBureau", en: "myBureau" },
             bodies: { fr: "", en: "" },
             x: null, y: null, opens: null, icon: null, wallpaper: null,
+            about: "about.jpg",
             photographs: [], video: null, languages: ["en", "fr"],
             on: [{
               kind: "folder", path: "content/da", name: "da",
@@ -136,6 +154,7 @@ sandbox.globalThis = sandbox;
 byId.get("view").contentDocument = frameDoc;
 
 const code = readFileSync(new URL("./app.js", import.meta.url), "utf8");
+const src0 = code;
 let loaded = true;
 let why = "";
 try {
@@ -249,6 +268,52 @@ if (loaded) {
     /data-drop="video"/.test(look.innerHTML), look.innerHTML.slice(0, 120));
   check("and somewhere for its affiche",
     /data-drop="poster"/.test(look.innerHTML));
+
+  // ---- the home desk: the bandeau, and about me.txt ----------------
+  // Neither had anywhere to be edited. The bandeau is on every page and
+  // belongs to no desk; the portrait had no convention at all, so the
+  // about window was prose and nothing else.
+  const homeRow = tree.children.find((r) => /myBureau/.test(r.innerHTML));
+  check("the home desk has a row of its own", Boolean(homeRow));
+  if (homeRow && homeRow.__click) homeRow.__click();
+  await new Promise((r) => setTimeout(r, 20));
+  check("the home desk offers the two words in the bandeau",
+    /id="who"/.test(look.innerHTML) && /id="studio"/.test(look.innerHTML),
+    look.innerHTML.slice(0, 160));
+  check("and fills them with what config.toml actually says, not a default",
+    /value="a demo of"/.test(look.innerHTML) && /value="myBureau"/.test(look.innerHTML));
+  check("it says which name is live, so changing the wrong one is not silent",
+    /démo/.test(look.innerHTML));
+  check("about me.txt has somewhere to put her portrait",
+    /data-drop="about"/.test(look.innerHTML));
+  check("and shows the one that is already there",
+    /media\/content\/about\.jpg/.test(look.innerHTML), look.innerHTML.slice(0, 200));
+
+  // Typing a new name must reach the server as set_identity, with BOTH
+  // words — sending one would blank the other.
+  fetched = [];
+  let sent = null;
+  const realFetch = sandbox.fetch;
+  sandbox.fetch = async (url, opts) => {
+    if (String(url).includes("/api/do")) sent = JSON.parse(opts.body);
+    return realFetch(url, opts);
+  };
+  // through the same door app.js uses, because these two were drawn by
+  // the panel and are not in app.html
+  const grab = (id) => sandbox.document.getElementById(id);
+  grab("who").value = "le studio de";
+  grab("studio").value = "VALENTINA";
+  for (const fn of listeners.get("who:change") || []) await fn();
+  check("typing a new bandeau sends it, and sends both words together",
+    sent && sent.verb === "set_identity" && sent.owner === "le studio de"
+      && sent.studio === "VALENTINA", JSON.stringify(sent));
+  sandbox.fetch = realFetch;
+  // A config change is served stale with a 200 for about three seconds,
+  // so "the page answered" is not "the page changed". Reloading on the
+  // first 200 put the OLD name back in front of her.
+  check("and the frame waits for the new name to be in the page, not just for a 200",
+    /reframe\(body\.verb === "set_identity"/.test(src0)
+    && /includes\(expect\)/.test(src0));
 
   // Clicking in the frame must EDIT, not fire the site's own dynamics.
   // Those belong to a visitor; while she is arranging a desk they carry

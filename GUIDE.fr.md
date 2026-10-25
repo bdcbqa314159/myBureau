@@ -335,6 +335,26 @@ si tu leur en donnes une à eux.
 > l'ancienne : ton navigateur l'a gardée en mémoire. Recharge en appuyant
 > sur **⌘-Maj-R**, ou attends quelques minutes.
 
+### Ta photo dans « about me.txt »
+
+Même principe. Dépose une image appelée **`about.jpg`** à côté du
+`_index.md` de la page d'accueil, et elle s'affiche en haut de la fenêtre
+`about me.txt`, au-dessus de ton texte.
+
+```
+content/
+    _index.md
+    _index.en.md
+    about.jpg         ← ta photo, au-dessus du texte
+```
+
+Le texte, c'est ce qui est écrit **sous les `+++`** dans ce même
+`_index.md` — et sous les `+++` de `_index.en.md` pour l'anglais. La
+photo, elle, sert les deux langues.
+
+Depuis le panneau : choisis **la page d'accueil** dans la colonne de
+gauche, et tu as la photo et le texte au même endroit.
+
 ### Décider où une icône se pose
 
 Optionnel. Sans rien, elle se range sur une grille :

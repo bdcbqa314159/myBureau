@@ -229,6 +229,24 @@ Wallpapers are SVG too — a duotone wash, film grain from
 `feTurbulence`, and a vignette. Under 1 KB each instead of ~380 KB, and
 the grain is computed rather than compressed, so it never bands.
 
+### The portrait in `about me.txt`
+
+**Drop a file called `about.*` beside the home desk's `_index.md`.** It
+renders at the top of the about window, above the text — which is the
+body of that same `_index.md`, per language.
+
+```
+content/
+    _index.md
+    _index.en.md
+    about.jpg         ← above the words, both languages
+```
+
+The home desk only: the about window is built on the home page and
+nowhere else, so `set_about` refuses any other desk rather than writing a
+file that is never read. `about` joins `icon`, `poster` and `wallpaper` in
+`SPOKEN_FOR`, so it is not also listed as one of the desk's photographs.
+
 ### A desk's wallpaper
 
 **Drop a file called `wallpaper.*` beside the bureau's `_index.md`.**
@@ -1100,8 +1118,20 @@ counter moved twice per edit and every careful rule above was defeated.
 
 A closed list in `tools/studio/verbs.py`, not a file manager:
 `new_project`, `new_bureau`, `move`, `throw_away`, `place`, `retitle`,
-`set_body`, `set_icon`, `set_wallpaper`, `add_image`, `add_video`,
-`set_poster`, `reorder`, `remove_image`, `undo`.
+`set_body`, `set_icon`, `set_wallpaper`, `set_about`, `set_identity`,
+`add_image`, `add_video`, `set_poster`, `reorder`, `remove_image`, `undo`.
+
+`set_identity` is the only one that leaves `content/`: the two words in
+the top bar are not content, they are in `config.toml` under
+`[extra.demo]` and `[extra.real]`. It writes **whichever block `live`
+currently selects**, because writing the other would be a change she
+cannot see — and the next person to flip `live` would inherit it without
+knowing. Surgical inside that block, like every other write here.
+
+One consequence worth knowing: `zola serve` serves a **stale page with a
+200** for about three seconds after a config change rather than the 404 a
+content change gives. The panel's reload therefore waits for the new name
+to actually be in the page, not merely for the page to answer.
 
 #### Why `move` has to nudge
 

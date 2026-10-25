@@ -279,6 +279,8 @@ class Studio(http.server.BaseHTTPRequestHandler):
                 how = (q.get("as") or [""])[0]
                 if how == "wallpaper":
                     out = verbs.set_wallpaper(into, name, raw)
+                elif how == "about":
+                    out = verbs.set_about(into, name, raw)
                 elif how == "icon":
                     out = verbs.set_icon(into, name, raw)
                 elif how == "video":
@@ -317,6 +319,8 @@ class Studio(http.server.BaseHTTPRequestHandler):
             return verbs.move(ask["item"], ask["into"])
         if name == "throw_away":
             return verbs.throw_away(ask["item"])
+        if name == "set_identity":
+            return verbs.set_identity(ask["owner"], ask["studio"])
         if name == "retitle":
             return verbs.retitle(ask["item"], ask.get("lang", "fr"), ask["title"])
         if name == "set_body":

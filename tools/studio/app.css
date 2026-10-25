@@ -83,6 +83,10 @@ button:disabled { color: #9a9aa2; cursor: default; }
 /* the handle drawn over a real icon while it is being moved */
 .look h2 { margin: 0 0 .5rem; font-size: 13px; }
 .look .what { color: #6b6b74; font-size: 12px; margin: 0 0 .75rem; }
+.about { margin: 0 0 .9rem; padding: .5rem .6rem .6rem; border: 1px solid #dcdce2;
+         border-radius: 6px; background: #fafafc; }
+.about legend { padding: 0 .3rem; font-size: 11px; color: #6b6b74; }
+.hintline { margin: .35rem 0 0; font-size: 11px; color: #9a9aa2; line-height: 1.35; }
 .waiting { margin: 0 0 .75rem; padding: .45rem .55rem; font-size: 12px;
            line-height: 1.4; color: #6a4a12; background: #fdf6e3;
            border: 1px solid #efe0b8; border-radius: 5px; }
