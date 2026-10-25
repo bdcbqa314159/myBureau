@@ -61,6 +61,108 @@ NO_USE_FOR = {
 }
 
 
+# ---------------------------------------------------------------------
+# is the file what its name says it is?
+# ---------------------------------------------------------------------
+# The extension was the only test, and the extension is the one thing a
+# person can change by accident. Rename a PDF or an iPhone .heic to
+# .jpg — which is exactly what someone does to make a file "work" — and
+# the panel took it, and then `zola build` died on it:
+#
+#     --> page.html:101  {% set shape = get_image_metadata(path=asset) %}
+#
+# A broken site, from a drag that said it had worked. So the first bytes
+# are read too. This is not security — it is the difference between a
+# sentence she can act on and a build that stops.
+def sniff(data: bytes) -> str:
+    """What this file actually is, by its first bytes. "" if unknown."""
+    if data[:3] == b"\xff\xd8\xff":
+        return "jpeg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "gif"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp"
+    if data[:4] == b"%PDF":
+        return "pdf"
+    if data[:4] == b"\x1a\x45\xdf\xa3":
+        return "webm"
+    # the ISO base media family: mp4, m4v, mov, avif and heic all carry a
+    # `ftyp` box, and the four characters after it say which
+    if data[4:8] == b"ftyp":
+        brand = data[8:12]
+        if brand[:3] == b"qt ":
+            return "mov"
+        if brand in (b"avif", b"avis"):
+            return "avif"
+        if brand in (b"heic", b"heix", b"hevc", b"mif1", b"msf1"):
+            return "heic"
+        return "mp4"
+    head = data[:400].lstrip()
+    if head[:5] == b"<?xml" or head[:4] == b"<svg":
+        return "svg"
+    return ""
+
+# NOT "do the bytes match the extension" — "can the engine use these
+# bytes for what this file is for". Those are different questions, and
+# the stricter one is wrong: zola reads a PNG carrying a .jpg name
+# perfectly well (checked — it builds), so refusing that would be a
+# refusal she cannot act on for a file that works.
+#
+# What it must catch is bytes the engine cannot use in that role at all:
+# a PDF or an iPhone .heic named .jpg, a photograph named .mov.
+SHOWS_AS_IMAGE = {"jpeg", "png", "gif", "webp", "avif", "svg"}
+PLAYS_AS_VIDEO = {"mp4", "mov", "webm"}
+READS_AS_DOC = {"pdf"}
+
+ROLE_OF_EXT = {
+    "jpg": SHOWS_AS_IMAGE, "jpeg": SHOWS_AS_IMAGE, "png": SHOWS_AS_IMAGE,
+    "gif": SHOWS_AS_IMAGE, "webp": SHOWS_AS_IMAGE, "avif": SHOWS_AS_IMAGE,
+    "svg": SHOWS_AS_IMAGE,
+    "mp4": PLAYS_AS_VIDEO, "m4v": PLAYS_AS_VIDEO, "mov": PLAYS_AS_VIDEO,
+    "webm": PLAYS_AS_VIDEO,
+    "pdf": READS_AS_DOC,
+}
+
+WANTED_HERE = {
+    id(SHOWS_AS_IMAGE): "une image",
+    id(PLAYS_AS_VIDEO): "une vidéo",
+    id(READS_AS_DOC): "un PDF",
+}
+
+# What to call the thing she actually handed over, in her language.
+IN_FRENCH = {
+    "jpeg": "un JPEG", "png": "un PNG", "gif": "un GIF", "webp": "un WebP",
+    "avif": "un AVIF", "pdf": "un PDF", "heic": "une photo iPhone (.heic)",
+    "mp4": "une vidéo MP4", "mov": "une vidéo QuickTime", "webm": "une vidéo WebM",
+    "svg": "un SVG",
+}
+
+
+def must_really_be(name: str, data: bytes) -> None:
+    """Refuse bytes the engine cannot use for what this file is called."""
+    ext = pathlib.Path(name).suffix.lower().lstrip(".")
+    role = ROLE_OF_EXT.get(ext)
+    if role is None:
+        return                          # not a kind we make claims about
+    was = sniff(data)
+    if was == "" or was in role:
+        # unknown bytes are let through: a format we do not recognise is
+        # not the same as a format that is wrong, and the extension lists
+        # in config.toml are the real gate
+        return
+    # the .heic advice already exists and is the right advice
+    if was == "heic":
+        raise Refused("ce fichier s'appelle .{} mais c'est une photo iPhone :"
+                      " un .heic ne s'affiche pas. Réexporte-la en JPEG."
+                      .format(ext))
+    raise Refused(
+        "ce fichier s'appelle .{} mais c'est {} — et ici le site attend {}."
+        .format(ext, IN_FRENCH.get(was, "autre chose"),
+                WANTED_HERE[id(role)]))
+
+
 def unusable(ext: str, wanted: str) -> str:
     """The most useful sentence we can offer about a file we refuse."""
     if ext in NO_USE_FOR:
@@ -182,6 +284,19 @@ def set_key(text: str, name: str, value) -> str:
 # taking it back
 # ---------------------------------------------------------------------
 
+# How far back Annuler goes, and therefore how much the bin holds. Every
+# replaced wallpaper, every binned photograph and every thrown-away
+# project used to stay in .studio/trash for the life of the repository —
+# nothing ever emptied it, and the biggest things in this project are
+# photographs and films.
+#
+# Bounded here rather than by age: what makes a bin safe to empty is that
+# undo can no longer reach into it, and undo reaches exactly as far as the
+# journal. So the two are trimmed together, and anything no entry still
+# names is gone.
+REMEMBERED = 60
+
+
 def record(verb: str, texts: list, moves: list) -> None:
     """One line per action, holding enough to reverse it.
 
@@ -193,6 +308,39 @@ def record(verb: str, texts: list, moves: list) -> None:
     entry = {"at": time.time(), "verb": verb, "texts": texts, "moves": moves}
     with JOURNAL.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    forget_the_oldest()
+
+
+def forget_the_oldest() -> None:
+    """Trim the journal to REMEMBERED, then empty what it no longer names.
+
+    Order matters: the journal is trimmed FIRST and the bin is swept
+    against what is left, so a directory is only ever removed once no
+    entry can ask for it back.
+    """
+    if not JOURNAL.exists():
+        return
+    lines = [l for l in JOURNAL.read_text(encoding="utf-8").splitlines() if l.strip()]
+    if len(lines) > REMEMBERED:
+        atomic(JOURNAL, "\n".join(lines[-REMEMBERED:]) + "\n")
+        lines = lines[-REMEMBERED:]
+    if not TRASH.is_dir():
+        return
+    wanted = set()
+    for line in lines:
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            continue
+        for m in entry.get("moves", []):
+            for side in (m.get("from", ""), m.get("to", "")):
+                # ".studio/trash/<stamp>/<file>" — the stamp is the folder
+                bits = pathlib.PurePosixPath(side).parts
+                if len(bits) >= 3 and bits[0] == ".studio" and bits[1] == "trash":
+                    wanted.add(bits[2])
+    for d in sorted(TRASH.iterdir()):
+        if d.is_dir() and d.name not in wanted:
+            shutil.rmtree(d, ignore_errors=True)
 
 
 def undo() -> str:
@@ -286,6 +434,73 @@ def retitle(item: str, lang: str, title: str) -> dict:
     return {"title": title, "lang": lang}
 
 
+def set_alt(item: str, name: str, text: str) -> dict:
+    """What a photograph shows, for somebody who cannot see it.
+
+    `[extra.alt]` in the project's front matter, keyed by file name —
+    which is the map page.html already reads. Nothing in the panel could
+    write it, so every photograph on the site has `alt=""`: a screen
+    reader is told there was nothing there. In a portfolio the
+    photographs ARE the content.
+
+    Written to EVERY language file, with the same words.
+
+    ponytail: a description is language-dependent text and this writes
+    one text for all of them. The alternative was two boxes per
+    photograph — twenty-four for the gallery — and the likely outcome of
+    that is none of them filled in. A translator can still override one
+    by hand; the file is the source of truth and this only replaces the
+    line it owns. The lever, if she ever wants it, is a language toggle
+    over the whole pane rather than a box per language.
+    """
+    d = a_project(item)
+    if not (d / name).is_file():
+        raise Refused("cette photo n'existe pas.")
+    text = text.strip()
+    if '"' in text or "\n" in text:
+        raise Refused("pas de guillemets ni de retour à la ligne ici.")
+    if len(text) > 300:
+        raise Refused("une description tient en 300 caractères.")
+    texts, wrote = [], 0
+    for f in language_files(d):
+        before = f.read_text(encoding="utf-8")
+        after = set_alt_key(before, name, text)
+        if after != before:
+            texts.append({"path": rel(f), "before": before})
+            atomic(f, after)
+            wrote += 1
+    if texts:
+        record("set_alt", texts, [])
+    return {"described": name, "files": wrote}
+
+
+def set_alt_key(text: str, file: str, value: str) -> str:
+    """One line inside `[extra.alt]`, leaving every other byte alone.
+
+    `[extra.alt]` is appended at the END of the front matter when it is
+    not there, which is the only safe place for a TOML sub-table: any
+    bare key written after it would silently belong to it instead of to
+    `[extra]`.
+    """
+    parts = text.split("+++")
+    if len(parts) < 3:
+        raise Refused("ce fichier n'a pas d'en-tête entre les +++.")
+    fm = parts[1]
+    line = '"{}" = "{}"'.format(file, value)
+    here = re.compile(r'^\s*"' + re.escape(file) + r'"\s*=.*$', re.M)
+    block = re.search(r'^\[extra\.alt\]\s*$', fm, re.M)
+    if block and here.search(fm):
+        fm = here.sub(line, fm, count=1) if value else here.sub("", fm, count=1)
+    elif not value:
+        pass                                  # nothing there to clear
+    elif block:
+        fm = fm[:block.end()] + "\n" + line + fm[block.end():]
+    else:
+        fm = fm.rstrip("\n") + "\n\n[extra.alt]\n" + line + "\n"
+    parts[1] = fm
+    return "+++".join(parts)
+
+
 def set_body(item: str, lang: str, body: str) -> dict:
     """The paragraph under the front matter, in one language.
 
@@ -326,6 +541,7 @@ def add_image(item: str, name: str, data: bytes) -> dict:
         raise Refused(unusable(ext, "une image"))
     if not data:
         raise Refused("ce fichier est vide.")
+    must_really_be(name, data)
     dest = d / "{:02d}{}".format(_next_number(d), ext)
     tmp = dest.with_name(dest.name + ".studio-tmp")
     tmp.write_bytes(data)
@@ -505,6 +721,7 @@ def add_video(item: str, name: str, data: bytes) -> dict:
         raise Refused(unusable(ext, "une vidéo (mp4, mov, webm, m4v)"))
     if not data:
         raise Refused("ce fichier est vide.")
+    must_really_be(name, data)
     # the other half of the rule in add_doc: a film's icon opens the film
     # window, which never shows a dossier
     if any(f.suffix.lower() in DOC for f in d.iterdir() if f.is_file()):
@@ -549,6 +766,7 @@ def add_doc(item: str, name: str, data: bytes) -> dict:
         raise Refused(unusable(ext, "un PDF"))
     if not data:
         raise Refused("ce fichier est vide.")
+    must_really_be(name, data)
     # A project holding a video IS a film, and its icon opens the film
     # window — which never shows a dossier. The PDF would be built,
     # copied, and reachable from nowhere.
@@ -587,6 +805,7 @@ def set_poster(item: str, name: str, data: bytes) -> dict:
         raise Refused(unusable(ext, "une image"))
     if not data:
         raise Refused("ce fichier est vide.")
+    must_really_be(name, data)
     moves = []
     for old in sorted(d.iterdir()):
         if old.is_file() and old.stem.lower() == "poster":
@@ -623,6 +842,7 @@ def set_icon(item: str, name: str, data: bytes) -> dict:
         raise Refused(unusable(ext, "une image"))
     if not data:
         raise Refused("ce fichier est vide.")
+    must_really_be(name, data)
     moves = []
     for old in sorted(d.iterdir()):
         if old.is_file() and old.stem.lower() == "icon":
@@ -695,6 +915,7 @@ def set_about(item: str, name: str, data: bytes) -> dict:
         raise Refused(unusable(ext, "une image"))
     if not data:
         raise Refused("ce fichier est vide.")
+    must_really_be(name, data)
     moves = []
     for old in sorted(d.iterdir()):
         if old.is_file() and old.stem.lower() == "about":
@@ -724,6 +945,13 @@ def set_wallpaper(item: str, name: str, data: bytes) -> dict:
     d = inside(item)
     if not any(d.glob("_index*.md")):
         raise Refused("seul un bureau a un fond d'écran.")
+    # The panel already hides this box on a gallery and look.py calls a
+    # declared one a line that does nothing — but the VERB took it, so
+    # the rule lived in the interface and not in the thing that decides.
+    # The README says the server decides; now it does.
+    if is_gallery(d):
+        raise Refused("une galerie est une chambre noire : elle n'a pas de"
+                      " fond d'écran, ses photos sont le fond.")
     ext = pathlib.Path(name).suffix.lower()
     if ext in VIDEO:
         raise Refused("un fond d'écran est une image fixe, pas une vidéo.")
@@ -731,6 +959,7 @@ def set_wallpaper(item: str, name: str, data: bytes) -> dict:
         raise Refused(unusable(ext, "une image"))
     if not data:
         raise Refused("ce fichier est vide.")
+    must_really_be(name, data)
     moves = []
     for old in sorted(d.iterdir()):
         if old.is_file() and old.stem.lower() == "wallpaper":

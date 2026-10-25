@@ -401,6 +401,7 @@ def main() -> int:
         check("the whole site cannot be thrown away", True)
 
     doc_cases(tmp)
+    honesty_cases(tmp)
     identity_cases(tmp)
 
     shutil.rmtree(tmp, ignore_errors=True)
@@ -509,6 +510,111 @@ def doc_cases(tmp: pathlib.Path) -> None:
     check("clearing it on purpose is still allowed",
           verbs.set_body("content", "fr", "")["wrote"] == 0)
     verbs.undo()
+
+
+def honesty_cases(tmp: pathlib.Path) -> None:
+    """A file is what its bytes say, the gallery decides at the verb, the
+    bin does not grow for ever, and a photograph can be described."""
+    print("\n  -- what a file really is, and what it can be told --\n")
+    pixels = (ROOT / "content/da/theodora/01.jpg").read_bytes()
+    pdf = TINY_PDF
+    heic = b"\x00\x00\x00\x18ftypheic" + b"\x00" * 40
+    mp4 = b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 40
+    png = (b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR"
+           + b"\x00" * 40)
+
+    def refused(fn, *a, **k):
+        try:
+            fn(*a, **k)
+        except verbs.Refused as why:
+            return str(why)
+        return ""
+
+    proj = "content/da/theodora"
+    # The one that broke the build: zola dies on get_image_metadata, so a
+    # drag that said it worked left a site that would not compile.
+    say = refused(verbs.add_image, proj, "cover.jpg", pdf)
+    check("a PDF renamed .jpg is refused before it can break the build",
+          "PDF" in say and ".jpg" in say, say)
+    check("and an iPhone .heic renamed .jpg too, with the export advice",
+          "heic" in refused(verbs.add_image, proj, "photo.jpg", heic))
+    check("a photograph renamed .mov is refused as a film",
+          "JPEG" in refused(verbs.add_video, proj, "clip.mov", pixels))
+    check("a photograph renamed .pdf is refused as a dossier",
+          "JPEG" in refused(verbs.add_doc, proj, "x.pdf", pixels))
+    # ...but NOT this one. zola reads a PNG carrying a .jpg name and
+    # builds it; refusing that would be a refusal she cannot act on.
+    check("a PNG carrying a .jpg name is allowed, because the site reads it",
+          refused(verbs.add_image, proj, "fine.jpg", png) == "")
+    check("a real film is still allowed",
+          refused(verbs.add_video, proj, "ok.mp4", mp4) == "")
+    check("bytes we do not recognise are not refused on a guess",
+          refused(verbs.add_image, proj, "odd.jpg", b"no idea what this is") == "")
+
+    # ---- the gallery decides at the verb, not in the interface -------
+    check("the gallery refuses a wallpaper at the verb, not just in the panel",
+          "galerie" in refused(verbs.set_wallpaper, "content/pellicules",
+                               "w.jpg", pixels))
+    check("and a real bureau still takes one",
+          refused(verbs.set_wallpaper, "content/da", "w.jpg", pixels) == "")
+
+    # ---- the bin is bounded -----------------------------------------
+    for i in range(verbs.REMEMBERED + 25):
+        verbs.set_wallpaper("content/da", "w{}.jpg".format(i), pixels)
+    kept = [l for l in verbs.JOURNAL.read_text(encoding="utf-8").splitlines()
+            if l.strip()]
+    bins = [d for d in verbs.TRASH.iterdir() if d.is_dir()]
+    check("the journal stops at what Annuler can actually reach",
+          len(kept) == verbs.REMEMBERED, str(len(kept)))
+    check("and the bin holds nothing the journal no longer names",
+          len(bins) <= verbs.REMEMBERED, str(len(bins)))
+    check("undo still works after the trim",
+          verbs.undo() == "set_wallpaper")
+
+    # ---- a photograph can say what it shows -------------------------
+    print()
+    before = (tmp / proj / "index.md").read_text(encoding="utf-8")
+    out = verbs.set_alt(proj, "01.jpg", "Deux silhouettes sur une plage.")
+    check("a description is written to every language, not just one",
+          out["files"] == 2, str(out))
+    for f in ("index.md", "index.en.md"):
+        got = (tmp / proj / f).read_text(encoding="utf-8")
+        check("  it is in {}, under [extra.alt]".format(f),
+              "[extra.alt]" in got and "Deux silhouettes sur une plage." in got)
+    check("the front matter it already had is untouched",
+          "x = 32" in (tmp / proj / "index.md").read_text(encoding="utf-8"))
+    verbs.set_alt(proj, "01.jpg", "Deux silhouettes, au crépuscule.")
+    got = (tmp / proj / "index.md").read_text(encoding="utf-8")
+    check("writing it again replaces the line rather than adding a second",
+          got.count('"01.jpg"') == 1 and "au crépuscule" in got)
+    verbs.set_alt(proj, "01.jpg", "")
+    check("clearing it takes the line out",
+          '"01.jpg"' not in (tmp / proj / "index.md").read_text(encoding="utf-8"))
+    check("a description for a photograph that is not there is refused",
+          refused(verbs.set_alt, proj, "99.jpg", "x") != "")
+    check("a quote is refused, because it would end the TOML string",
+          refused(verbs.set_alt, proj, "01.jpg", 'a "b') != "")
+    check("and three hundred characters is the limit",
+          refused(verbs.set_alt, proj, "01.jpg", "x" * 301) != "")
+    # and the panel has to be able to SHOW what is written, or the box
+    # comes up empty every time she reopens the project
+    verbs.set_alt(proj, "02.jpg", "Un portrait de profil.")
+    import model as the_model
+    the_model.ROOT, the_model.CONTENT = tmp, tmp / "content"
+    seen = {}
+    for d in the_model.tree()["desks"]:
+        for c in d["on"]:
+            if c["path"] == proj:
+                seen = c.get("alt") or {}
+    check("the panel reads back the description it wrote",
+          seen.get("02.jpg") == "Un portrait de profil.", str(seen))
+
+    verbs.undo()
+    verbs.undo()
+    verbs.undo()
+    verbs.undo()
+    check("undo walks all of it back",
+          (tmp / proj / "index.md").read_text(encoding="utf-8") == before)
 
 
 def identity_cases(tmp: pathlib.Path) -> None:
@@ -791,6 +897,41 @@ def serve() -> None:
         check("with the right field it writes",
               "Directrice artistique." in home.read_text(encoding="utf-8"))
         post("/api/do", {"verb": "undo"})
+
+        # FOUR AT ONCE. This answered [200, 200, 500, 500] and left ONE
+        # photograph on disk: _next_number() reads the folder then writes
+        # to it, so two threads chose the same number and one overwrote
+        # the other — while both told her it had worked.
+        import threading
+        P = "content/travail-selectionne/nocturne"
+        had = {f.name for f in (tmp / P).iterdir()}
+        shot = (ROOT / "content/da/theodora/01.jpg").read_bytes()
+        got = {}
+
+        def upload(i):
+            req = urllib.request.Request(
+                "http://127.0.0.1:{}/api/upload?into={}&name=p{}.jpg&as=photos&t={}"
+                .format(port, P, i, token), data=shot, method="POST")
+            try:
+                got[i] = urllib.request.urlopen(req, timeout=20).status
+            except urllib.error.HTTPError as e:
+                got[i] = e.code
+            except Exception as e:                      # noqa: BLE001
+                got[i] = type(e).__name__
+
+        threads = [threading.Thread(target=upload, args=(i,)) for i in range(4)]
+        for th in threads:
+            th.start()
+        for th in threads:
+            th.join()
+        now = {f.name for f in (tmp / P).iterdir()}
+        check("four photographs dropped at once are all accepted",
+              sorted(got.values()) == [200, 200, 200, 200], str(got))
+        check("and all four are really on disk, with distinct names",
+              len(now - had) == 4, "{} new".format(len(now - had)))
+        for f in now - had:
+            (tmp / P / f).unlink()
+
 
         try:
             post("/api/do", {"verb": "rm", "item": "content"})

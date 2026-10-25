@@ -83,6 +83,15 @@ def special(folder: pathlib.Path, kind: str) -> "str | None":
     return None
 
 
+def alt_of(fm: str) -> dict:
+    """`[extra.alt]` as a plain map, keyed by file name."""
+    block = re.search(r'^\[extra\.alt\]\s*$(.*?)(?=^\[|\Z)', fm, re.M | re.S)
+    if not block:
+        return {}
+    return {m.group(1): m.group(2) for m in
+            re.finditer(r'^\s*"([^"]+)"\s*=\s*"([^"]*)"', block.group(1), re.M)}
+
+
 def video(folder: pathlib.Path) -> "str | None":
     for f in sorted(folder.iterdir()):
         if f.is_file() and f.suffix.lower() in VIDEO:
@@ -116,6 +125,9 @@ def thing(folder: pathlib.Path, stem: str, kind: str) -> dict:
         "wallpaper": special(folder, "wallpaper"),
         "about": special(folder, "about"),
         "photographs": photographs(folder),
+        # what each photograph shows, for a screen reader — the map
+        # page.html reads, so the panel can show what is already written
+        "alt": alt_of(first),
         "video": video(folder),
         "doc": doc(folder),
         # which language files exist, so the dashboard can say "English is

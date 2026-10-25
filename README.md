@@ -61,7 +61,7 @@ reading the templates. Each one **builds fine** and then does nothing:
 | `icon =` names a file that is not there | broken image on the desk | named by `tools/look.py` |
 | a `url` with no `https://` | points inside the site, 404 | named |
 | a `.tiff` or `.psd` in a project folder | the page has no images | named |
-| a `wallpaper` on the gallery | ignored, it is a dark room | named |
+| a `wallpaper` on the gallery | ignored, it is a dark room | named, and `set_wallpaper` refuses it |
 | a project folder with no images and no text | an empty page | named |
 
 `title` misspelt as `titel` fails the build outright, which is correct.
@@ -1164,9 +1164,16 @@ counter moved twice per edit and every careful rule above was defeated.
 
 A closed list in `tools/studio/verbs.py`, not a file manager:
 `new_project`, `new_bureau`, `move`, `throw_away`, `place`, `retitle`,
-`set_body`, `set_icon`, `set_wallpaper`, `set_about`, `set_identity`,
-`add_image`, `add_video`, `add_doc`, `set_poster`, `reorder`,
-`remove_image`, `undo`.
+`set_body`, `set_alt`, `set_icon`, `set_wallpaper`, `set_about`,
+`set_identity`, `add_image`, `add_video`, `add_doc`, `set_poster`,
+`reorder`, `remove_image`, `undo`.
+
+`set_alt` writes `[extra.alt]`, the map `page.html` already reads, keyed
+by file name. Nothing could write it before, so every photograph on the
+site carried `alt=""` — a screen reader told there was nothing there,
+in a portfolio where the photographs *are* the content. It writes the
+same words to **every** language file; see the `ponytail:` note on it for
+why one box per photograph beat two.
 
 `set_identity` is the only one that leaves `content/`: the two words in
 the top bar are not content, they are in `config.toml` under
@@ -1179,6 +1186,57 @@ One consequence worth knowing: `zola serve` serves a **stale page with a
 200** for about three seconds after a config change rather than the 404 a
 content change gives. The panel's reload therefore waits for the new name
 to actually be in the page, not merely for the page to answer.
+
+#### One writer at a time
+
+Four photographs dropped at once answered `[200, 200, 500, 500]` and left
+**one** file on disk. `_next_number()` reads the folder and then writes to
+it, so two threads under `ThreadingHTTPServer` chose `04` and one
+overwrote the other — and both told her it had worked.
+
+A single `WRITING` lock is held around the whole verb and the fingerprint
+it stamps afterwards. The panel's own loop awaits each upload, so this
+needed a second tab or an impatient double-click to reach; it then lost a
+photograph silently, which is the worst shape a bug can have here.
+
+Serialising costs nothing: one person, one desk, and the slowest verb is
+64MB hitting an SSD.
+
+#### A file has to be what its name says
+
+The extension was the only test, and the extension is the one thing a
+person changes by accident. A PDF or an iPhone `.heic` renamed to `.jpg` —
+which is exactly what someone does to make a file "work" — was accepted,
+and then the build died:
+
+```
+--> page.html:101  {% set shape = get_image_metadata(path=asset) %}
+```
+
+A broken site, from a drag that reported success. So `must_really_be()`
+reads the first bytes.
+
+The rule is **not** "do the bytes match the extension". It is "can the
+engine use these bytes for what this file is for" — because zola reads a
+PNG carrying a `.jpg` name and builds it perfectly well (checked), so
+refusing that would be a refusal she cannot act on for a file that works.
+What it catches is bytes that are unusable in the role: a PDF or `.heic`
+named `.jpg`, a photograph named `.mov`. Bytes in no format we recognise
+are let through — an unknown format is not a wrong one, and the extension
+lists in `config.toml` remain the real gate.
+
+#### The bin is bounded by what Annuler can reach
+
+`.studio/trash` was never emptied. Every replaced wallpaper, binned
+photograph and thrown-away project stayed for the life of the repository,
+and the big things in this project are photographs and films.
+
+What makes a bin safe to empty is that undo can no longer reach into it,
+and undo reaches exactly as far as the journal. So `REMEMBERED = 60`
+trims the journal first and sweeps the bin against what is left —
+nothing is removed while an entry can still ask for it back. Eighty
+wallpaper swaps: 60 entries, 57 bin directories, 12.2 MB, and undo still
+works.
 
 #### Why `move` has to nudge
 
