@@ -211,6 +211,24 @@ if (loaded) {
 
   check("the panel says where a new thing is going",
     /<select[^>]*id="into"/.test(markup) && byId.get("into").children.length > 0);
+  // Each kind must say what it really makes. "un document" produced a
+  // project called X.pdf and then asked for photographs, because the
+  // engine cannot show a PDF — the extension only ever chose the icon.
+  const kindSel = byId.get("kind"), willbe = byId.get("willbe");
+  const said = {};
+  for (const k of ["photos", "film", "document", "page"]) {
+    kindSel.value = k;
+    for (const fn of listeners.get("kind:change") || []) fn();
+    said[k] = willbe.innerHTML;
+  }
+  check("every kind says what it really makes",
+    Object.values(said).every((s) => s.length > 20)
+    && new Set(Object.values(said)).size === 4, JSON.stringify(said).slice(0, 160));
+  check("and the document one admits the site cannot show a PDF",
+    /PDF/.test(said.document) && /JPEG/i.test(said.document), said.document);
+  kindSel.value = "photos";
+  for (const fn of listeners.get("kind:change") || []) fn();
+
   check("and what it will do once it is there",
     byId.get("willbe").innerHTML.length > 10, byId.get("willbe").innerHTML);
   check("a folder's job is explained, because it depends on where it is",

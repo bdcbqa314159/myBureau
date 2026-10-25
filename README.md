@@ -1152,6 +1152,29 @@ do. Every verb is journalled to `.studio/` with the previous text, so
 **Annuler** takes it back; a deleted photograph goes to `.studio/trash/`
 rather than being unlinked. `.studio/` is git-ignored.
 
+#### The kinds say what they really make
+
+The kind chosen when making a project writes an extension into its name,
+and that extension chooses **the drawn icon**. Nothing else. The engine
+has no idea how to show a PDF — `_icon.html` is the only template that
+mentions one.
+
+So offering "un document" and then asking for photographs, and refusing
+the PDF when it was dropped, was the panel promising something the site
+cannot do. Each kind now says what it really makes, before it is made and
+again in the inspector while the project is still empty:
+
+| | |
+|---|---|
+| des photos | the first one is the icon |
+| un film | the video, and an image as its affiche |
+| un document | **the site does not display PDFs** — it shows pages; the icon will be a document, export the pages as JPEG |
+| une page | text, with photographs if any are added |
+
+This is the client's own convention, not a limitation invented here: the
+prototype names projects `Calendar.pdf` and `12 regards.pdf`, and their
+pages show images.
+
 #### Filing a thing by dropping it on a folder
 
 The gesture a desktop has always had: pick a thing up and drop it **on a

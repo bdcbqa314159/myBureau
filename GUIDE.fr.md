@@ -120,6 +120,11 @@ Tu peux :
   un dossier), donne un nom, Créer. Le panneau te dit ce que ça va faire
   avant de le faire.
 
+> **« un document »** ne veut pas dire que le site montrera ton PDF — il
+> ne sait pas les afficher. Ça veut dire que l'icône aura l'air d'un
+> document. Exporte les pages du PDF en JPEG et dépose-les : ce sont
+> elles qu'on verra.
+
 > **Un dossier ne fait pas la même chose partout.** Sur la page
 > d'accueil, il a sa propre page et une place dans le bandeau. Rangé dans
 > un autre dossier, il s'ouvre comme une fenêtre. Et tant qu'il est vide,
