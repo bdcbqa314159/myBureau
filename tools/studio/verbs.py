@@ -40,14 +40,17 @@ TRASH = STUDIO / "trash"
 
 IMAGE = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"}
 VIDEO = {".mp4", ".webm", ".mov", ".m4v"}
+DOC = {".pdf"}
 SPOKEN_FOR = {"icon", "poster", "wallpaper", "about"}
 
 # What to say when she hands over something the site cannot show. A list
 # of permitted extensions is not an answer — it does not say what to do
 # with the file in her hand.
 NO_USE_FOR = {
-    ".pdf": "le site n'affiche pas les PDF. Exporte les pages en JPEG et"
-            " dépose-les : elles deviendront les images du projet.",
+    # The site shows a PDF now — but not as a photograph, a wallpaper, an
+    # icon or an affiche, which is every caller of this.
+    ".pdf": "un PDF s'affiche tout seul, en grand : dépose-le sur la case"
+            " du dossier, pas ici.",
     ".psd": "un .psd ne s'affiche pas. Exporte en JPEG.",
     ".ai":  "un .ai ne s'affiche pas. Exporte en JPEG ou en PNG.",
     ".tif": "un .tif ne s'affiche pas. Réexporte en JPEG.",
@@ -337,7 +340,7 @@ def add_image(item: str, name: str, data: bytes) -> dict:
 NEW_KINDS = {
     "photos":  {"suffix": ".jpg", "what": "des photos"},
     "film":    {"suffix": ".mov", "what": "un film"},
-    "document": {"suffix": ".pdf", "what": "un document"},
+    "document": {"suffix": ".pdf", "what": "un dossier PDF"},
     "page":    {"suffix": "",     "what": "une page"},
 }
 
@@ -502,6 +505,11 @@ def add_video(item: str, name: str, data: bytes) -> dict:
         raise Refused(unusable(ext, "une vidéo (mp4, mov, webm, m4v)"))
     if not data:
         raise Refused("ce fichier est vide.")
+    # the other half of the rule in add_doc: a film's icon opens the film
+    # window, which never shows a dossier
+    if any(f.suffix.lower() in DOC for f in d.iterdir() if f.is_file()):
+        raise Refused("ce projet est un dossier PDF. Un film a besoin de son"
+                      " propre projet.")
     moves = []
     for old in sorted(d.iterdir()):
         if old.is_file() and old.suffix.lower() in VIDEO:
@@ -517,6 +525,51 @@ def add_video(item: str, name: str, data: bytes) -> dict:
     moves.append({"from": "", "to": rel(dest)})
     record("add_video", [], moves)
     return {"video": dest.name}
+
+
+def add_doc(item: str, name: str, data: bytes) -> dict:
+    """The dossier itself — a PDF, shown in the project's own page.
+
+    One per project: the engine shows the first one it finds, so a second
+    would sit in the folder doing nothing. The one already there goes to
+    the bin, which `Annuler` brings back.
+
+    ponytail: the bin-then-write below is the sixth copy of the same ten
+    lines (add_video, set_poster, set_icon, set_about, set_wallpaper). The
+    lever is one `_replace(d, predicate, dest, data)` helper, worth
+    pulling the day a seventh wants it — not on a branch about PDFs.
+    """
+    d = a_project(item)
+    ext = pathlib.Path(name).suffix.lower()
+    if ext in IMAGE:
+        raise Refused("c'est une image — dépose-la sur les photos.")
+    if ext in VIDEO:
+        raise Refused("c'est une vidéo — dépose-la sur le film.")
+    if ext not in DOC:
+        raise Refused(unusable(ext, "un PDF"))
+    if not data:
+        raise Refused("ce fichier est vide.")
+    # A project holding a video IS a film, and its icon opens the film
+    # window — which never shows a dossier. The PDF would be built,
+    # copied, and reachable from nowhere.
+    if any(f.suffix.lower() in VIDEO for f in d.iterdir() if f.is_file()):
+        raise Refused("ce projet est un film. Un dossier PDF a besoin de sa"
+                      " propre page — fais-en un projet à part.")
+    moves = []
+    for old in sorted(d.iterdir()):
+        if old.is_file() and old.suffix.lower() in DOC:
+            TRASH.mkdir(parents=True, exist_ok=True)
+            bin_ = TRASH / str(int(time.time() * 1000))
+            bin_.mkdir(exist_ok=True)
+            shutil.move(str(old), str(bin_ / old.name))
+            moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
+    dest = d / ("dossier" + ext)
+    tmp = dest.with_name(dest.name + ".studio-tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, dest)
+    moves.append({"from": "", "to": rel(dest)})
+    record("add_doc", [], moves)
+    return {"doc": dest.name}
 
 
 def set_poster(item: str, name: str, data: bytes) -> dict:

@@ -141,7 +141,16 @@ const sandbox = {
               titles: { fr: "theodora.jpeg", en: "theodora.jpeg" },
               bodies: { fr: "", en: "" },
               x: "32", y: "12", opens: null, icon: null, wallpaper: null,
-              photographs: ["01.jpg", "02.jpg"], video: "film.mp4", languages: ["en", "fr"],
+              photographs: ["01.jpg", "02.jpg"], video: "film.mp4",
+              doc: null, languages: ["en", "fr"],
+            }, {
+              // a dossier that has not had its PDF yet — the state the
+              // panel used to answer by asking for photographs
+              kind: "project", path: "content/da/grocery", name: "grocery",
+              titles: { fr: "grocery.pdf", en: "grocery.pdf" },
+              bodies: { fr: "", en: "" },
+              x: "60", y: "40", opens: null, icon: null, wallpaper: null,
+              photographs: [], video: null, doc: null, languages: ["en", "fr"],
             }],
           }],
         },
@@ -243,8 +252,9 @@ if (loaded) {
   check("every kind says what it really makes",
     Object.values(said).every((s) => s.length > 20)
     && new Set(Object.values(said)).size === 4, JSON.stringify(said).slice(0, 160));
-  check("and the document one admits the site cannot show a PDF",
-    /PDF/.test(said.document) && /JPEG/i.test(said.document), said.document);
+  check("and the document one says the PDF is shown, in its own page",
+    /PDF/.test(said.document) && /page/i.test(said.document)
+    && !/JPEG/i.test(said.document), said.document);
   kindSel.value = "photos";
   for (const fn of listeners.get("kind:change") || []) fn();
 
@@ -259,15 +269,36 @@ if (loaded) {
   check("the rows can be dragged, which is how a thing changes folder",
     rows.length > 0 && rows.every((r) => r.draggable === true));
 
-  // Selecting the PROJECT rather than the desk. Rows are created
-  // elements with no id, so every row handler lands under ":click" —
-  // running them all ends on the last row, which is the project.
-  for (const fn of listeners.get(":click") || []) fn();
-  await new Promise((r) => setTimeout(r, 20));
+  // Selecting the PROJECT rather than the desk. By the row that says so:
+  // rows are created elements with no id, so every handler lands under
+  // ":click", and "run them all" quietly meant "whichever row happens to
+  // be last" — which changes the moment the fixture grows.
+  const pick = async (what) => {
+    const row = tree.children.find((r) => r.innerHTML.includes(what));
+    if (row && row.__click) row.__click();
+    await new Promise((r) => setTimeout(r, 20));
+    return Boolean(row);
+  };
+  check("the film has a row to choose", await pick("theodora.jpeg"));
   check("a film offers somewhere to put the film",
     /data-drop="video"/.test(look.innerHTML), look.innerHTML.slice(0, 120));
   check("and somewhere for its affiche",
     /data-drop="poster"/.test(look.innerHTML));
+  check("a film is not asked for a PDF",
+    !/data-drop="doc"/.test(look.innerHTML));
+
+  // ---- the dossier -------------------------------------------------
+  // "I created a .pdf inside a folder and it creates a pdf and keeps
+  // asking for images to drop in." It asked for photographs because the
+  // engine could not show a PDF at all.
+  check("the dossier has a row to choose", await pick("grocery.pdf"));
+  check("a dossier is offered somewhere to put its PDF",
+    /data-drop="doc"/.test(look.innerHTML), look.innerHTML.slice(0, 200));
+  check("and is told that is what it is waiting for, not photographs",
+    /attend son PDF/.test(look.innerHTML)
+    && !/JPEG/i.test(look.innerHTML), look.innerHTML.slice(0, 300));
+  check("and the panel says it will be shown, not downloaded",
+    /téléchargement/.test(look.innerHTML));
 
   // ---- the home desk: the bandeau, and about me.txt ----------------
   // Neither had anywhere to be edited. The bandeau is on every page and

@@ -277,9 +277,13 @@ def main() -> int:
     check("an icon refuses a video", "image" in say, say)
 
     # the refusal has to say what to DO, not list extensions
+    # Still refused here — a PDF is not a photograph — but the sentence
+    # now points at the box that takes one. It used to say "exporte les
+    # pages en JPEG", which was true of an engine that could not show a
+    # PDF at all.
     say = refused(verbs.add_image, film, "brochure.pdf", b"%PDF-1.4")
     check("a PDF is refused with what to do about it, not a list of formats",
-          "JPEG" in say and "PDF" in say, say)
+          "PDF" in say and "dossier" in say and "JPEG" not in say, say)
     say = refused(verbs.add_image, film, "photo.heic", pixels)
     check("and so is an iPhone .heic", "JPEG" in say, say)
 
@@ -396,6 +400,7 @@ def main() -> int:
     except verbs.Refused:
         check("the whole site cannot be thrown away", True)
 
+    doc_cases(tmp)
     identity_cases(tmp)
 
     shutil.rmtree(tmp, ignore_errors=True)
@@ -409,6 +414,82 @@ def main() -> int:
     return 0
 
 
+
+
+TINY_PDF = b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n"
+
+
+def doc_cases(tmp: pathlib.Path) -> None:
+    """A dossier, and the guardrails around which file goes where."""
+    print("\n  -- a dossier PDF --\n")
+    pixels = (ROOT / "content/da/theodora/01.jpg").read_bytes()
+    clip = b"\x00\x00\x00\x18ftypmp42"
+
+    def refused(fn, *a, **k):
+        try:
+            fn(*a, **k)
+        except verbs.Refused as why:
+            return str(why)
+        return ""
+
+    made = verbs.new_project("content/da", "grocery", "document")
+    proj = made["made"]
+    check("a new document is named .pdf, so it has a face before it has a file",
+          made["title"].endswith(".pdf"))
+
+    verbs.add_doc(proj, "Grocery Brochure.PDF", TINY_PDF)
+    folder = tmp / proj
+    check("the PDF lands in the project",
+          (folder / "dossier.pdf").read_bytes() == TINY_PDF)
+    check("and the extension is lowered",
+          [f.name for f in folder.iterdir() if f.suffix.lower() == ".pdf"]
+          == ["dossier.pdf"])
+
+    verbs.add_doc(proj, "v2.pdf", TINY_PDF + b"2")
+    check("a second PDF replaces the first rather than sitting beside it",
+          len([f for f in folder.iterdir() if f.suffix.lower() == ".pdf"]) == 1
+          and (folder / "dossier.pdf").read_bytes() == TINY_PDF + b"2")
+    verbs.undo()
+    check("undo brings the first one back",
+          (folder / "dossier.pdf").read_bytes() == TINY_PDF)
+
+    # ---- which file goes where ---------------------------------------
+    check("an image is refused on the dossier, and says where it goes",
+          "photos" in refused(verbs.add_doc, proj, "cover.jpg", pixels))
+    check("a video is refused on the dossier",
+          "film" in refused(verbs.add_doc, proj, "clip.mov", clip))
+    check("something that is neither is refused with a sentence about PDFs",
+          "PDF" in refused(verbs.add_doc, proj, "notes.txt", b"x"))
+    check("an empty file is refused",
+          refused(verbs.add_doc, proj, "x.pdf", b"") != "")
+
+    say = refused(verbs.add_image, proj, "brochure.pdf", TINY_PDF)
+    check("a PDF is still refused as a photograph",
+          say != "" and "JPEG" not in say, say)
+    check("and the refusal now points at the dossier instead of lying",
+          "dossier" in say, say)
+    check("a PDF is refused as a wallpaper",
+          refused(verbs.set_wallpaper, "content/da", "x.pdf", TINY_PDF) != "")
+    check("and as an icon",
+          refused(verbs.set_icon, proj, "x.pdf", TINY_PDF) != "")
+    check("and as an affiche",
+          refused(verbs.set_poster, proj, "x.pdf", TINY_PDF) != "")
+
+    # ---- a film and a dossier are two different projects -------------
+    check("a film cannot also be a dossier",
+          "propre projet" in refused(verbs.add_video, proj, "film.mp4", clip))
+    film = verbs.new_project("content/da", "une bande", "film")["made"]
+    verbs.add_video(film, "clip.mp4", clip)
+    check("and a dossier cannot be added to a film",
+          "propre page" in refused(verbs.add_doc, film, "x.pdf", TINY_PDF))
+
+    # photographs are still welcome — a brochure has a cover
+    verbs.add_image(proj, "cover.jpg", pixels)
+    check("a dossier still takes a cover photograph",
+          (folder / "01.jpg").is_file())
+
+    check("a dossier cannot be made in a gallery",
+          refused(verbs.new_project, "content/pellicules", "x", "document") != "")
 
 
 def identity_cases(tmp: pathlib.Path) -> None:

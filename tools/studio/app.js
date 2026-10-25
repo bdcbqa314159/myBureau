@@ -126,6 +126,7 @@ function kindOf(o) {
     return k.opens_as === "window" ? "dossier · fenêtre" : "dossier · page";
   }
   if (o.video) return "film";
+  if (o.doc) return "dossier · page";
   if (o.opens === "page") return "projet · page";
   if (o.photographs.length) return "projet · photos";
   return "projet · sans image";
@@ -158,8 +159,8 @@ const find = (p) => all().map((r) => r.o).find((o) => o.path === p) || null;
 const KINDS = {
   photos:   "Des photos. La première sert d'icône.",
   film:     "Un film : dépose la vidéo, et une image comme affiche.",
-  document: "Le site n'affiche pas les PDF — il montre des pages. "
-            + "L'icône sera celle d'un document ; exporte les pages en JPEG.",
+  document: "Un dossier PDF. Il s'affiche en grand dans sa propre page — "
+            + "dépose le PDF, et une image si tu veux une couverture.",
   page:     "Une page de texte, avec des photos si tu en ajoutes.",
 };
 
@@ -266,12 +267,31 @@ function waitingFor(o) {
   const isFilm = o.video || /\.(mov|mp4|m4v|webm)$/.test(named);
   const isDoc = /\.pdf$/.test(named);
   if (isFilm && !o.video) return "Ce film attend sa vidéo.";
-  if (isDoc && !o.photographs.length) {
-    return "Ce document attend ses pages. Le site n'affiche pas les PDF :"
-         + " exporte les pages en JPEG et dépose-les ici.";
-  }
-  if (!o.photographs.length && !o.video) return "Rien dedans pour l'instant.";
+  // A document waits for its PDF, not for photographs. It used to ask
+  // for "ses pages, en JPEG", which was true of an engine that could not
+  // show a PDF and is now simply wrong.
+  if (isDoc && !o.doc) return "Ce dossier attend son PDF.";
+  if (!o.photographs.length && !o.video && !o.doc)
+    return "Rien dedans pour l'instant.";
   return "";
+}
+
+/* The dossier. Offered on a project NAMED .pdf, or one already holding
+ * one — the same "what she typed, or what is in the folder" test the
+ * film well uses, so a document has somewhere to be dropped before it is
+ * a document. */
+function dossier(o) {
+  const named = (o.titles.fr || "").toLowerCase();
+  const wants = o.doc || /\.pdf$/.test(named);
+  if (o.kind === "desk" || o.gallery || !wants) return "";
+  return `
+    <label>le dossier
+      <div class="face wide" data-drop="doc">${o.doc
+        ? `<span>${esc(o.doc)}</span>`
+        : `<span>aucun PDF pour l'instant</span>`}</div>
+    </label>
+    <p class="drop" data-drop="doc">Dépose le PDF ici. Il s'affiche en grand
+       dans sa page — rien ne le propose en téléchargement.</p>`;
 }
 
 function reel(o) {
@@ -432,7 +452,7 @@ function inspect(o) {
     ${isDesk ? `<p class="what">${folderSays(o)}</p>` : ""}
     ${waitingFor(o) ? `<p class="waiting">${esc(waitingFor(o))}</p>` : ""}
     ${titles}${bodies}${bandeau}${about}${face}${wall}
-    ${isDesk && !o.gallery ? "" : reel(o) + `<ul class="shots">${shots}</ul>
+    ${isDesk && !o.gallery ? "" : dossier(o) + reel(o) + `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">${o.gallery
         ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."
         : "Dépose des photos ici. La première est l'icône."}</p>`}
@@ -517,8 +537,19 @@ look.addEventListener("drop", async (e) => {
   e.preventDefault();
   // dropped on the wallpaper patch, or anywhere else in the panel
   const hit = e.target.closest && e.target.closest("[data-drop]");
-  const as = hit ? hit.dataset.drop : "photos";
+  let as = hit ? hit.dataset.drop : "photos";
   const files = [...e.dataTransfer.files];
+  // A PDF dropped anywhere on a project that IS a dossier goes to the
+  // dossier. Dropping it on the photographs would be refused with a
+  // sentence telling her to aim at a box three centimetres away, which
+  // is a worse answer than doing the obvious thing.
+  //
+  // Only when the project already wants one — on a project of
+  // photographs a PDF still refuses, because accepting it would quietly
+  // change what clicking that icon does.
+  const wantsDoc = o.doc || /\.pdf$/.test((o.titles.fr || "").toLowerCase());
+  if (as === "photos" && wantsDoc && files.every((f) => /\.pdf$/i.test(f.name)))
+    as = "doc";
   // a wallpaper and an icon are one each; photographs are a pile
   for (const f of (as === "photos" ? files : files.slice(0, 1))) {
     const out = await ask(
@@ -526,7 +557,8 @@ look.addEventListener("drop", async (e) => {
       + (as === "photos" ? "" : `&as=${as}`),
       { method: "POST", body: await f.arrayBuffer() });
     const said = { wallpaper: "fond d'écran changé", icon: "apparence changée",
-                   about: "ta photo de présentation est en place" }[as]
+                   about: "ta photo de présentation est en place",
+                   doc: "le dossier est en place" }[as]
                  || `${f.name} ajoutée`;
     tell(out ? said : `${f.name} refusée`);
   }

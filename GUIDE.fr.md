@@ -249,6 +249,9 @@ Deux exceptions, et elles tombent toutes seules :
   film, avec ton texte à côté — sauf si tu demandes sa page, voir plus bas
 - un dossier **sans aucune image** n'a rien à montrer en aperçu : il va
   directement à sa page
+- un dossier qui contient un **PDF** est un dossier à lire : il va
+  directement à sa page, où le PDF s'affiche en grand — voir juste en
+  dessous
 
 #### Si un projet mérite sa page tout de suite
 
@@ -268,6 +271,35 @@ Rien du tout, et c'est l'aperçu qui s'ouvre.
 > Ça marche aussi pour une vidéo. `opens = "page"` sur un film l'envoie
 > sur sa page, où la vidéo s'affiche en grand avec les photos en dessous
 > — pratique pour un projet qui a beaucoup à raconter.
+
+#### Un dossier PDF — une brochure, un book, un dossier de presse
+
+Pose le `.pdf` dans le dossier du projet. C'est tout : la page du projet
+l'affiche **en grand, directement dans la page**. Personne ne le
+télécharge — rien sur le site ne propose le fichier, on le lit sur place.
+
+```
+content/da/grocery/
+    index.md
+    index.en.md
+    grocery.pdf       ← s'affiche en grand dans la page
+    01.jpg            ← la couverture : c'est l'icône sur le bureau
+```
+
+Les images que tu mets à côté viennent **sous** le PDF, et la première
+sert d'icône — donc mets la couverture en `01.jpg` et l'icône est la
+couverture.
+
+Depuis le panneau : **Nouveau → un dossier PDF**, puis dépose le PDF dans
+la case « le dossier ».
+
+> **Un film ou un dossier, pas les deux.** Un projet qui contient une
+> vidéo s'ouvre comme un film, et un film ne montre pas de PDF. Si tu as
+> les deux, fais-en deux projets — le panneau te le dira si tu essaies.
+
+> La barre d'outils du lecteur PDF (avec son bouton de téléchargement)
+> appartient au navigateur, pas au site. Chrome et Safari la cachent quand
+> on le leur demande, Firefox la garde. Ce n'est pas réglable depuis ici.
 
 ### Écrire un texte de présentation
 

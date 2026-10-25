@@ -47,10 +47,13 @@
 {%- if ic_kind == "file" and ic_window == "" -%}
   {%- set_global ic_clip = "" -%}
   {%- set_global ic_still = false -%}
+  {%- set_global ic_doc = "" -%}
   {%- for a in ic_assets -%}
     {%- set leaf = a | split(pat="/") | last -%}
     {%- if leaf | split(pat=".") | last | lower in config.extra.video_types -%}
       {%- set_global ic_clip = a -%}
+    {%- elif leaf | split(pat=".") | last | lower in config.extra.doc_types -%}
+      {%- set_global ic_doc = a -%}
     {%- elif leaf | split(pat=".") | last | lower in config.extra.image_types
              and leaf | split(pat=".") | first != "icon" -%}
       {%- set_global ic_still = true -%}
@@ -63,6 +66,12 @@
   {%- if ic_opens == "page" -%}
   {%- elif ic_clip != "" -%}
     {%- set_global ic_window = "film-" ~ (ic_path | slugify) -%}
+  {#- A DOCUMENT GOES TO ITS PAGE. Tested above the picture, because a
+      brochure usually has a cover photograph in the folder too — and the
+      cover is what the icon should look like, while the dossier is what
+      the click should open. Previewing the cover and never showing the
+      document is the medley this engine is supposed to have stopped. -#}
+  {%- elif ic_doc != "" -%}
   {%- elif ic_still -%}
     {%- set_global ic_window = "preview-" ~ (ic_path | slugify) -%}
   {%- endif -%}
