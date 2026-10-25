@@ -34,6 +34,24 @@ node_modules/
 
 # design sources, wherever they land
 *.pdf
+
+# A DOSSIER IN content/ IS NOT A DESIGN SOURCE — it is the site.
+# The engine shows PDFs now (a .pdf in a project folder is framed in its
+# own page), and the deploy builds from a CHECKOUT of this repository. So
+# an ignored dossier means a page that frames a file nobody ever
+# committed: perfect on her machine, a 404 on the live site, and nothing
+# anywhere saying so. tools/look.py fails if anything under content/ is
+# ignored, so this cannot quietly come back.
+!/content/**/*.pdf
+
+# ...except the test kit's own PDFs, which tools/kit.py WRITES — they are
+# not design sources and not anyone's but ours. Kept narrow to one
+# directory on purpose: the rule above is the one that stops a client's
+# brochure reaching a public repository, and it stays in force everywhere
+# else. Without this line the kit shipped with its documents missing and
+# nothing said so.
+!/kit/documents/*.pdf
+!/kit/wrong/*.pdf
 *.ai
 *.psd
 *.sketch
