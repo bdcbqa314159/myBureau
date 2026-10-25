@@ -173,6 +173,36 @@ def main() -> int:
     # This one is not advice. Everything else look.py reports is a thing
     # that looks wrong; this is a thing that WILL be wrong the moment it
     # is deployed, and the deploy runs this. So it stops the run.
+    # ---- a file zola will not read -----------------------------------
+    # Not advice either: the site does not build at all. It happened —
+    # a content file turned up with its front matter gone and the only
+    # thing that said so was zola, in the middle of a build log, while
+    # this tool said "nothing to report".
+    unreadable = []
+    for md in sorted(CONTENT.rglob("*.md")):
+        text = md.read_text(encoding="utf-8", errors="replace")
+        why = ("le fichier est vide" if not text.strip()
+               else "ne commence pas par +++" if not text.startswith("+++")
+               else "pas de second +++ pour fermer l'en-tête"
+               if text.count("+++") < 2 else "")
+        if why:
+            unreadable.append((str(md.relative_to(ROOT)), [
+                "no front matter — " + why,
+                "zola cannot build the site at all while this is true:"
+                ' "Couldn\'t find front matter in ..."',
+                "fix: the file needs +++ on its own line, the title and any"
+                " other settings, then a closing +++",
+            ]))
+    if unreadable:
+        print("\n  REFUSED: {} file(s) under content/ have no front"
+              " matter.\n".format(len(unreadable)))
+        for where, lines in unreadable:
+            print("  " + where)
+            for line in lines:
+                print("    " + line)
+        print()
+        return 1
+
     hidden = unseen_by_git()
     if hidden:
         print("\n  REFUSED: {} file(s) under content/ are not in the"

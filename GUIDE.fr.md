@@ -522,6 +522,40 @@ dans le Finder (**Finder → Réglages → Avancé → Afficher tous les noms
 d'extension de fichier**) et regarde : un `index.md.txt` ou un
 `index.rtf` ne compte pas. Renomme-le en `index.md`.
 
+### « Couldn't find front matter in … » — le site ne se construit plus
+
+Un fichier `.md` a perdu son en-tête. Un fichier de contenu doit toujours
+commencer comme ça :
+
+```
++++
+title = "mon projet.jpg"
++++
+
+Le texte, ici.
+```
+
+Pour savoir **lequel**, lance :
+
+```
+python3 tools/look.py
+```
+
+Il te donne le chemin exact et ce qui manque. Le panneau, lui, ne peut
+plus créer cette situation : il refuse d'écrire un fichier qui finirait
+sans en-tête, et il te dit de quel fichier il parle.
+
+Le plus simple pour réparer : dans GitHub Desktop, fais un clic droit sur
+le fichier et **Discard changes**. Tu reviens à la dernière version qui
+marchait.
+
+### Un seul panneau à la fois
+
+Si tu lances `preview.command` deux fois, le deuxième te dira qu'un
+panneau tourne déjà. C'est voulu : deux panneaux qui écrivent dans le même
+dossier finissent par se marcher dessus. Ferme le premier (**Ctrl-C** dans
+sa fenêtre) ou utilise celui qui est déjà ouvert.
+
 ### Le panneau refuse une photo en disant qu'elle « n'est pas une image »
 
 Ça veut dire que le fichier ne porte pas le bon nom. Un `.pdf` ou une
