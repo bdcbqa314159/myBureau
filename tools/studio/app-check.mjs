@@ -585,10 +585,75 @@ if (loaded) {
     && /if \(!moved \|\| !onDesk\)/.test(src4));
 
   const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
+  // FLATTENED FIRST. The rule-splitting below keys on braces, and an
+  // @media block nests them — so every rule inside one was swallowed
+  // into its parent and never examined. Both checks that read this file
+  // silently stopped looking at the narrow-screen rules, which is
+  // exactly where the layout bugs live. Comments go too: one mentioning
+  // a selector was enough to make a rule look like it matched.
+  const flat = css.replace(/\/\*[\s\S]*?\*\//g, "")
+                  .replace(/@media[^{]*\{/g, "");
+  const rules = [...flat.matchAll(/(^|\})([^{}]+)\{([^}]*)\}/g)]
+    .map((m) => ({ sel: m[2].trim(), body: m[3] }));
+
+  // ---- grid placement only on things the grid actually owns --------
+  // The narrow-screen rules positioned `.tree`, which lives INSIDE
+  // `.side` and is not a child of the grid — so the declaration did
+  // nothing, the left column was auto-placed into row 1 alone, and with
+  // a second row beneath it the list was cut off from below.
+  //
+  // The children are read out of app.html rather than listed here, so
+  // this stays true when the markup changes.
+  const VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img",
+                        "input", "link", "meta", "source", "track", "wbr"]);
+  const frameBlock = markup.slice(markup.indexOf('<main class="frame">'));
+  const kids = new Set();
+  {
+    let depth = 0;
+    const tag = /<(\/?)([a-z]+)([^>]*)>/g;
+    let m;
+    while ((m = tag.exec(frameBlock))) {
+      const closing = m[1] === "/", name = m[2], attrs = m[3];
+      if (closing) { depth--; if (depth <= 0) break; continue; }
+      // void elements never close, so counting them as open put the
+      // depth permanently out and the scan missed .stage and .look
+      if (/\/$/.test(attrs) || VOID.has(name)) continue;
+      depth++;
+      if (depth === 2) {
+        const cls = /class="([^"]+)"/.exec(attrs);
+        if (cls) cls[1].split(/\s+/).forEach((c) => kids.add(c));
+      }
+    }
+  }
+  check("app.html really has the three panes the layout places",
+    kids.has("side") && kids.has("stage") && kids.has("look"),
+    [...kids].join(" "));
+
+  const placed = new Set();
+  for (const r of rules) {
+    if (!/grid-(column|row)\s*:/.test(r.body)) continue;
+    for (const sel of r.sel.split(",")) {
+      const cls = /^\s*\.([a-z-]+)\s*$/.exec(sel);
+      if (cls) placed.add(cls[1]);
+    }
+  }
+  const strays = [...placed].filter((c) => !kids.has(c));
+  check("nothing is given a grid position that the grid cannot place",
+    strays.length === 0, "placed but not a child of .frame: " + strays.join(", "));
+
+  check("a long name in the list is shortened, not sliced by the column",
+    /text-overflow:\s*ellipsis/.test(css) && /\.row\s*>\s*span:first-child/.test(css));
+
+  // BY RULE, not by a regex over the whole file. The old version looked
+  // for "display:none ... } /* ...look..." anywhere, which a COMMENT
+  // mentioning .look was enough to trip — and it would have missed
+  // `.frame .look { display: none }` entirely. Asked properly: does any
+  // rule that selects the editor hide it.
+  const hiding = rules
+    .filter((r) => /\blook\b/.test(r.sel) && /display:\s*none/.test(r.body))
+    .map((r) => r.sel);
   check("and no rule anywhere hides the editor",
-    !/\.look\s*\{[^}]*display:\s*none/.test(css)
-    && !/display:\s*none[^}]*\}\s*\/\*[^*]*look/.test(css),
-    "app.css still hides .look somewhere");
+    hiding.length === 0, "hidden by: " + hiding.join(" / "));
 
   const before = fetched.length;
   for (const fn of listeners.get("undo:click") || []) fn();
