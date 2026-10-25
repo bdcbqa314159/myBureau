@@ -124,6 +124,8 @@ def thing(folder: pathlib.Path, stem: str, kind: str) -> dict:
         "icon": special(folder, "icon") or key(first, "icon"),
         "wallpaper": special(folder, "wallpaper"),
         "about": special(folder, "about"),
+        # the affiche — the panel shows it as the proof a film landed
+        "poster": special(folder, "poster"),
         "photographs": photographs(folder),
         # what each photograph shows, for a screen reader — the map
         # page.html reads, so the panel can show what is already written

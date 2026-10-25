@@ -402,6 +402,7 @@ def main() -> int:
 
     doc_cases(tmp)
     gate_cases(tmp)
+    affiche_cases(tmp)
     honesty_cases(tmp)
     identity_cases(tmp)
 
@@ -616,6 +617,101 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     verbs.undo()
     check("undo walks all of it back",
           (tmp / proj / "index.md").read_text(encoding="utf-8") == before)
+
+
+def affiche_cases(tmp: pathlib.Path) -> None:
+    """A dropped film gets its own first frame as its affiche."""
+    print("\n  -- the film's own first frame --\n")
+    clip = (ROOT / "kit/films/clip-3s.mp4").read_bytes()
+    other = (ROOT / "kit/films/clip-2s.webm").read_bytes()
+    pixels = (ROOT / "kit/films/affiche-1600x900.jpg").read_bytes()
+    started = len([l for l in verbs.JOURNAL.read_text(encoding="utf-8").splitlines()
+                   if l.strip()]) if verbs.JOURNAL.exists() else 0
+
+    made = verbs.new_project("content/da", "sans affiche", "film")["made"]
+    d = tmp / made
+    out = verbs.add_video(made, "clip.mp4", clip)
+    check("dropping a film writes an affiche from its first frame",
+          out.get("poster") == "poster.png" and (d / "poster.png").is_file(),
+          str(out))
+    check("and the frame is a real picture, not an empty file",
+          (d / "poster.png").stat().st_size > 2000)
+    import model as the_model
+    the_model.ROOT, the_model.CONTENT = tmp, tmp / "content"
+    seen = None
+    for desk in the_model.tree()["desks"]:
+        for c in desk["on"]:
+            if c["path"] == made:
+                seen = c
+    check("which the panel reports, so it can show it",
+          seen is not None and seen.get("poster") == "poster.png"
+          and seen.get("video") == "film.mp4", str(seen and
+          {k: seen.get(k) for k in ("video", "poster")}))
+
+    # and a film that is too broken to read must not hold the panel:
+    # Quick Look hangs for ever on a truncated one (measured), and this
+    # runs with the write lock held
+    broken_proj = verbs.new_project("content/da", "corrompu", "film")["made"]
+    import time as _t
+    t0 = _t.perf_counter()
+    got = verbs.add_video(broken_proj, "truncated.mp4",
+                          b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 40000)
+    spent = _t.perf_counter() - t0
+    check("a truncated film gives up instead of hanging the panel",
+          got.get("poster") is None and spent < verbs.FRAME_DEADLINE + 5,
+          "{:.1f}s".format(spent))
+    check("and the film itself still landed, which is what she asked for",
+          (tmp / broken_proj / "film.mp4").is_file())
+
+    # A NEW FILM MUST NOT KEEP THE OLD FILM'S FRAME. A .webm is the
+    # sharpest case: Quick Look cannot read one — it hangs for ever on a
+    # perfectly valid vp9 file, measured — so there is no new frame to
+    # draw, and the question becomes what happens to the old one. It has
+    # to go. A page showing one film's frame while playing another is
+    # worse than a page showing no frame.
+    verbs.add_video(made, "autre.webm", other)
+    check("a film Quick Look cannot read gets no frame",
+          not (d / "poster.png").exists())
+    check("and the frame of the film it replaced is gone with it",
+          not any(f.stem.lower() == "poster" for f in d.iterdir()))
+    import time as _t
+    t0 = _t.perf_counter()
+    verbs.add_video(made, "encore.webm", other)
+    webm_cost = _t.perf_counter() - t0
+    check("a webm is refused a frame immediately, not after the deadline",
+          webm_cost < 2, "{:.1f}s".format(webm_cost))
+
+    # and a format it CAN read draws one again
+    verbs.add_video(made, "retour.mp4", clip)
+    check("dropping a readable film draws its frame again",
+          (d / "poster.png").is_file())
+
+    # but hers wins, and keeps winning
+    verbs.set_poster(made, "la mienne.jpg", pixels)
+    check("choosing her own affiche replaces ours",
+          (d / "poster.jpg").is_file() and not (d / "poster.png").exists())
+    verbs.add_video(made, "encore.mp4", clip)
+    check("and a new film leaves HER affiche alone",
+          (d / "poster.jpg").read_bytes() == pixels
+          and not (d / "poster.png").exists())
+
+    # the one already in the real content has a hand-made affiche
+    before = sorted(f.name for f in (tmp / "content/da/junes-cry").iterdir())
+    verbs.add_video("content/da/junes-cry", "x.mp4", clip)
+    check("a project that already had an affiche keeps it",
+          (tmp / "content/da/junes-cry/poster.jpg").is_file()
+          and not (tmp / "content/da/junes-cry/poster.png").exists())
+
+    # and all of it comes back — undone until the journal is the length
+    # it was when these cases started, rather than a fixed count that
+    # silently stops meaning anything when a case is added above
+    while len([l for l in verbs.JOURNAL.read_text(encoding="utf-8").splitlines()
+               if l.strip()]) > started:
+        verbs.undo()
+    check("undo walks the whole lot back, and the film project is gone",
+          not (tmp / made).exists(), str(
+              sorted(f.name for f in (tmp / made).iterdir())
+              if (tmp / made).exists() else "gone"))
 
 
 def gate_cases(tmp: pathlib.Path) -> None:

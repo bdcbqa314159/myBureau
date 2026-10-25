@@ -29,6 +29,8 @@ import os
 import pathlib
 import re
 import shutil
+import signal
+import subprocess
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
@@ -804,8 +806,110 @@ def add_video(item: str, name: str, data: bytes) -> dict:
     tmp.write_bytes(data)
     os.replace(tmp, dest)
     moves.append({"from": "", "to": rel(dest)})
+    made = first_frame(d, dest, moves)
     record("add_video", [], moves)
-    return {"video": dest.name}
+    return {"video": dest.name, "poster": made}
+
+
+# WHAT QUICK LOOK CAN ACTUALLY READ. It draws the formats AVFoundation
+# knows — the QuickTime family — and **hangs for ever on a valid vp9
+# .webm**, measured and killed at two minutes. So webm is not offered to
+# it at all: the deadline would catch the hang, but paying ten seconds on
+# a file that was never going to work is not a cost worth charging her.
+FRAMEABLE = {".mp4", ".m4v", ".mov"}
+
+# Smaller than this is not a film we can take a frame from, and trying
+# is how Quick Look gets handed something it will hang on.
+FILM_FLOOR = 10_000
+# A real film answers in a tenth of a second; this is only here so a
+# broken one cannot hold the panel.
+FRAME_DEADLINE = 10
+
+
+def quick_look(film: pathlib.Path, out: pathlib.Path) -> bool:
+    """One frame via Quick Look, or False — never a wait without end."""
+    proc = subprocess.Popen(
+        ["qlmanage", "-t", "-s", "1200", "-o", str(out), str(film)],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        start_new_session=True)              # its own group, so we can kill it all
+    try:
+        proc.wait(timeout=FRAME_DEADLINE)
+        return proc.returncode == 0
+    except subprocess.TimeoutExpired:
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except OSError:
+            proc.kill()
+        proc.wait(timeout=5)
+        return False
+
+
+def first_frame(d: pathlib.Path, film: pathlib.Path, moves: list) -> "str | None":
+    """The film's own first frame, as its affiche.
+
+    "How come the preview of a video is not the original image of the
+    video?" — because nothing ever looked inside the file. A film with no
+    affiche and no photograph beside it got a drawn film-strip icon, and
+    the window showed a black rectangle until it was played.
+
+    `qlmanage` is the Quick Look thumbnailer macOS already has — the same
+    machinery that draws a frame in the Finder. No install, which is the
+    whole point: preview.sh asks for zola and nothing else.
+
+    Only when she has not chosen one herself. The convention is the
+    extension: qlmanage writes PNG, so `poster.png` is ours and may be
+    replaced when the film changes; anything else she dropped through
+    `set_poster` is hers and is left alone.
+    """
+    hers = [f for f in sorted(d.iterdir())
+            if f.is_file() and f.stem.lower() == "poster"
+            and f.suffix.lower() != ".png"]
+    if hers:
+        return None
+    if not shutil.which("qlmanage"):
+        return None
+
+    # OURS GOES FIRST, whether or not a new one can be drawn. It is the
+    # frame of the film being replaced, so leaving it when the drawing
+    # fails means the page shows one film and plays another — and that is
+    # worse than showing no frame at all. A missing affiche is honest.
+    for old_poster in sorted(d.iterdir()):
+        if old_poster.is_file() and old_poster.stem.lower() == "poster" \
+                and old_poster.suffix.lower() == ".png":
+            TRASH.mkdir(parents=True, exist_ok=True)
+            bin_ = TRASH / str(int(time.time() * 1000))
+            bin_.mkdir(exist_ok=True)
+            shutil.move(str(old_poster), str(bin_ / old_poster.name))
+            moves.append({"from": rel(old_poster), "to": rel(bin_ / old_poster.name)})
+
+    if film.suffix.lower() not in FRAMEABLE:
+        return None
+    # A real film is 0.09s through Quick Look. A TRUNCATED one hangs it
+    # for ever — measured, killed at two minutes — and this runs while
+    # the write lock is held, so a corrupt file would freeze the panel
+    # rather than just fail to get a frame. Hence both guards below: a
+    # size floor that skips anything too small to be video at all, and a
+    # hard deadline that kills the whole process group, because qlmanage
+    # delegates to helpers that outlive it.
+    if len(film.read_bytes()[:FILM_FLOOR]) < FILM_FLOOR:
+        return None
+    out = d / "studio-frame"
+    try:
+        shutil.rmtree(out, ignore_errors=True)
+        out.mkdir()
+        if not quick_look(film, out):
+            return None
+        drawn = [f for f in out.iterdir() if f.suffix.lower() == ".png"]
+        if not drawn:
+            return None
+        dest = d / "poster.png"
+        os.replace(str(drawn[0]), str(dest))
+        moves.append({"from": "", "to": rel(dest)})
+        return dest.name
+    except (OSError, subprocess.SubprocessError):
+        return None
+    finally:
+        shutil.rmtree(out, ignore_errors=True)
 
 
 def add_doc(item: str, name: str, data: bytes) -> dict:
