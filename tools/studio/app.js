@@ -218,7 +218,10 @@ function paint() {
     const b = document.createElement("button");
     b.className = "row" + (depth === 2 ? " deep" : depth > 2 ? " deeper" : "");
     b.setAttribute("aria-current", String(keyOf(o) === chosen));
-    b.innerHTML = `<span>${esc(o.titles.fr || o.name)}</span><span class="kind">${kindOf(o)}</span>`;
+    const label = o.titles.fr || o.name;
+    // the whole name on hover, since a long one is shortened in place
+    b.title = label + " — " + kindOf(o);
+    b.innerHTML = `<span>${esc(label)}</span><span class="kind">${kindOf(o)}</span>`;
     b.addEventListener("click", () => select(o));
 
     // Drag a row onto a bureau to move the thing into it — the Finder

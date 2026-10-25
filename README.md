@@ -1257,6 +1257,37 @@ frame — a page showing one film and playing another is worse than a page
 showing no frame. Hers (any `poster.*` that is not our `.png`) is never
 touched.
 
+#### The left column was cut off
+
+Two things, and only one of them was the width.
+
+The list is **17rem** now rather than 14. The names in it are hers —
+*graphic design*, *atelier mirabelle* — and each row carries what the
+thing **is** beside the name, so 14rem clipped both against the frame. A
+long name now ends in an ellipsis instead of being sliced by the column
+edge, with the whole of it on the row as a tooltip, and the kind label
+gives up its space first: what a thing is called matters more than which
+kind it is.
+
+The other was a real bug. The narrow-screen rules positioned **`.tree`**,
+which lives *inside* `.side` and is not a child of the grid — so the
+declaration did nothing, the left column was auto-placed into row 1
+alone, and with a second row beneath it the list stopped short of the
+window. It is `.side` now.
+
+Two static checks followed, and **neither could see the bug when first
+written**: the CSS rule-splitter keys on braces, and an `@media` block
+nests them, so every rule inside one was swallowed into its parent and
+never examined. That is where the layout bugs live. It flattens media
+queries and strips comments first now, and both checks were verified by
+putting each bug back.
+
+The same blindness had been sitting under the existing *"no rule anywhere
+hides the editor"* check — which exists because the editor was once
+hidden by `@media (max-width: 72rem) { .look { display: none } }`. It
+could not have seen that. It reads rule by rule now, so
+`.frame .look { display: none }` inside a media query fails it.
+
 #### Which box will take this file
 
 Every drop zone used to light up at once, whatever was being dragged —
