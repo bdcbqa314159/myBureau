@@ -24,9 +24,31 @@ const check = (what, held, detail = "") => {
 
 // ---- the smallest document the panel can wake up in -----------------
 const listeners = new Map();
-const node = (id = "") => ({
+const node = (id = "") => {
+  const n = rawNode(id);
+  n.classList._owner = n;
+  n._cls = n._cls || new Set();
+  return n;
+};
+
+const rawNode = (id = "") => ({
   id,
-  style: {}, dataset: {}, classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+  style: {}, dataset: {},
+  // A REAL classList, backed by a set. It used to be four no-ops, so
+  // anything the panel expressed by adding a class — which is how it
+  // says "this box will take your file" — could not be observed, and no
+  // check could tell guidance from none.
+  _cls: new Set(),
+  classList: {
+    add(...c) { c.forEach((x) => this._owner._cls.add(x)); },
+    remove(...c) { c.forEach((x) => this._owner._cls.delete(x)); },
+    toggle(c, on) {
+      if (on === undefined) on = !this._owner._cls.has(c);
+      if (on) this._owner._cls.add(c); else this._owner._cls.delete(c);
+      return on;
+    },
+    contains(c) { return this._owner._cls.has(c); },
+  },
   textContent: "", value: "",
   children: [],
   // SETTING innerHTML EMPTIES THE ELEMENT. paint() clears the list with
@@ -37,7 +59,7 @@ const node = (id = "") => ({
   // once and the first one's handlers.
   _html: "",
   get innerHTML() { return this._html; },
-  set innerHTML(v) { this._html = v; this.children = []; },
+  set innerHTML(v) { this._html = v; this.children = []; drawn.clear(); },
   append(...n) { this.children.push(...n); },
   insertAdjacentHTML() {}, setPointerCapture() {},
   setAttribute() {}, getAttribute: () => null, removeAttribute() {},
@@ -64,12 +86,21 @@ const node = (id = "") => ({
     const re = new RegExp('data-' + key + '="([^"]*)"', "g");
     let m;
     while ((m = re.exec(this.innerHTML))) {
-      const n = node(key + ":" + m[1]);
-      n.dataset[key] = m[1];
-      out.push(n);
+      // THE SAME ELEMENT EACH TIME IT IS QUERIED. A fresh object per
+      // query meant anything the panel set on it — a class saying "this
+      // box takes your file" — was thrown away before a check could read
+      // it. Cleared whenever innerHTML is written, as a re-render does.
+      const id = key + ":" + m[1];
+      if (!drawn.has(id)) {
+        const n = node(id);
+        n.dataset[key] = m[1];
+        drawn.set(id, n);
+      }
+      out.push(drawn.get(id));
     }
     return out;
   },
+  closest() { return null; },
   addEventListener(kind, fn) {
     const key = id + ":" + kind;
     listeners.set(key, (listeners.get(key) || []).concat(fn));
@@ -97,6 +128,7 @@ const markup = readFileSync(new URL("./app.html", import.meta.url), "utf8");
 const ids = [...markup.matchAll(/\bid="([^"]+)"/g)].map((m) => m[1]);
 const byId = new Map(ids.map((id) => [id, node(id)]));
 const made = new Map();          // elements the panel drew for itself
+const drawn = new Map();         // and the ones it queries by attribute
 const missing = [];
 
 let fetched = [];
@@ -186,7 +218,7 @@ const sandbox = {
               bodies: { fr: "", en: "" },
               x: "32", y: "12", opens: null, icon: null, wallpaper: null,
               photographs: ["01.jpg", "02.jpg"], video: "film.mp4",
-              doc: null, languages: ["en", "fr"],
+              poster: "poster.png", doc: null, languages: ["en", "fr"],
               alt: { "01.jpg": "Deux silhouettes sur une plage." },
             }, {
               // a dossier that has not had its PDF yet — the state the
@@ -340,6 +372,55 @@ if (loaded) {
     /data-drop="poster"/.test(look.innerHTML));
   check("a film is not asked for a PDF",
     !/data-drop="doc"/.test(look.innerHTML));
+
+  // ---- you can SEE that the film landed ----------------------------
+  // "I had been dropping it ten times before noticing the video was
+  // already there." It said the file name, in the same grey box as
+  // before it arrived.
+  check("a film that is there says so, by name",
+    /class="landed"/.test(look.innerHTML) && /film\.mp4/.test(look.innerHTML),
+    look.innerHTML.slice(0, 200));
+  check("and shows the frame rather than a word",
+    /media\/content\/da\/theodora\/poster\.png/.test(look.innerHTML));
+  check("so the box no longer asks for a film it already has",
+    !/Dépose la vidéo ici/.test(look.innerHTML));
+
+  // ---- only the box that will take THIS file lights up -------------
+  // "when I want to drop a video plenty of placeholders highlight"
+  const drag = (...types) => {
+    const ev = { preventDefault() {}, target: { closest: () => null },
+                 dataTransfer: { items: types.map((t) => ({ kind: "file", type: t })) } };
+    for (const fn of listeners.get("look:dragover") || []) fn(ev);
+    const zones = {};
+    for (const z of look.querySelectorAll("[data-drop]")) {
+      zones[z.dataset.drop] = z._cls.has("can") ? "can"
+        : z._cls.has("cannot") ? "cannot" : "-";
+    }
+    return zones;
+  };
+
+  let z = drag("video/quicktime");
+  check("dragging a video lights the film box",
+    z.video === "can", JSON.stringify(z));
+  check("and tells the image boxes they cannot have it",
+    z.photos === "cannot" && z.poster === "cannot", JSON.stringify(z));
+
+  z = drag("image/jpeg");
+  check("dragging a photograph lights the photographs and the affiche",
+    z.photos === "can" && z.poster === "can", JSON.stringify(z));
+  check("and not the film", z.video === "cannot", JSON.stringify(z));
+
+  z = drag("");
+  check("a file whose type the browser will not say lights everything,"
+    + " rather than guiding wrong",
+    Object.values(z).every((v) => v === "can"), JSON.stringify(z));
+
+  for (const fn of listeners.get("look:dragleave") || []) fn({});
+  const after = {};
+  for (const zz of look.querySelectorAll("[data-drop]"))
+    after[zz.dataset.drop] = zz._cls.has("can") || zz._cls.has("cannot");
+  check("and when the drag leaves, nothing stays lit",
+    Object.values(after).every((v) => v === false), JSON.stringify(after));
 
   // ---- a description per photograph --------------------------------
   // Every photograph on the site carried alt="", which tells a screen

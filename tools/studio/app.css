@@ -85,6 +85,23 @@ button:disabled { color: #9a9aa2; cursor: default; }
 .look .what { color: #6b6b74; font-size: 12px; margin: 0 0 .75rem; }
 /* the description sits under its photograph, full width of the cell */
 .shot .alt { width: 100%; margin-top: .25rem; font-size: 11px; padding: .2rem .3rem; }
+/* ---- where this file can land ------------------------------------
+   During a drag only the boxes that will take THIS file are lit, and the
+   one under the cursor is the one that will get it. Everything that
+   cannot take it steps back rather than disappearing — a box that
+   vanishes mid-drag moves everything else under the cursor. */
+.look.over [data-drop].cannot { opacity: .3; }
+.look.over [data-drop].can { border-color: #5b86e5; }
+.look.over p.drop.can { color: #3f6fd0; }
+.look.over [data-drop].aim {
+  border-color: #2f5fc0; background: #eaf1ff;
+  box-shadow: 0 0 0 3px rgb(91 134 229 / .25);
+}
+/* the film is in place: its frame, and a line that says so */
+.face.has { border-style: solid; border-color: #c9ccd4; }
+.landed { margin: .3rem 0 .55rem; font-size: 11px; color: #2c7a3f; line-height: 1.4; }
+.landed b { color: #1f5c2e; }
+
 .about { margin: 0 0 .9rem; padding: .5rem .6rem .6rem; border: 1px solid #dcdce2;
          border-radius: 6px; background: #fafafc; }
 .about legend { padding: 0 .3rem; font-size: 11px; color: #6b6b74; }

@@ -755,6 +755,52 @@ def case_about_is_a_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_a_film_wears_its_own_frame(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A film with an affiche and nothing else wears the affiche.
+
+    "How come the preview of a video is not the original image of the
+    video?" The panel writes `poster.*` from the film's first frame now,
+    and this is the half that has to be true for that to be worth
+    anything: the engine has to USE it — as the desk icon, as the
+    window's poster, and on the page — for a project that has no
+    photographs at all.
+
+    The rule it leans on is in _icon.html: a project is its own first
+    picture. `poster` is not one of the project's photographs (it is
+    SPOKEN_FOR, so it never appears among them) but it IS a picture in
+    the folder, and that is what makes this work.
+    """
+    bureau = d / "content" / "da"
+    film = bureau / "clip-sans-photo"
+    film.mkdir()
+    (film / "index.md").write_text(FRONT.format(title="un film.mov", extra=""))
+    (film / "index.en.md").write_text(FRONT.format(title="a film.mov", extra=""))
+    shutil.copyfile(ROOT / "kit/films/clip-3s.mp4", film / "film.mp4")
+    shutil.copyfile(ROOT / "kit/films/affiche-1600x900.jpg", film / "poster.jpg")
+
+    ok, log = build(d)
+    desk = page(d, "da/index.html")
+    icons = re.findall(r'<a class="icon".*?</a>', desk, re.S)
+    mine = next((i for i in icons if 'data-vt="da-clip-sans-photo"' in i), "")
+    win = re.search(r'<dialog class="win win-film" id="film-da-clip-sans-photo">.*?</dialog>',
+                    desk, re.S)
+    inner = page(d, "da/clip-sans-photo/index.html")
+    return [
+        ("builds", ok),
+        ("the film has an icon on the desk", bool(mine)),
+        ("and it is the affiche, not a drawn film strip",
+         "processed_images" in mine and "movie.svg" not in mine),
+        ("clicking it opens the film window", 'data-window="film-da-clip-sans-photo"' in mine),
+        ("the window exists to be opened", bool(win)),
+        ("and shows the frame before anything is played",
+         bool(win) and "poster=" in win.group(0)),
+        ("the page shows it too",
+         "poster=" in inner and "<video" in inner),
+        ("and the affiche is not ALSO one of the project's photographs",
+         len(re.findall(r'<figure class="proj-fig"', inner)) == 0),
+    ]
+
+
 def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A PDF is SHOWN, in its own page, and never offered as a download.
 
@@ -1048,6 +1094,7 @@ CASES = [
     ("every page can say what it is", case_every_page_can_say_what_it_is),
     ("about me opens as a screen", case_about_is_a_screen),
     ("a document is shown, not downloaded", case_a_document_is_shown),
+    ("a film wears its own frame", case_a_film_wears_its_own_frame),
     ("every photograph in the gallery opens", case_gallery_photographs_open),
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),

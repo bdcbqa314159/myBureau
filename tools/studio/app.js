@@ -311,13 +311,25 @@ function reel(o) {
   const named = (o.titles.fr || "").toLowerCase();
   const wantsFilm = o.video || /\.(mov|mp4|m4v|webm)$/.test(named);
   if (o.kind === "desk" || !wantsFilm) return "";
+  // THE FILM HAS TO LOOK DIFFERENT ONCE IT IS THERE. It said only the
+  // file name, in the same grey box as before — "I had been dropping it
+  // ten times before noticing the video was already there." So: the
+  // frame, the name, and a word saying it is in place.
+  const landed = Boolean(o.video);
   return `
     <label>le film
-      <div class="face wide" data-drop="video">${o.video
-        ? `<span>${esc(o.video)}</span>` : `<span>aucun film pour l'instant</span>`}</div>
+      <div class="face wide ${landed ? "has" : ""}" data-drop="video">${landed
+        ? (o.poster
+            ? `<img src="${q("/media/" + o.path + "/" + o.poster)}" alt="">`
+            : `<span>${esc(o.video)}</span>`)
+        : `<span>aucun film pour l'instant</span>`}</div>
     </label>
-    <p class="drop" data-drop="video">Dépose la vidéo ici (mp4, mov, webm).</p>
-    <p class="drop" data-drop="poster">Et une image ici comme affiche.</p>`;
+    ${landed ? `<p class="landed">✓ <b>${esc(o.video)}</b> est en place${
+        o.poster ? ` — l'affiche est la première image du film` : ""}.</p>`
+      : `<p class="drop" data-drop="video">Dépose la vidéo ici (mp4, mov, webm).</p>`}
+    <p class="drop" data-drop="poster">${o.poster
+      ? "Dépose une image ici pour choisir une autre affiche."
+      : "Et une image ici comme affiche."}</p>`;
 }
 
 function folderSays(o) {
@@ -582,9 +594,66 @@ function wire(o) {
   });
 }
 
+/* WHICH BOX WILL TAKE THIS FILE.
+ *
+ * Every drop zone used to light up at once, whatever was being dragged —
+ * "when I want to drop a video plenty of placeholders highlight". So the
+ * pane lit up and said nothing about where the file could actually go.
+ *
+ * During a drag the files themselves are unreadable (that is the
+ * browser's rule, and a good one), but `dataTransfer.items` carries each
+ * one's TYPE. That is enough: a video can only be the film, a PDF only
+ * the dossier, an image anything that shows a picture.
+ *
+ * Unknown or missing type — some browsers give "" for an unusual
+ * extension — lights everything, because refusing to guide is better
+ * than guiding wrong. The verb still has the last word either way. */
+const TAKES = {
+  video:     (kind) => kind.startsWith("video/"),
+  doc:       (kind) => kind === "application/pdf",
+  photos:    (kind) => kind.startsWith("image/"),
+  icon:      (kind) => kind.startsWith("image/"),
+  poster:    (kind) => kind.startsWith("image/"),
+  wallpaper: (kind) => kind.startsWith("image/"),
+  about:     (kind) => kind.startsWith("image/"),
+};
+
+function dragKinds(e) {
+  const items = (e.dataTransfer && e.dataTransfer.items) || [];
+  const out = [];
+  for (const it of items) if (it.kind === "file") out.push(it.type || "");
+  return out;
+}
+
+function guide(e) {
+  const kinds = dragKinds(e);
+  const blind = !kinds.length || kinds.some((k) => !k);
+  const hit = e.target.closest && e.target.closest("[data-drop]");
+  look.querySelectorAll("[data-drop]").forEach((zone) => {
+    const takes = TAKES[zone.dataset.drop] || (() => true);
+    const yes = blind || kinds.every(takes);
+    zone.classList.toggle("can", yes);
+    zone.classList.toggle("cannot", !yes);
+    zone.classList.toggle("aim", yes && zone === hit);
+  });
+  return { blind, kinds };
+}
+
+function unguide() {
+  look.querySelectorAll("[data-drop]").forEach((zone) =>
+    zone.classList.remove("can", "cannot", "aim"));
+}
+
 ["dragenter", "dragover"].forEach((k) =>
-  look.addEventListener(k, (e) => { e.preventDefault(); look.classList.add("over"); }));
-["dragleave", "drop"].forEach((k) => look.addEventListener(k, () => look.classList.remove("over")));
+  look.addEventListener(k, (e) => {
+    e.preventDefault();
+    look.classList.add("over");
+    guide(e);
+  }));
+["dragleave", "drop"].forEach((k) => look.addEventListener(k, () => {
+  look.classList.remove("over");
+  unguide();
+}));
 look.addEventListener("drop", async (e) => {
   const o = find(chosen);
   if (!o || !e.dataTransfer.files.length) return;

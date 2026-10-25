@@ -171,6 +171,29 @@ comprendre d'autre que ça.
 **TextEdit**, qui est déjà sur ton Mac : clic droit sur le fichier →
 **Ouvrir avec → TextEdit**. Aucune application à installer.
 
+### Déposer une vidéo
+
+Choisis le projet, puis dépose le fichier sur la case **« le film »**.
+
+Pendant que tu fais glisser le fichier, **seules les cases qui peuvent le
+recevoir s'allument** — une vidéo n'éclaire que la case du film, une image
+n'éclaire que les photos et l'affiche. Celle qui est sous ton curseur est
+encadrée en bleu : c'est celle qui prendra le fichier.
+
+Quand c'est fait, la case **montre une image du film** et une ligne verte
+dit son nom. S'il n'y a pas de changement visible, le fichier n'est pas
+passé — regarde le message en bas du panneau.
+
+> **L'affiche se fait toute seule.** La première image du film devient son
+> affiche : c'est ce qu'on voit sur le bureau comme icône, et dans la
+> fenêtre avant d'appuyer sur lecture. Tu peux en choisir une autre en
+> déposant une image sur « l'affiche » — à partir de là c'est la tienne,
+> et changer le film n'y touchera plus.
+>
+> Une exception : les `.webm`. macOS ne sait pas en lire une image, donc
+> pour ceux-là il faut déposer l'affiche toi-même. Les `.mp4` et `.mov`
+> marchent tout seuls.
+
 ### Des fichiers pour t'entraîner
 
 Avant de toucher à tes vraies photos : le dossier **`kit/`** contient des

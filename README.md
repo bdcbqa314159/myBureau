@@ -1212,6 +1212,75 @@ One consequence worth knowing: `zola serve` serves a **stale page with a
 content change gives. The panel's reload therefore waits for the new name
 to actually be in the page, not merely for the page to answer.
 
+#### A film wears its own first frame
+
+*"How come the preview of a video is not the original image of the
+video?"* Because nothing ever looked inside the file. A film with no
+affiche and no photograph beside it got a drawn film-strip icon, and the
+window showed a black rectangle until it was played.
+
+`add_video` now writes `poster.png` from the film's first frame, and the
+engine already does the rest: `poster` is not one of a project's
+photographs (it is `SPOKEN_FOR`) but it *is* a picture in the folder, so
+_icon.html's "a project is its own first picture" rule makes it the desk
+icon, `_film.html` makes it the window's poster, and page.html puts it on
+the video. One write, three places.
+
+> It is **macOS-only, and CI is Linux.** `first_frame` looks for
+> `qlmanage` before it touches anything, so on any other machine the film
+> still lands and nothing is destroyed reaching for a frame that cannot
+> be drawn. `check.py` says out loud which half it skipped — 199 checks
+> on a Mac, 190 without — because a suite that goes quiet about what it
+> did not run is worse than one that fails. The first version of these
+> checks simply assumed macOS and took CI down with a `FileNotFoundError`.
+
+Through **`qlmanage`**, the Quick Look thumbnailer macOS already ships —
+the same machinery that draws a frame in the Finder. No install, which is
+the point: `preview.sh` asks for zola and nothing else.
+
+Three things measured rather than assumed:
+
+- a real film is **0.09s**
+- a **truncated** one hangs Quick Look **for ever** (killed at two
+  minutes). This runs with the write lock held, so a corrupt file would
+  have frozen the panel. Hence a 10s deadline that kills the whole
+  process group — qlmanage delegates to helpers that outlive it — and a
+  10KB size floor that skips anything too small to be video at all.
+- a **valid vp9 `.webm` also hangs it**. So webm is never offered to it:
+  the deadline would catch the hang, but charging ten seconds for a file
+  that was never going to work is not worth it. `.mp4`, `.m4v` and `.mov`
+  only.
+
+Ours is binned **before** the attempt, not after. If the new frame cannot
+be drawn, the result is no affiche rather than the *previous* film's
+frame — a page showing one film and playing another is worse than a page
+showing no frame. Hers (any `poster.*` that is not our `.png`) is never
+touched.
+
+#### Which box will take this file
+
+Every drop zone used to light up at once, whatever was being dragged —
+*"when I want to drop a video plenty of placeholders highlight"*. The
+pane lit up and said nothing about where the file could actually go.
+
+During a drag the files themselves are unreadable, which is the
+browser's rule and a good one, but `dataTransfer.items` carries each
+one's type. That is enough: a video can only be the film, a PDF only the
+dossier, an image anything that shows a picture. The compatible boxes are
+outlined, the incompatible ones step back to 30% rather than disappearing
+(a box that vanishes mid-drag moves everything else under the cursor),
+and the one under the cursor is filled.
+
+A file whose type the browser will not name lights everything — refusing
+to guide beats guiding wrong, and the verb still has the last word.
+
+#### And a film that landed looks landed
+
+*"I had been dropping it ten times before noticing the video was already
+there."* The well said the file name, in the same grey box as before it
+arrived. It now shows the frame, with a green line naming the file — and
+stops asking for a video it already has.
+
 #### The last gate before the disk
 
 A content file turned up with its front matter gone and the site stopped

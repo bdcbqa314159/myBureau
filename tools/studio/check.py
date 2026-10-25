@@ -402,6 +402,7 @@ def main() -> int:
 
     doc_cases(tmp)
     gate_cases(tmp)
+    affiche_cases(tmp)
     honesty_cases(tmp)
     identity_cases(tmp)
 
@@ -616,6 +617,116 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     verbs.undo()
     check("undo walks all of it back",
           (tmp / proj / "index.md").read_text(encoding="utf-8") == before)
+
+
+def affiche_cases(tmp: pathlib.Path) -> None:
+    """A dropped film gets its own first frame as its affiche.
+
+    THE FRAME NEEDS QUICK LOOK, which is macOS. CI runs on Linux, so the
+    half that depends on it is skipped there — loudly, and named, because
+    a suite that goes quiet about what it did not run is worse than one
+    that fails. What IS checked everywhere is the part that must hold
+    without it: the film still lands, and nothing is destroyed reaching
+    for a frame that cannot be drawn.
+    """
+    has_ql = bool(shutil.which("qlmanage"))
+    print("\n  -- the film's own first frame --\n")
+    if not has_ql:
+        print("  ---- no Quick Look on this machine (it is macOS-only), so the")
+        print("       frame itself is NOT checked here. The rest is.\n")
+
+    clip = (ROOT / "kit/films/clip-3s.mp4").read_bytes()
+    other = (ROOT / "kit/films/clip-2s.webm").read_bytes()
+    pixels = (ROOT / "kit/films/affiche-1600x900.jpg").read_bytes()
+    started = len([l for l in verbs.JOURNAL.read_text(encoding="utf-8").splitlines()
+                   if l.strip()]) if verbs.JOURNAL.exists() else 0
+
+    made = verbs.new_project("content/da", "sans affiche", "film")["made"]
+    d = tmp / made
+    out = verbs.add_video(made, "clip.mp4", clip)
+
+    # ---- true with or without Quick Look ----------------------------
+    check("the film itself lands, frame or no frame",
+          (d / "film.mp4").is_file() and out["video"] == "film.mp4", str(out))
+    check("and the answer says whether a frame was taken",
+          "poster" in out, str(out))
+
+    if not has_ql:
+        check("with no Quick Look it reports no affiche rather than pretending",
+              out["poster"] is None, str(out))
+        check("and writes no affiche file either",
+              not any(f.stem.lower() == "poster" for f in d.iterdir()))
+        # hers must survive a machine that cannot draw frames
+        verbs.set_poster(made, "la mienne.jpg", pixels)
+        verbs.add_video(made, "encore.mp4", clip)
+        check("her own affiche is untouched where no frame can be drawn",
+              (d / "poster.jpg").read_bytes() == pixels)
+    else:
+        check("dropping a film writes an affiche from its first frame",
+              out.get("poster") == "poster.png" and (d / "poster.png").is_file(),
+              str(out))
+        check("and the frame is a real picture, not an empty file",
+              (d / "poster.png").stat().st_size > 2000)
+
+        import model as the_model
+        the_model.ROOT, the_model.CONTENT = tmp, tmp / "content"
+        seen = None
+        for desk in the_model.tree()["desks"]:
+            for c in desk["on"]:
+                if c["path"] == made:
+                    seen = c
+        check("which the panel reports, so it can show it",
+              seen is not None and seen.get("poster") == "poster.png"
+              and seen.get("video") == "film.mp4",
+              str(seen and {k: seen.get(k) for k in ("video", "poster")}))
+
+        # a truncated film hangs Quick Look for ever (measured), and this
+        # runs with the write lock held
+        broken_proj = verbs.new_project("content/da", "corrompu", "film")["made"]
+        t0 = time.perf_counter()
+        got = verbs.add_video(broken_proj, "truncated.mp4",
+                              b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 40000)
+        spent = time.perf_counter() - t0
+        check("a truncated film gives up instead of hanging the panel",
+              got.get("poster") is None and spent < verbs.FRAME_DEADLINE + 5,
+              "{:.1f}s".format(spent))
+        check("and the film itself still landed, which is what she asked for",
+              (tmp / broken_proj / "film.mp4").is_file())
+
+        # a .webm cannot be read at all, so the OLD frame must go
+        verbs.add_video(made, "autre.webm", other)
+        check("a film Quick Look cannot read gets no frame",
+              not (d / "poster.png").exists())
+        check("and the frame of the film it replaced is gone with it",
+              not any(f.stem.lower() == "poster" for f in d.iterdir()))
+        t0 = time.perf_counter()
+        verbs.add_video(made, "encore.webm", other)
+        cost = time.perf_counter() - t0
+        check("a webm is refused a frame immediately, not after the deadline",
+              cost < 2, "{:.1f}s".format(cost))
+
+        verbs.add_video(made, "retour.mp4", clip)
+        check("dropping a readable film draws its frame again",
+              (d / "poster.png").is_file())
+
+        verbs.set_poster(made, "la mienne.jpg", pixels)
+        check("choosing her own affiche replaces ours",
+              (d / "poster.jpg").is_file() and not (d / "poster.png").exists())
+        verbs.add_video(made, "encore2.mp4", clip)
+        check("and a new film leaves HER affiche alone",
+              (d / "poster.jpg").read_bytes() == pixels
+              and not (d / "poster.png").exists())
+        check("a project that already had an affiche keeps it",
+              (tmp / "content/da/junes-cry/poster.jpg").is_file())
+
+    # ---- and all of it comes back, on either machine -----------------
+    while len([l for l in verbs.JOURNAL.read_text(encoding="utf-8").splitlines()
+               if l.strip()]) > started:
+        verbs.undo()
+    check("undo walks the whole lot back, and the film project is gone",
+          not (tmp / made).exists(),
+          str(sorted(f.name for f in (tmp / made).iterdir())
+              if (tmp / made).exists() else "gone"))
 
 
 def gate_cases(tmp: pathlib.Path) -> None:
