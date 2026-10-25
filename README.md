@@ -1226,6 +1226,14 @@ _icon.html's "a project is its own first picture" rule makes it the desk
 icon, `_film.html` makes it the window's poster, and page.html puts it on
 the video. One write, three places.
 
+> It is **macOS-only, and CI is Linux.** `first_frame` looks for
+> `qlmanage` before it touches anything, so on any other machine the film
+> still lands and nothing is destroyed reaching for a frame that cannot
+> be drawn. `check.py` says out loud which half it skipped — 199 checks
+> on a Mac, 190 without — because a suite that goes quiet about what it
+> did not run is worse than one that fails. The first version of these
+> checks simply assumed macOS and took CI down with a `FileNotFoundError`.
+
 Through **`qlmanage`**, the Quick Look thumbnailer macOS already ships —
 the same machinery that draws a frame in the Finder. No install, which is
 the point: `preview.sh` asks for zola and nothing else.
