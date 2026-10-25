@@ -209,12 +209,41 @@ def tree() -> dict:
     known = {d["path"]: d for d in desks}
     for d in desks:
         for child in d["on"]:
+            if child["kind"] == "about":
+                continue                      # shares the home desk's path
             k = known.get(child["path"])
             if k is None:
                 continue                      # a project: not a desk anywhere
             for field in ("gallery", "depth", "opens_as", "empty", "holds",
                           "can_receive"):
                 child[field] = k[field]
+
+    # ---- about me.txt ------------------------------------------------
+    # It is not a folder and not a project: it is a window declared in
+    # [extra.items], so nothing in content/ represents it and it had no
+    # row. Its portrait and its words are the home page's, which is why
+    # they were reachable only by knowing to select the home desk — and
+    # then they sat under that desk's own name and text, two fields that
+    # mean something else entirely.
+    #
+    # It carries the home desk's path, because that is the file its two
+    # verbs write. The panel keys it as "about" so the two rows stay
+    # distinct; see keyOf() in app.js.
+    home = known.get("content")
+    if home is not None:
+        home["on"].append({
+            "kind": "about",
+            "path": home["path"],
+            "name": "about me.txt",
+            "titles": {code: "about me.txt" for code in home["languages"]},
+            "bodies": home["bodies"],
+            "about": home["about"],
+            "languages": home["languages"],
+            # it has no desk of its own, nothing in it, and its position
+            # is declared in config-like front matter we do not rewrite
+            "x": None, "y": None, "opens": None, "icon": None,
+            "wallpaper": None, "photographs": [], "video": None, "doc": None,
+        })
     return {"desks": desks, "identity": identity()}
 
 

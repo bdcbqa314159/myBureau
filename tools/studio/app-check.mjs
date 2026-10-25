@@ -27,8 +27,17 @@ const listeners = new Map();
 const node = (id = "") => ({
   id,
   style: {}, dataset: {}, classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
-  innerHTML: "", textContent: "", value: "",
+  textContent: "", value: "",
   children: [],
+  // SETTING innerHTML EMPTIES THE ELEMENT. paint() clears the list with
+  // `tree.innerHTML = ""` and appends the rows again, and this stub kept
+  // every row from every repaint — three paints of six rows answered
+  // `children.length === 18`. Any check that counted rows, or asked
+  // whether they were all draggable, was reading three generations at
+  // once and the first one's handlers.
+  _html: "",
+  get innerHTML() { return this._html; },
+  set innerHTML(v) { this._html = v; this.children = []; },
   append(...n) { this.children.push(...n); },
   insertAdjacentHTML() {}, setPointerCapture() {},
   setAttribute() {}, getAttribute: () => null, removeAttribute() {},
@@ -38,6 +47,29 @@ const node = (id = "") => ({
   querySelector: () => null,
   querySelectorAll: () => [],
   matchAll() { return []; },
+  // THE BOXES THE PANEL DREW. wire() reaches its inputs with
+  // querySelectorAll("[data-title]") and friends, and this returned []
+  // for every one of them — so no name box, no text box and no
+  // photograph row had ever been wired in a check. They were asserted to
+  // be PRESENT in the markup and never asserted to DO anything, which is
+  // the whole of "there is no possibility to add any text".
+  //
+  // Only `[data-x]` selectors, which is all wire() uses. Each box gets a
+  // synthetic id so its listener is findable: `body:fr`, `title:en`.
+  querySelectorAll(sel) {
+    const attr = /^\[data-([a-z]+)\]$/.exec(sel);
+    if (!attr || typeof this.innerHTML !== "string") return [];
+    const key = attr[1];
+    const out = [];
+    const re = new RegExp('data-' + key + '="([^"]*)"', "g");
+    let m;
+    while ((m = re.exec(this.innerHTML))) {
+      const n = node(key + ":" + m[1]);
+      n.dataset[key] = m[1];
+      out.push(n);
+    }
+    return out;
+  },
   addEventListener(kind, fn) {
     const key = id + ":" + kind;
     listeners.set(key, (listeners.get(key) || []).concat(fn));
@@ -122,12 +154,24 @@ const sandbox = {
             bodies: { fr: "", en: "" },
             x: null, y: null, opens: null, icon: null, wallpaper: null,
             about: "about.jpg",
-            photographs: [], video: null, languages: ["en", "fr"],
+            photographs: [], video: null, doc: null, languages: ["en", "fr"],
             on: [{
               kind: "folder", path: "content/da", name: "da",
               titles: { fr: "DA", en: "art direction" }, bodies: { fr: "", en: "" },
               x: "66", y: "66", opens: null, icon: null, wallpaper: "wallpaper.jpg",
               photographs: [], video: null, languages: ["en", "fr"],
+            }, {
+              // about me.txt: a window declared in [extra.items], so it
+              // has no path of its own and carries the home desk's. The
+              // model appends it; leaving it out of this fixture is how
+              // the panel got checked against a tree it never sees.
+              kind: "about", path: "content", name: "about me.txt",
+              titles: { fr: "about me.txt", en: "about me.txt" },
+              bodies: { fr: "Je suis directrice artistique.",
+                        en: "I am an art director." },
+              about: "about.jpg", languages: ["en", "fr"],
+              x: null, y: null, opens: null, icon: null, wallpaper: null,
+              photographs: [], video: null, doc: null,
             }],
           }, {
             kind: "desk", path: "content/da", name: "da", gallery: false,
@@ -266,8 +310,17 @@ if (loaded) {
   check("a thing can be thrown away from the panel",
     /id="binall"/.test(look.innerHTML));
   const rows = tree.children;
+  // about me.txt is the exception: its position is declared in
+  // [extra.items] and no verb writes there, so there is nowhere to drag
+  // it to and dragging it would write a coordinate for something that
+  // has none.
+  // every row but about me.txt, whose position is declared in
+  // [extra.items] and which no verb can place
   check("the rows can be dragged, which is how a thing changes folder",
-    rows.length > 0 && rows.every((r) => r.draggable === true));
+    rows.length > 1 && rows.filter((r) => r.draggable === true).length
+                       === rows.length - 1,
+    rows.map((r) => (r.draggable ? "+" : "-")).join("")
+      + " of " + rows.length);
 
   // Selecting the PROJECT rather than the desk. By the row that says so:
   // rows are created elements with no id, so every handler lands under
@@ -315,10 +368,47 @@ if (loaded) {
     /value="a demo of"/.test(look.innerHTML) && /value="myBureau"/.test(look.innerHTML));
   check("it says which name is live, so changing the wrong one is not silent",
     /démo/.test(look.innerHTML));
-  check("about me.txt has somewhere to put her portrait",
+  check("the home desk is no longer also the about editor",
+    !/data-drop="about"/.test(look.innerHTML));
+
+  // ---- about me.txt, on its own ------------------------------------
+  // "when clicking on about me there is no possibility to choose
+  // anything - neither to add any text". It was a block at the bottom of
+  // the home desk's pane, under that desk's own name and text.
+  check("about me.txt has a row of its own", await pick("about me.txt"));
+  check("its pane is about IT, not about the home desk",
+    /<h2>about me\.txt<\/h2>/.test(look.innerHTML), look.innerHTML.slice(0, 120));
+  check("it offers somewhere to put her portrait",
     /data-drop="about"/.test(look.innerHTML));
   check("and shows the one that is already there",
-    /media\/content\/about\.jpg/.test(look.innerHTML), look.innerHTML.slice(0, 200));
+    /media\/content\/about\.jpg/.test(look.innerHTML), look.innerHTML.slice(0, 220));
+  check("it offers her text, one box per language",
+    (look.innerHTML.match(/data-body="/g) || []).length === 2,
+    look.innerHTML.slice(0, 400));
+  check("filled with the text that is actually there",
+    /Je suis directrice artistique/.test(look.innerHTML));
+  check("and not a name to type, which is not hers to change here",
+    !/data-title/.test(look.innerHTML));
+  check("nor a wallpaper, nor photographs, nor a way to throw it away",
+    !/data-drop="wallpaper"/.test(look.innerHTML)
+    && !/data-drop="photos"/.test(look.innerHTML)
+    && !/id="binall"/.test(look.innerHTML));
+
+  // TYPING IN IT. Not "is there a box" — does the box reach the server,
+  // with the right verb, the right language and the right file.
+  let said2 = null;
+  const realFetch2 = sandbox.fetch;
+  sandbox.fetch = async (url, opts) => {
+    if (String(url).includes("/api/do")) said2 = JSON.parse(opts.body);
+    return realFetch2(url, opts);
+  };
+  // fired by key: each render re-makes the boxes, and the listener for
+  // the French one lands under "body:fr:change"
+  for (const fn of listeners.get("body:fr:change") || []) await fn();
+  sandbox.fetch = realFetch2;
+  check("typing in its text box writes the home page's own body",
+    said2 && said2.verb === "set_body" && said2.item === "content"
+      && said2.lang === "fr", JSON.stringify(said2));
 
   // Typing a new name must reach the server as set_identity, with BOTH
   // words — sending one would blank the other.
@@ -382,8 +472,11 @@ if (loaded) {
     /deskOf\(\{ path: movingPath \}\) === targetPath/.test(src4));
   check("the folder she is aiming at is lit up in the page",
     /studio-aim/.test(src4));
+  // By the clause, not by the whole line: this pinned the line verbatim
+  // and broke the moment a second thing that cannot be placed was added
+  // to it, while what it is actually for was still true.
   check("icons inside a folder window are not given a position",
-    /const onDesk = desk\.contains\(icon\);/.test(src4)
+    /const onDesk = desk\.contains\(icon\)/.test(src4)
     && /if \(!moved \|\| !onDesk\)/.test(src4));
 
   const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");

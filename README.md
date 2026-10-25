@@ -261,6 +261,20 @@ nowhere.
 > `asked_for()` and the case that guards it had the same blind spot. Urls
 > are stripped of query and fragment once, at harvest.
 
+### `about me.txt` has a row of its own
+
+It is a **window**, declared in `[extra.items]`, not a folder and not a
+project — so the panel's list, which is built from `content/`, had nothing
+to show for it. Its portrait and words were a block at the bottom of the
+*home desk's* pane, underneath that desk's own name and text, which read
+as though those were the ones it meant.
+
+The model appends a synthetic row to the home desk's children. It carries
+the home desk's `path` because that is the file `set_about` and `set_body`
+write, and the panel keys rows through `keyOf()` so two rows can share one
+path. It is excluded from the loop that merges desk facts onto children —
+without that it inherited `holds: 4` and described itself as a bureau.
+
 ### The portrait in `about me.txt`
 
 **Drop a file called `about.*` beside the home desk's `_index.md`.** It
@@ -1312,8 +1326,19 @@ The outline matters more than it sounds. Without it the only sign a
 click did anything is a column on the far side of the window changing,
 which does not read as *"I selected this."*
 
-An icon the panel cannot edit — `about me.txt`, `contact`, declared in
-`config.toml` — says so on hover rather than silently doing nothing.
+An icon the panel cannot edit — `contact`, a shortcut, anything declared
+in front matter it does not write — says so on hover rather than silently
+doing nothing.
+
+`about me.txt` used to be one of those. It is a window declared in
+`[extra.items]`, so nothing in `content/` represented it, `bySlug` had no
+entry for its slug, and clicking it selected nothing at all. It has a row
+of its own now — `kind: "about"`, carrying the home desk's path because
+that is the file its two verbs write, keyed separately by `keyOf()` so one
+path can back two rows. Its pane holds a photograph and the text, per
+language, and nothing else: no name to type, since the label lives in
+`[extra.items]`, and no position, since that does too. Double-clicking it
+opens the real `<dialog>` so she can see what she just changed.
 
 And **throwing a thing away lands her on the desk it was on.** It used to
 leave the frame pointing at a page that no longer existed: a blank room

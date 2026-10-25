@@ -384,8 +384,10 @@ Le texte, c'est ce qui est écrit **sous les `+++`** dans ce même
 `_index.md` — et sous les `+++` de `_index.en.md` pour l'anglais. La
 photo, elle, sert les deux langues.
 
-Depuis le panneau : choisis **la page d'accueil** dans la colonne de
-gauche, et tu as la photo et le texte au même endroit.
+Depuis le panneau : **about me.txt** a sa propre ligne dans la colonne de
+gauche, sous la page d'accueil. Choisis-la et tu as ta photo et ton texte
+— rien d'autre. Double-clique sur son icône dans la page pour voir la
+fenêtre telle qu'elle sera.
 
 ### Décider où une icône se pose
 
