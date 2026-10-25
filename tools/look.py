@@ -16,6 +16,7 @@ from __future__ import annotations   # macOS ships 3.9; `X | Y` needs 3.10
 
 import pathlib
 import re
+import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -32,6 +33,30 @@ def front_matter(p: pathlib.Path) -> str:
     t = p.read_text(encoding="utf-8", errors="replace")
     parts = t.split("+++")
     return parts[1] if len(parts) >= 3 else ""
+
+
+def unseen_by_git() -> list:
+    """Files under content/ that git is ignoring."""
+    files = [p for p in CONTENT.rglob("*") if p.is_file()]
+    if not files or not (ROOT / ".git").exists():
+        return []                 # a scratch copy of the site, not a clone
+    done = subprocess.run(
+        ["git", "check-ignore", "--stdin"], cwd=ROOT, text=True,
+        input="\n".join(str(f.relative_to(ROOT)) for f in files),
+        capture_output=True)
+    # 0 = some were ignored, 1 = none were, anything else = no git to ask
+    if done.returncode not in (0, 1):
+        return []
+    out = []
+    for line in done.stdout.splitlines():
+        if line.strip():
+            out.append((line.strip(), [
+                "git is ignoring this file, so it is not in the repository.",
+                "The deploy builds from a checkout, so the live site will not"
+                " have it — however right the preview looks.",
+                "fix: add an exception for it in .gitignore",
+            ]))
+    return out
 
 
 def main() -> int:
@@ -135,6 +160,29 @@ def main() -> int:
                     " file per language, and both need renaming)",
                 ]))
             seen[title] = where
+
+    # ---- is anything in content/ invisible to git? ------------------
+    # The deploy builds from a CHECKOUT, not from this disk. A file under
+    # content/ that .gitignore swallows is therefore a page referring to
+    # something nobody ever committed: right in the preview, 404 on the
+    # live site, and nothing anywhere announcing it.
+    #
+    # This exists because `*.pdf` — written to keep a client's brief out
+    # of a public repository — also swallowed every dossier the panel
+    # writes, from the day the engine learned to show PDFs.
+    # This one is not advice. Everything else look.py reports is a thing
+    # that looks wrong; this is a thing that WILL be wrong the moment it
+    # is deployed, and the deploy runs this. So it stops the run.
+    hidden = unseen_by_git()
+    if hidden:
+        print("\n  REFUSED: {} file(s) under content/ are not in the"
+              " repository.\n".format(len(hidden)))
+        for where, lines in hidden:
+            print("  " + where)
+            for line in lines:
+                print("    " + line)
+        print()
+        return 1
 
     if not notes:
         print("\n  Nothing to report — everything in content/ will do what it says.\n")

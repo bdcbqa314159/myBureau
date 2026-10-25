@@ -171,6 +171,20 @@ comprendre d'autre que ça.
 **TextEdit**, qui est déjà sur ton Mac : clic droit sur le fichier →
 **Ouvrir avec → TextEdit**. Aucune application à installer.
 
+### Des fichiers pour t'entraîner
+
+Avant de toucher à tes vraies photos : le dossier **`kit/`** contient des
+fichiers faits exprès pour ça — des images de toutes les formes, deux
+fonds d'écran, des portraits pour `about me.txt`, un PDF de quatre pages,
+deux petites vidéos.
+
+Tire-les dans le panneau, casse tout, appuie sur **Annuler**. Rien de ce
+qui est dans `kit/` n'apparaît sur le site : c'est un bac à sable.
+
+Il y a même un dossier `kit/wrong/` avec des fichiers qui **mentent** sur
+ce qu'ils sont — un PDF renommé en `.jpg`, par exemple. Le panneau doit
+les refuser en t'expliquant pourquoi. C'est normal, et c'est fait pour.
+
 ### Ajouter un projet
 
 Le plus simple, et celui qui ne se trompe pas : **duplique un projet qui
