@@ -229,10 +229,54 @@ def atomic(p: pathlib.Path, text: str) -> None:
     `zola serve` is watching this directory. A plain write is visible
     half-finished, and zola will occasionally read it and flash an error
     at her for something she did not do.
+
+    THE LAST GATE BEFORE THE DISK. Every write the panel makes to a
+    content file comes through here — every verb, undo, and nudge — so
+    this is the one place that can promise the file it leaves behind is
+    one zola will read.
+
+    It exists because a content file turned up with its front matter
+    gone and the site stopped building: "Couldn't find front matter in
+    `_index.en.md`". Nothing in the journal explained it, so rather than
+    guess at a cause, the class is closed here. Whatever reaches this
+    function with the wrong bytes now gets a refusal naming the file
+    instead of a site that will not build.
+
+    The temp name carries the pid, because preview.sh hunts for a free
+    port and will happily start a SECOND panel on the same repository.
+    Two panels sharing one temp name can have one truncate the other's
+    half-written file and then rename it into place.
     """
-    tmp = p.with_name(p.name + ".studio-tmp")
+    if p.suffix == ".md" and _under_content(p):
+        unfenced = _no_front_matter(text)
+        if unfenced:
+            raise Refused("je refuse d'écrire {} : {}. Rien n'a été modifié."
+                          .format(p.name, unfenced))
+    tmp = p.with_name("{}.studio-tmp-{}".format(p.name, os.getpid()))
     tmp.write_text(text, encoding="utf-8")
     os.replace(tmp, p)
+
+
+def _under_content(p: pathlib.Path) -> bool:
+    try:
+        p.resolve().relative_to(CONTENT.resolve())
+        return True
+    except (ValueError, OSError):
+        return False
+
+
+def _no_front_matter(text: str) -> str:
+    """Why zola would refuse this text, or "" if it would not.
+
+    The same three things zola checks, in her words rather than its.
+    """
+    if not text.strip():
+        return "le fichier serait vide"
+    if not text.startswith("+++"):
+        return "il ne commencerait pas par +++"
+    if text.count("+++") < 2:
+        return "l'en-tête ne serait pas fermée par un second +++"
+    return ""
 
 
 def nudge(folder: pathlib.Path) -> None:
@@ -255,7 +299,7 @@ def nudge(folder: pathlib.Path) -> None:
             pass
 
 
-def set_key(text: str, name: str, value) -> str:
+def set_key(text: str, name: str, value, where: str = "ce fichier") -> str:
     """Set one key in the front matter, leaving every other byte alone.
 
     Three cases, in order: the key is already there; there is an [extra]
@@ -265,7 +309,8 @@ def set_key(text: str, name: str, value) -> str:
     """
     parts = text.split("+++")
     if len(parts) < 3:
-        raise Refused("ce fichier n'a pas d'en-tête entre les +++.")
+        raise Refused("{} n'a pas d'en-tête entre les +++ — c'est ce fichier"
+                      " qu'il faut réparer.".format(where))
     fm = parts[1]
     line = "{} = {}".format(name, value if isinstance(value, int)
                             else '"{}"'.format(value))
@@ -397,9 +442,17 @@ def place(item: str, x: int, y: int) -> dict:
     if not (0 <= x <= 100 and 0 <= y <= 100):
         raise Refused("une position est un pourcentage du bureau, de 0 à 100.")
     texts = []
+    # WORK OUT EVERY FILE FIRST, WRITE NOTHING UNTIL ALL OF THEM PARSE.
+    # This verb touches one file per language, and a refusal halfway
+    # through leaves one language moved and the other where it was — the
+    # exact half-edit this whole tool exists to remove. It only looked
+    # safe because `index.en.md` sorts before `index.md`.
+    planned = []
     for f in language_files(d):
         before = f.read_text(encoding="utf-8")
-        after = set_key(set_key(before, "x", x), "y", y)
+        planned.append((f, before, set_key(set_key(before, "x", x, rel(f)),
+                                           "y", y, rel(f))))
+    for f, before, after in planned:
         if after != before:
             texts.append({"path": rel(f), "before": before})
             atomic(f, after)
@@ -427,7 +480,7 @@ def retitle(item: str, lang: str, title: str) -> dict:
     if not f.exists():
         raise Refused("il n'y a pas encore de version {} pour celui-ci.".format(lang))
     before = f.read_text(encoding="utf-8")
-    after = set_key(before, "title", title)
+    after = set_key(before, "title", title, rel(f))
     if after != before:
         atomic(f, after)
         record("retitle", [{"path": rel(f), "before": before}], [])
@@ -462,9 +515,12 @@ def set_alt(item: str, name: str, text: str) -> dict:
     if len(text) > 300:
         raise Refused("une description tient en 300 caractères.")
     texts, wrote = [], 0
+    # every file planned before any is written — see place()
+    planned = []
     for f in language_files(d):
         before = f.read_text(encoding="utf-8")
-        after = set_alt_key(before, name, text)
+        planned.append((f, before, set_alt_key(before, name, text, rel(f))))
+    for f, before, after in planned:
         if after != before:
             texts.append({"path": rel(f), "before": before})
             atomic(f, after)
@@ -474,7 +530,8 @@ def set_alt(item: str, name: str, text: str) -> dict:
     return {"described": name, "files": wrote}
 
 
-def set_alt_key(text: str, file: str, value: str) -> str:
+def set_alt_key(text: str, file: str, value: str,
+                where: str = "ce fichier") -> str:
     """One line inside `[extra.alt]`, leaving every other byte alone.
 
     `[extra.alt]` is appended at the END of the front matter when it is
@@ -484,7 +541,8 @@ def set_alt_key(text: str, file: str, value: str) -> str:
     """
     parts = text.split("+++")
     if len(parts) < 3:
-        raise Refused("ce fichier n'a pas d'en-tête entre les +++.")
+        raise Refused("{} n'a pas d'en-tête entre les +++ — c'est ce fichier"
+                      " qu'il faut réparer.".format(where))
     fm = parts[1]
     line = '"{}" = "{}"'.format(file, value)
     here = re.compile(r'^\s*"' + re.escape(file) + r'"\s*=.*$', re.M)
@@ -512,11 +570,17 @@ def set_body(item: str, lang: str, body: str) -> dict:
     f = d / ("{}.md".format(stem) if lang in ("", "fr", None)
              else "{}.{}.md".format(stem, lang))
     if not f.exists():
-        raise Refused("il n'y a pas encore de version {} pour celui-ci.".format(lang))
+        raise Refused("il n'y a pas encore de version {} pour celui-ci"
+                      " ({} n'existe pas).".format(lang, f.name))
     before = f.read_text(encoding="utf-8")
     parts = before.split("+++")
     if len(parts) < 3:
-        raise Refused("ce fichier n'a pas d'en-tête entre les +++.")
+        # NAMING THE FILE. This said only "ce fichier n'a pas d'en-tête",
+        # which reads as though the thing she had just selected were the
+        # problem — the report it produced was "it cannot find the
+        # _index.en.md". The file it means is the one to go and look at.
+        raise Refused("{} n'a pas d'en-tête entre les +++ — c'est ce fichier"
+                      " qu'il faut réparer.".format(rel(f)))
     after = "+++".join(parts[:2]) + "+++\n\n" + body.strip() + "\n"
     if after != before:
         atomic(f, after)

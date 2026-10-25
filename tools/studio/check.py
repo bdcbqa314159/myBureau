@@ -401,6 +401,7 @@ def main() -> int:
         check("the whole site cannot be thrown away", True)
 
     doc_cases(tmp)
+    gate_cases(tmp)
     honesty_cases(tmp)
     identity_cases(tmp)
 
@@ -615,6 +616,91 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     verbs.undo()
     check("undo walks all of it back",
           (tmp / proj / "index.md").read_text(encoding="utf-8") == before)
+
+
+def gate_cases(tmp: pathlib.Path) -> None:
+    """The panel must never leave a file zola cannot read.
+
+    A content file turned up with its front matter gone and the site
+    stopped building. Nothing in the journal explained it, so instead of
+    guessing at a cause the class is closed at the last gate before the
+    disk: every write to a content .md goes through verbs.atomic.
+    """
+    print("\n  -- the last gate before the disk --\n")
+
+    def refused(fn, *a, **k):
+        try:
+            fn(*a, **k)
+        except verbs.Refused as why:
+            return str(why)
+        return ""
+
+    f = tmp / "content" / "_index.en.md"
+    good = f.read_text(encoding="utf-8")
+    for what, text in [
+            ("an empty file", ""),
+            ("one with no opening +++", "Juste du texte.\n"),
+            ("one whose header is never closed", '+++\ntitle = "x"\n\nTexte.\n'),
+            ("one with a blank line before the +++",
+             '\n+++\ntitle = "x"\n+++\n\nTexte.\n')]:
+        say = refused(verbs.atomic, f, text)
+        check("atomic refuses " + what, say != "", "it was written")
+        check("  and says which file", "_index.en.md" in say, say)
+    check("and the file is untouched by any of those attempts",
+          f.read_text(encoding="utf-8") == good)
+
+    # the gate is for content only: the journal and config.toml are not
+    # markdown and must still be writable
+    verbs.atomic(verbs.JOURNAL, "")
+    check("the journal may still be emptied — it is not content",
+          verbs.JOURNAL.read_text(encoding="utf-8") == "")
+
+    # a real edit still goes through
+    verbs.set_body("content", "en", "I am an art director.")
+    now = f.read_text(encoding="utf-8")
+    check("a real edit still lands",
+          "art director" in now and now.startswith("+++"))
+
+    # ---- the refusals name the file ---------------------------------
+    broken = tmp / "content" / "da" / "theodora" / "index.en.md"
+    was = broken.read_text(encoding="utf-8")
+    broken.write_text("Pas d'en-tete ici.\n", encoding="utf-8")
+    for what, fn, args in [
+            ("set_body", verbs.set_body, ("content/da/theodora", "en", "Texte.")),
+            ("retitle", verbs.retitle, ("content/da/theodora", "en", "Nom")),
+            ("set_alt", verbs.set_alt, ("content/da/theodora", "01.jpg", "Une photo."))]:
+        say = refused(fn, *args)
+        check("{} on a broken file names it".format(what),
+              "index.en.md" in say, say)
+    broken.write_text(was, encoding="utf-8")
+
+    # ---- a verb that writes EVERY language is all or nothing --------
+    # Asked of BOTH orders. `index.en.md` sorts before `index.md`, so
+    # breaking the English one found the problem before anything was
+    # written and the check passed on sort order rather than on the code
+    # being right. Breaking the French one is the real test.
+    fr = tmp / "content" / "da" / "theodora" / "index.md"
+    for which, other in ((broken, fr), (fr, broken)):
+        keep_a = which.read_text(encoding="utf-8")
+        keep_b = other.read_text(encoding="utf-8")
+        which.write_text("Pas d'en-tete.\n", encoding="utf-8")
+        say = refused(verbs.place, "content/da/theodora", 40, 40)
+        check("place refuses when {} is broken".format(which.name),
+              say != "", "it went ahead")
+        check("  and names that file", which.name in say, say)
+        check("  and left {} completely alone".format(other.name),
+              other.read_text(encoding="utf-8") == keep_b)
+        which.write_text(keep_a, encoding="utf-8")
+
+    for which, other in ((broken, fr), (fr, broken)):
+        keep_a, keep_b = (which.read_text(encoding="utf-8"),
+                          other.read_text(encoding="utf-8"))
+        which.write_text("Pas d'en-tete.\n", encoding="utf-8")
+        refused(verbs.set_alt, "content/da/theodora", "01.jpg", "Une photo.")
+        check("set_alt left {} alone when {} was broken"
+              .format(other.name, which.name),
+              other.read_text(encoding="utf-8") == keep_b)
+        which.write_text(keep_a, encoding="utf-8")
 
 
 def identity_cases(tmp: pathlib.Path) -> None:

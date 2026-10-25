@@ -18,6 +18,7 @@ is not under content/.
 """
 from __future__ import annotations
 
+import fcntl
 import http.server
 import json
 import mimetypes
@@ -367,7 +368,33 @@ class Studio(http.server.BaseHTTPRequestHandler):
         raise verbs.Refused("cette action n'existe pas.")
 
 
+def only_one() -> None:
+    """Refuse to be the second panel on this repository.
+
+    preview.sh hunts for a free port, so running it twice does not
+    collide — it starts a SECOND panel, quietly, on the next port up.
+    Two panels then write to the same content/ with a lock each holds
+    alone, share a journal whose last line each believes is its own, and
+    both reload a frame the other changed. None of that is ever wanted.
+
+    An exclusive flock, so it is released by the kernel when this process
+    dies however it dies — no stale lock file to explain to anybody.
+    """
+    verbs.STUDIO.mkdir(exist_ok=True)
+    lock = verbs.STUDIO / "panel.lock"
+    fh = open(lock, "w")
+    try:
+        fcntl.flock(fh, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        print("\n  Un panneau tourne déjà pour ce dossier.\n"
+              "  Ferme-le (Ctrl-C dans sa fenêtre) avant d'en ouvrir un autre,\n"
+              "  ou utilise celui qui est déjà ouvert.\n", file=sys.stderr)
+        raise SystemExit(1)
+    globals()["_lock_handle"] = fh          # held for the life of the process
+
+
 def main() -> int:
+    only_one()
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 1112
     STATE["site"] = sys.argv[2] if len(sys.argv) > 2 else "http://127.0.0.1:1111/"
     threading.Thread(target=watch, daemon=True).start()

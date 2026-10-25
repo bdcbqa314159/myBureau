@@ -1212,6 +1212,47 @@ One consequence worth knowing: `zola serve` serves a **stale page with a
 content change gives. The panel's reload therefore waits for the new name
 to actually be in the page, not merely for the page to answer.
 
+#### The last gate before the disk
+
+A content file turned up with its front matter gone and the site stopped
+building — *"Couldn't find front matter in `_index.en.md`"*. I could not
+find the cause: the journal held seventeen operations and **every stored
+previous text parsed**, so no verb wrote the damage; a 400-step fuzz over
+the verbs, a both-languages pass over every object in the tree, the
+creation path, and two panels racing 160 writes all stayed clean.
+
+So the class is closed at the only place every write passes through
+rather than at a cause I cannot name. `verbs.atomic` refuses to write a
+`.md` under `content/` that would be empty, not start with `+++`, or
+never close its header — naming the file, changing nothing. Whatever the
+cause was, the outcome is now a refusal instead of a site that will not
+build.
+
+Three things followed from looking:
+
+- **The refusals did not name the file.** "ce fichier n'a pas d'en-tête"
+  reads as though the thing just selected were the problem; the report it
+  produced was *"it cannot find the `_index.en.md`"*. They name it now.
+- **`tools/look.py` said "nothing to report"** on a file that stops the
+  build outright. It refuses the run now, with the path and what is
+  missing — one command to find it.
+- **`place` and `set_alt` write one file per language and could refuse
+  halfway**, leaving one language edited and the other not. They plan
+  every file before writing any. That only looked safe because
+  `index.en.md` sorts before `index.md`; the checks now break each order.
+
+#### One panel per repository
+
+`preview.sh` hunts for a free port, so running it twice does not
+collide — it quietly starts a **second** panel on the next port up. Two
+panels write to one `content/` with a lock each holds alone, share a
+journal whose last line each believes is its own, and reload a frame the
+other changed.
+
+An exclusive `flock` on `.studio/panel.lock`, released by the kernel
+however the process dies, so there is no stale lock to explain. The
+second panel says so in French and exits.
+
 #### One writer at a time
 
 Four photographs dropped at once answered `[200, 200, 500, 500]` and left
