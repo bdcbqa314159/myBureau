@@ -473,10 +473,18 @@ function inspect(o) {
                                         : "hérité du bureau au-dessus"}</span>`}</div>
     </label>
     <p class="drop" data-drop="wallpaper">Dépose une image ici pour changer le fond.</p>` : "";
+  // A DESCRIPTION PER PHOTOGRAPH. Without it every photograph on the
+  // site carries alt="", which tells a screen reader there was nothing
+  // there — and in a portfolio the photographs are the content. It was
+  // writable by hand in the .md and nowhere in the panel.
+  const alt = o.alt || {};
   const shots = o.photographs.map((n, i) => `
     <li class="shot" draggable="true" data-name="${esc(n)}">
       <img src="${q("/media/" + o.path + "/" + n)}" alt="">
       <b>${i + 1}</b><button class="bin" title="jeter">✕</button>
+      <input class="alt" type="text" data-alt="${esc(n)}" maxlength="300"
+             value="${esc(alt[n] || "")}"
+             placeholder="ce qu'on voit sur cette photo">
     </li>`).join("");
 
   const canBin = o.path !== "content";
@@ -491,7 +499,10 @@ function inspect(o) {
     ${isDesk && !o.gallery ? "" : dossier(o) + reel(o) + `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">${o.gallery
         ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."
-        : "Dépose des photos ici. La première est l'icône."}</p>`}
+        : "Dépose des photos ici. La première est l'icône."}</p>
+      ${o.photographs.length ? `<p class="hintline">La description sert aux
+        personnes qui ne voient pas la photo. Elle est écrite une fois pour
+        toutes les langues.</p>` : ""}`}
     ${canBin ? `<button class="bin-all" id="binall">Jeter ${esc(o.titles.fr || o.name)}</button>` : ""}`;
   wire(o);
 }
@@ -511,6 +522,13 @@ function wire(o) {
     el("who").addEventListener("change", send);
     el("studio").addEventListener("change", send);
   }
+  look.querySelectorAll("[data-alt]").forEach((i) => {
+    i.addEventListener("change", async () => {
+      const out = await act({ verb: "set_alt", item: o.path,
+                              name: i.dataset.alt, text: i.value });
+      if (out) tell("description enregistrée");
+    });
+  });
   look.querySelectorAll("[data-title]").forEach((i) => {
     i.addEventListener("change", async () => {
       const out = await act({ verb: "retitle", item: o.path, lang: i.dataset.title, title: i.value });

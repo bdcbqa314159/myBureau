@@ -50,11 +50,16 @@ TOKEN = secrets.token_urlsafe(24)
 STATE = {"n": 0, "look": "", "site": "", "mark": None}
 
 
+# Held for the length of any verb. See do_POST.
+WRITING = threading.Lock()
+
+
 def fingerprint() -> int:
     stamp = []
     for p in sorted((ROOT / "content").rglob("*")):
         try:
-            stamp.append((str(p), p.stat().st_mtime_ns, p.stat().st_size))
+            s = p.stat()          # once, not twice: this runs every 0.4s
+            stamp.append((str(p), s.st_mtime_ns, s.st_size))
         except OSError:
             pass
     return hash(tuple(stamp))
@@ -272,6 +277,22 @@ class Studio(http.server.BaseHTTPRequestHandler):
             return self.oops(413, "ce fichier est très lourd.")
         raw = self.rfile.read(length) if length else b""
 
+        # ONE WRITER AT A TIME, for the whole verb AND the fingerprint it
+        # stamps afterwards.
+        #
+        # Four photographs dropped at once used to answer [200, 200, 500,
+        # 500] and leave ONE file on disk: _next_number() reads the folder
+        # and then writes to it, so two threads pick 04 and one overwrites
+        # the other — and both tell her it worked. The panel's own loop
+        # awaits each upload, so it took a second tab or an impatient
+        # double-click, and then it lost a photograph quietly.
+        #
+        # Serialising writes costs nothing here: there is one person at
+        # one desk, and the slowest verb is a 64MB file hitting an SSD.
+        with WRITING:
+            return self.write(u, q, raw)
+
+    def write(self, u, q: dict, raw: bytes) -> None:
         try:
             if u.path == "/api/upload":
                 into = (q.get("into") or [""])[0]
@@ -323,6 +344,8 @@ class Studio(http.server.BaseHTTPRequestHandler):
             return verbs.throw_away(ask["item"])
         if name == "set_identity":
             return verbs.set_identity(ask["owner"], ask["studio"])
+        if name == "set_alt":
+            return verbs.set_alt(ask["item"], ask["name"], ask["text"])
         if name == "retitle":
             return verbs.retitle(ask["item"], ask.get("lang", "fr"), ask["title"])
         if name == "set_body":

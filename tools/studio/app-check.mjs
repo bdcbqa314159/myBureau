@@ -187,6 +187,7 @@ const sandbox = {
               x: "32", y: "12", opens: null, icon: null, wallpaper: null,
               photographs: ["01.jpg", "02.jpg"], video: "film.mp4",
               doc: null, languages: ["en", "fr"],
+              alt: { "01.jpg": "Deux silhouettes sur une plage." },
             }, {
               // a dossier that has not had its PDF yet — the state the
               // panel used to answer by asking for photographs
@@ -339,6 +340,29 @@ if (loaded) {
     /data-drop="poster"/.test(look.innerHTML));
   check("a film is not asked for a PDF",
     !/data-drop="doc"/.test(look.innerHTML));
+
+  // ---- a description per photograph --------------------------------
+  // Every photograph on the site carried alt="", which tells a screen
+  // reader there was nothing there. It was writable by hand in the .md
+  // and nowhere in the panel.
+  check("each photograph has a box for what it shows",
+    (look.innerHTML.match(/data-alt="/g) || []).length === 2,
+    look.innerHTML.slice(0, 300));
+  check("and the one already described shows its words",
+    /value="Deux silhouettes sur une plage\."/.test(look.innerHTML));
+  check("the panel says the description is for people who cannot see it",
+    /ne voient pas/.test(look.innerHTML));
+  let saidAlt = null;
+  const keepFetch = sandbox.fetch;
+  sandbox.fetch = async (url, opts) => {
+    if (String(url).includes("/api/do")) saidAlt = JSON.parse(opts.body);
+    return keepFetch(url, opts);
+  };
+  for (const fn of listeners.get("alt:02.jpg:change") || []) await fn();
+  sandbox.fetch = keepFetch;
+  check("typing one sends it for THAT photograph",
+    saidAlt && saidAlt.verb === "set_alt" && saidAlt.item === "content/da/theodora"
+      && saidAlt.name === "02.jpg", JSON.stringify(saidAlt));
 
   // ---- the dossier -------------------------------------------------
   // "I created a .pdf inside a folder and it creates a pdf and keeps

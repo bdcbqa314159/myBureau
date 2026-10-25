@@ -83,6 +83,8 @@ button:disabled { color: #9a9aa2; cursor: default; }
 /* the handle drawn over a real icon while it is being moved */
 .look h2 { margin: 0 0 .5rem; font-size: 13px; }
 .look .what { color: #6b6b74; font-size: 12px; margin: 0 0 .75rem; }
+/* the description sits under its photograph, full width of the cell */
+.shot .alt { width: 100%; margin-top: .25rem; font-size: 11px; padding: .2rem .3rem; }
 .about { margin: 0 0 .9rem; padding: .5rem .6rem .6rem; border: 1px solid #dcdce2;
          border-radius: 6px; background: #fafafc; }
 .about legend { padding: 0 .3rem; font-size: 11px; color: #6b6b74; }

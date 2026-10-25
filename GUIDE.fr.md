@@ -420,6 +420,17 @@ title = "mon projet.jpg"
 +++
 ```
 
+**Depuis le panneau, c'est plus simple** : sous chaque photo il y a une
+petite case. Écris ce qu'on voit, et c'est enregistré.
+
+Une description sert **les deux langues** : elle est écrite une fois. Si
+tu veux la version anglaise à part, change-la à la main dans
+`index.en.md` — le panneau ne touche que la ligne de la photo.
+
+> Sans description, le site dit à un lecteur d'écran qu'il n'y avait rien
+> à cet endroit. Dans un portfolio, les photos **sont** le contenu — donc
+> ça vaut le quart d'heure.
+
 ### Changer les textes du site lui-même
 
 Les mots qui ne sont pas les tiens — *contact*, *retour à*, les messages
@@ -496,6 +507,19 @@ Son fichier texte n'est pas nommé `index.md`. Affiche les extensions
 dans le Finder (**Finder → Réglages → Avancé → Afficher tous les noms
 d'extension de fichier**) et regarde : un `index.md.txt` ou un
 `index.rtf` ne compte pas. Renomme-le en `index.md`.
+
+### Le panneau refuse une photo en disant qu'elle « n'est pas une image »
+
+Ça veut dire que le fichier ne porte pas le bon nom. Un `.pdf` ou une
+photo d'iPhone (`.heic`) renommée en `.jpg` **reste** un PDF ou un
+`.heic` : changer l'extension ne change pas le fichier.
+
+Avant, le panneau acceptait ce fichier et **le site ne se construisait
+plus** — l'erreur arrivait plus tard, loin du geste. Maintenant il le
+refuse tout de suite et dit ce que c'est vraiment.
+
+Ouvre le fichier dans **Aperçu**, puis *Fichier ▸ Exporter*, et choisis
+JPEG.
 
 ### Une photo n'apparaît pas
 
