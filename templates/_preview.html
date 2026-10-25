@@ -21,15 +21,21 @@
 -#}
 {% set_global pv_clip = "" %}
 {% set_global pv_still = false %}
+{% set_global pv_doc = "" %}
 {% for a in fp.assets %}
   {% set leaf = a | split(pat="/") | last %}
   {% if leaf | split(pat=".") | last | lower in config.extra.video_types %}
     {% set_global pv_clip = a %}
+  {% elif leaf | split(pat=".") | last | lower in config.extra.doc_types %}
+    {% set_global pv_doc = a %}
   {% elif leaf | split(pat=".") | last | lower in config.extra.image_types and leaf | split(pat=".") | first != "icon" and leaf | split(pat=".") | first != "poster" %}
     {% set_global pv_still = true %}
   {% endif %}
 {% endfor %}
-{% if pv_clip == "" and pv_still and fp.extra.opens != "page" %}
+{#- `pv_doc` keeps this in step with _icon.html, which sends a document
+    to its own page: a brochure with a cover photograph in the folder
+    would otherwise get a preview dialog here that no icon ever opens. -#}
+{% if pv_clip == "" and pv_doc == "" and pv_still and fp.extra.opens != "page" %}
 <dialog class="win win-preview" id="preview-{{ fp.path | slugify }}">
   <div class="win-bar">
     <span>{{ fp.title }}</span>

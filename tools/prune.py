@@ -37,25 +37,42 @@ OUT = ROOT / "public"
 # Only ever media. Never html, css, js, fonts, robots.txt — those are the
 # site itself, and a matcher that misses one of those breaks the page
 # rather than wasting a few kilobytes.
-MEDIA = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif",
+MEDIA = {".pdf",
+         ".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif",
          ".mp4", ".webm", ".mov", ".m4v"}
 
 
 def asked_for(out: pathlib.Path) -> set[str]:
-    """Every url the built pages and the stylesheet reference."""
+    """Every url the built pages and the stylesheet reference.
+
+    A url is recorded WITHOUT its query or fragment, because what is on
+    disk has neither. The document frame asks for
+
+        .../da/grocery/dossier.pdf#toolbar=0&navpanes=0
+
+    and with the fragment left on, `wanted()` matched nothing, the PDF was
+    pruned, and the deployed page framed a 404. The check below that is
+    meant to refuse exactly that missed it too: `.pdf#toolbar=0...` is not
+    a media suffix, so it skipped the url instead of failing on it. One
+    strip here, and both of them are right.
+    """
     urls: set[str] = set()
+
+    def note(u: str) -> None:
+        u = u.split("#")[0].split("?")[0]
+        if u:
+            urls.add(u)
+
     for p in list(out.rglob("*.html")) + list(out.rglob("*.css")):
         text = p.read_text(encoding="utf-8", errors="replace")
         for m in re.finditer(r'(?:src|href)="([^"]+)"', text):
-            urls.add(m.group(1))
+            note(m.group(1))
         for m in re.finditer(r'url\(\s*[\'"]?([^)\'"]+)', text):
-            urls.add(m.group(1))
+            note(m.group(1))
         # srcset is a comma-separated list, each with a width descriptor
         for m in re.finditer(r'srcset="([^"]+)"', text):
             for part in m.group(1).split(","):
-                bit = part.strip().split(" ")[0]
-                if bit:
-                    urls.add(bit)
+                note(part.strip().split(" ")[0])
     return urls
 
 
@@ -134,7 +151,7 @@ def main() -> int:
     on_disk = {str(p.relative_to(OUT)) for p in OUT.rglob("*") if p.is_file()}
     missing = []
     for u in sorted(urls):
-        tail = u.split("?")[0]
+        tail = u                      # already stripped — see asked_for
         if pathlib.PurePosixPath(tail).suffix.lower() not in MEDIA:
             continue
         if not any(tail.endswith("/" + d) or tail == d for d in on_disk):

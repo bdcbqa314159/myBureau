@@ -25,6 +25,7 @@ CONTENT = ROOT / "content"
 
 IMAGE = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"}
 VIDEO = {".mp4", ".webm", ".mov", ".m4v"}
+DOC = {".pdf"}
 # a file the engine gives a job to, so it is never one of the photographs
 SPOKEN_FOR = {"icon", "poster", "wallpaper", "about"}
 
@@ -89,6 +90,15 @@ def video(folder: pathlib.Path) -> "str | None":
     return None
 
 
+def doc(folder: pathlib.Path) -> "str | None":
+    """The dossier, if this project is one. The engine takes the first it
+    finds, so this reports the same one the page will show."""
+    for f in sorted(folder.iterdir()):
+        if f.is_file() and f.suffix.lower() in DOC:
+            return f.name
+    return None
+
+
 def thing(folder: pathlib.Path, stem: str, kind: str) -> dict:
     files = langs(folder, stem)
     fm = {code: front(f) for code, f in files.items()}
@@ -107,6 +117,7 @@ def thing(folder: pathlib.Path, stem: str, kind: str) -> dict:
         "about": special(folder, "about"),
         "photographs": photographs(folder),
         "video": video(folder),
+        "doc": doc(folder),
         # which language files exist, so the dashboard can say "English is
         # missing" rather than silently editing one of two
         "languages": sorted(files),

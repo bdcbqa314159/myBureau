@@ -229,6 +229,38 @@ Wallpapers are SVG too — a duotone wash, film grain from
 `feTurbulence`, and a vignette. Under 1 KB each instead of ~380 KB, and
 the grain is computed rather than compressed, so it never bands.
 
+### A document is shown, not downloaded
+
+**A `.pdf` in a project folder** makes that project a dossier: the file is
+framed in its own page, full width, at the height a brochure wants. Its
+icon navigates rather than opening a window — the brief asks for "un plus
+grand espace" for exactly this, and a twenty-page dossier read through a
+dialog is not reading it.
+
+Nothing on the site links to the file, which is the whole of what "shown,
+not downloaded" can mean from our side. The frame asks for
+`#toolbar=0&navpanes=0`, which hides the viewer chrome — and its download
+button — in Chrome and Safari; Firefox ignores it. That toolbar is the
+browser's, and a page cannot take it away.
+
+An `<iframe>`, not `<object>`/`<embed>`: the meta CSP carries
+`object-src 'none'`, so both of those are refused, while a frame falls
+under `default-src 'self'`.
+
+A cover photograph in the same folder sits **below** the document and
+becomes the desk icon, so `01.jpg` is the cover and the icon is the cover.
+A video and a PDF in one project is refused by `add_doc`/`add_video` in
+both directions: a project holding a video opens the film window, which
+never shows a dossier, so the PDF would be built and reachable from
+nowhere.
+
+> `tools/prune.py` counts `.pdf` as media now, which means an unreferenced
+> one is dropped. The url that frames a document carries a fragment, and
+> the matcher compared it against the file on disk with the fragment still
+> attached — so it matched nothing and deleted a PDF the page frames. Both
+> `asked_for()` and the case that guards it had the same blind spot. Urls
+> are stripped of query and fragment once, at harvest.
+
 ### The portrait in `about me.txt`
 
 **Drop a file called `about.*` beside the home desk's `_index.md`.** It
@@ -1119,7 +1151,8 @@ counter moved twice per edit and every careful rule above was defeated.
 A closed list in `tools/studio/verbs.py`, not a file manager:
 `new_project`, `new_bureau`, `move`, `throw_away`, `place`, `retitle`,
 `set_body`, `set_icon`, `set_wallpaper`, `set_about`, `set_identity`,
-`add_image`, `add_video`, `set_poster`, `reorder`, `remove_image`, `undo`.
+`add_image`, `add_video`, `add_doc`, `set_poster`, `reorder`,
+`remove_image`, `undo`.
 
 `set_identity` is the only one that leaves `content/`: the two words in
 the top bar are not content, they are in `config.toml` under

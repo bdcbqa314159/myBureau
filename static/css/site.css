@@ -799,6 +799,17 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 /* A film opening a project page gets the same ceiling as a photograph,
    and a black ground so letterboxing is the film's own edge rather than
    a cream gap nobody meant. */
+/* A document gets the height a brochure needs. There is no aspect ratio
+   to go on — a PDF can be A4 portrait or a landscape spread, and nothing
+   at build time knows which — so it takes most of the screen and scrolls
+   inside itself, which is what "son propre espace" means on a page. */
+.proj-doc { background: #2b2b2b; }
+.proj-doc iframe {
+  display: block; border: 0;
+  width: 100%; height: min(88vh, 1200px);
+}
+@media (max-width: 40rem) { .proj-doc iframe { height: 72vh; } }
+
 .proj-reel { background: #000; }
 .proj-reel video {
   display: block;

@@ -33,6 +33,15 @@ COPY = ["content", "templates", "static", "tools", "config.toml", "sass"]
 
 FRONT = '+++\ntitle = "{title}"\n{extra}+++\n\nUn texte.\n'
 
+# The smallest thing a browser will accept as a PDF. The build only copies
+# it, but a file that is not a PDF would make the cases that use it prove
+# nothing about the one thing they are for.
+TINY_PDF = (b"%PDF-1.4\n"
+            b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+            b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+            b"3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]>>endobj\n"
+            b"trailer<</Root 1 0 R>>\n%%EOF\n")
+
 
 def site(tmp: pathlib.Path) -> pathlib.Path:
     """A disposable copy of the site, minus the heavy placeholder photos
@@ -588,6 +597,17 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
     many produces a site that builds, deploys, and is quietly missing a
     photograph. Everything here is about what must SURVIVE.
     """
+    # A DOSSIER, because the url that frames one carries a fragment
+    # (#toolbar=0&navpanes=0) and that is what broke this: prune matched
+    # the url against the file on disk with the fragment still attached,
+    # found nothing, and deleted a PDF the page frames. The check below
+    # had its own copy of the same matching, with the same blind spot, so
+    # it agreed.
+    doc = d / "content" / "da" / "dossier"
+    doc.mkdir()
+    (doc / "index.md").write_text(FRONT.format(title="le dossier.pdf", extra=""))
+    (doc / "dossier.pdf").write_bytes(TINY_PDF)
+
     ok, log = build(d)
     pub = d / "public"
     before = {p for p in pub.rglob("*") if p.is_file()}
@@ -597,7 +617,8 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
                        capture_output=True, text=True)
     after = {p for p in pub.rglob("*") if p.is_file()}
 
-    MEDIA = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif",
+    MEDIA = {".pdf",
+             ".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif",
              ".mp4", ".webm", ".mov", ".m4v"}
     on_disk = {str(p.relative_to(pub)) for p in after}
     broken = []
@@ -608,7 +629,8 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
         for m in re.finditer(r'srcset="([^"]+)"', txt):
             urls |= {b.strip().split(" ")[0] for b in m.group(1).split(",") if b.strip()}
         for u in urls:
-            tail = u.split("?")[0]
+            # fragment AND query — a url names a file, neither of them do
+            tail = u.split("#")[0].split("?")[0]
             if pathlib.PurePosixPath(tail).suffix.lower() not in MEDIA:
                 continue
             if not any(tail.endswith("/" + x) or tail == x for x in on_disk):
@@ -632,6 +654,8 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
         ("what the image pipeline made was never even a candidate",
          "generated file(s) never considered" in r.stdout
          and " 0 generated" not in r.stdout),
+        ("a framed document survived, fragment in its url and all",
+         survived("dossier/dossier.pdf")),
     ]
 
 
@@ -719,6 +743,77 @@ def case_about_is_a_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
          "/en/about." not in page(d, "en/index.html")),
         ("it is not also sitting on the desk as an icon",
          'about.jpg' not in re.sub(r'<dialog.*?</dialog>', '', h, flags=re.S)),
+    ]
+
+
+def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A PDF is SHOWN, in its own page, and never offered as a download.
+
+    The engine could not display one at all: a .pdf in a project folder
+    was copied to the build and referenced by nothing. The panel offered
+    to make "un document", which produced a project named X.pdf and then
+    asked for photographs.
+
+    Two of them here, because the hard one is the brochure that also has
+    a cover: the cover must be the ICON and the dossier must be what the
+    click opens. Previewing the cover and never showing the document is
+    exactly the medley this is meant to end.
+    """
+    bureau = d / "content" / "da"
+    plain = bureau / "dossier-nu"
+    plain.mkdir()
+    (plain / "index.md").write_text(FRONT.format(title="le dossier.pdf", extra=""))
+    (plain / "dossier.pdf").write_bytes(TINY_PDF)
+
+    cover = bureau / "dossier-couverture"
+    cover.mkdir()
+    (cover / "index.md").write_text(FRONT.format(title="grocery.pdf", extra=""))
+    (cover / "grocery.pdf").write_bytes(TINY_PDF)
+    shutil.copyfile(ROOT / "content/da/theodora/01.jpg", cover / "01.jpg")
+
+    ok, log = build(d)
+    desk = page(d, "da/index.html")
+    nu = page(d, "da/dossier-nu/index.html")
+    cv = page(d, "da/dossier-couverture/index.html")
+    icons = re.findall(r'<a class="icon".*?</a>', desk, re.S)
+    icon_of = lambda slug: next(
+        (i for i in icons if 'data-vt="{}"'.format(slug) in i), "")
+
+    # Nothing anywhere may LINK to the file — that is the download.
+    links = re.findall(r'<a [^>]*href="[^"]*\.pdf[^"]*"', desk + nu + cv)
+
+    return [
+        ("builds", ok),
+        ("the file reaches the build at all",
+         (d / "public" / "da" / "dossier-nu" / "dossier.pdf").is_file()),
+        ("the page shows it in a frame",
+         bool(re.search(r'<iframe[^>]*src="[^"]*dossier\.pdf', nu))),
+        ("not through <object> or <embed>, which the CSP refuses",
+         "<object" not in nu and "<embed" not in nu),
+        ("and the CSP still refuses them, so that stays true",
+         "object-src 'none'" in nu),
+        ("nothing links to the file, so nothing offers to download it",
+         links == []),
+        ("nor asks for one with a download attribute",
+         "download" not in re.sub(r'<img[^>]*>', '', nu)),
+        ("its icon goes to its page rather than opening a window",
+         bool(icon_of("da-dossier-nu"))
+         and "data-window" not in icon_of("da-dossier-nu")),
+        ("and no dialog was rendered for it either",
+         'id="preview-da-dossier-nu"' not in desk),
+        # the brochure WITH a cover — the one that used to go wrong
+        ("a dossier with a cover still goes to its page",
+         bool(icon_of("da-dossier-couverture"))
+         and "data-window" not in icon_of("da-dossier-couverture")),
+        ("and no preview dialog is left behind for it",
+         'id="preview-da-dossier-couverture"' not in desk),
+        ("but the cover is what the icon looks like",
+         "processed_images" in icon_of("da-dossier-couverture")),
+        ("its page shows the document",
+         bool(re.search(r'<iframe[^>]*src="[^"]*grocery\.pdf', cv))),
+        ("and the cover below it, not competing with it",
+         cv.index("grocery.pdf") < cv.index("proj-pairs")
+         if "proj-pairs" in cv else False),
     ]
 
 
@@ -943,6 +1038,7 @@ CASES = [
     ("prune keeps what the site asks for", case_prune_keeps_what_the_site_asks_for),
     ("every page can say what it is", case_every_page_can_say_what_it_is),
     ("about me opens as a screen", case_about_is_a_screen),
+    ("a document is shown, not downloaded", case_a_document_is_shown),
     ("every photograph in the gallery opens", case_gallery_photographs_open),
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),

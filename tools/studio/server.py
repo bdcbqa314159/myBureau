@@ -279,6 +279,8 @@ class Studio(http.server.BaseHTTPRequestHandler):
                 how = (q.get("as") or [""])[0]
                 if how == "wallpaper":
                     out = verbs.set_wallpaper(into, name, raw)
+                elif how == "doc":
+                    out = verbs.add_doc(into, name, raw)
                 elif how == "about":
                     out = verbs.set_about(into, name, raw)
                 elif how == "icon":

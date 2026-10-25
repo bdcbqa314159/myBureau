@@ -36,11 +36,37 @@
       rather than competing with it. -#}
   {% set_global reel = "" %}
   {% set_global sheet = "" %}
+  {% set_global dossier = "" %}
   {% for a in page.assets %}
     {% set leaf = a | split(pat="/") | last %}
     {% if leaf | split(pat=".") | last | lower in config.extra.video_types %}{% set_global reel = a %}{% endif %}
+    {% if leaf | split(pat=".") | last | lower in config.extra.doc_types %}{% set_global dossier = a %}{% endif %}
     {% if leaf | split(pat=".") | first == "poster" %}{% set_global sheet = a %}{% endif %}
   {% endfor %}
+  {#- THE DOCUMENT, where there is one. SHOWN, not offered — there is no
+      link to the file anywhere on this page, which is the whole of what
+      "on montre, on ne télécharge pas" can mean from our side. A
+      browser's built-in viewer may still have a save button; that is the
+      browser's, and the page cannot take it away.
+
+      An <iframe>, because the meta CSP carries `object-src 'none'` —
+      <object> and <embed> are both refused by it, and a frame falls under
+      `default-src 'self'`. See the CSP comment in base.html.
+
+      `#toolbar=0&navpanes=0` asks Chrome and Edge to show the pages
+      without their viewer chrome, which is where their download button
+      lives. Firefox ignores it and shows its own toolbar. Scrolling works
+      either way, so a browser that ignores the hint loses nothing.
+
+      It opens the page, like the film, so the photographs below it fall
+      into the pairs rather than one of them competing for the top. -#}
+  {% if dossier %}
+    <figure class="proj-open proj-doc">
+      <iframe src="{{ get_url(path=dossier) }}#toolbar=0&amp;navpanes=0"
+              title="{{ page.title }}" loading="lazy"></iframe>
+    </figure>
+    {% set_global shown = 1 %}
+  {% endif %}
   {% if reel %}
     <figure class="proj-open proj-reel">
       <video controls playsinline preload="metadata"
