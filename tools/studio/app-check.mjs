@@ -181,7 +181,7 @@ const sandbox = {
                       live: false },
           desks: [{
             kind: "desk", path: "content", name: "content", gallery: false,
-            depth: 0, opens_as: "page", empty: false,
+            depth: 0, empty: false,
             titles: { fr: "myBureau", en: "myBureau" },
             bodies: { fr: "", en: "" },
             x: null, y: null, opens: null, icon: null, wallpaper: null,
@@ -207,7 +207,7 @@ const sandbox = {
             }],
           }, {
             kind: "desk", path: "content/da", name: "da", gallery: false,
-            depth: 1, opens_as: "page", empty: false,
+            depth: 1, empty: false,
             titles: { fr: "DA", en: "art direction" },
             bodies: { fr: "Un texte.", en: "Some text." },
             x: "66", y: "66", opens: null, icon: null, wallpaper: "wallpaper.jpg",
@@ -580,7 +580,7 @@ if (loaded) {
   // By the clause, not by the whole line: this pinned the line verbatim
   // and broke the moment a second thing that cannot be placed was added
   // to it, while what it is actually for was still true.
-  check("icons inside a folder window are not given a position",
+  check("only an icon on the desk itself is given a position",
     /const onDesk = desk\.contains\(icon\)/.test(src4)
     && /if \(!moved \|\| !onDesk\)/.test(src4));
 

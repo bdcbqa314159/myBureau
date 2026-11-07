@@ -121,10 +121,9 @@ function kindOf(o) {
   if (o.kind === "about") return "présentation";
   if (o.kind === "desk" || o.kind === "folder") {
     if (o.gallery) return "galerie";
-    const k = model.desks.find((d) => d.path === o.path);
-    // a folder's job is not a property of the folder: it is where it is
-    if (!k) return "dossier";
-    return k.opens_as === "window" ? "dossier · fenêtre" : "dossier · page";
+    // every folder opens a page now — a bureau of its own at the top,
+    // the project page anywhere else
+    return "dossier · page";
   }
   if (o.video) return "film";
   if (o.doc) return "dossier · page";
@@ -339,13 +338,13 @@ function folderSays(o) {
   const k = model.desks.find((d) => d.path === o.path);
   if (!k) return "";
   if (k.gallery) return "Une galerie : ses photos sont dans le dossier, il n'y a rien à poser dessus.";
-  if (k.empty) {
-    return (k.depth || 0) >= 1
-      ? "Vide pour l'instant, donc il ouvre sa propre page. Mets quelque chose dedans et il s'ouvrira comme une fenêtre."
-      : "Vide pour l'instant. Il a déjà sa page et sa place dans le bandeau.";
+  if ((k.depth || 0) >= 1) {
+    return k.empty
+      ? "Il a sa propre page : son titre, sa description, et son travail dessous. Vide pour l'instant."
+      : "Il a sa propre page : son titre, sa description, et son travail dessous.";
   }
-  return k.opens_as === "window"
-    ? "Il s'ouvre comme une fenêtre sur le bureau où il est posé."
+  return k.empty
+    ? "Vide pour l'instant. Il a déjà sa page et sa place dans le bandeau."
     : "Il a sa propre page, son fond d'écran, et une place dans le bandeau.";
 }
 let dragging = null;

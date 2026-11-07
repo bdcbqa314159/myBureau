@@ -186,7 +186,7 @@ configured.
 | you click | you get |
 |---|---|
 | a folder **on the home desk** | its own desk, its own wallpaper — a new page |
-| a folder **anywhere else** | a window on the desk it sits on, translucent, several at once |
+| a folder **anywhere else** | its own page — title, description, photographs |
 | a project with a **video** in it | the film window, text beside it, minimisable |
 | any other project | a **preview** window, modal, Escape closes it |
 | a project with **no image at all** | its page — there is nothing to preview |

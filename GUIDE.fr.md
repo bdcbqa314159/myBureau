@@ -126,9 +126,9 @@ Tu peux :
 > elles qu'on verra.
 
 > **Un dossier ne fait pas la même chose partout.** Sur la page
-> d'accueil, il a sa propre page et une place dans le bandeau. Rangé dans
-> un autre dossier, il s'ouvre comme une fenêtre. Et tant qu'il est vide,
-> il ouvre sa page — c'est normal, mets quelque chose dedans.
+> d'accueil, il a sa propre page — un nouveau bureau — et une place dans
+> le bandeau. Rangé dans un autre dossier, il ouvre **sa propre page** :
+> son titre, sa description, et ses photos dessous.
 - **regarder** une chose plutôt que le bureau où elle est posée : le
   bouton « regarder » au-dessus de la page
 - **ranger** : attrape une chose **dans la page** et lâche-la sur un
@@ -381,8 +381,10 @@ Il apparaît sur le bureau **et** dans le bandeau du haut, tout seul.
 > **Où tu le mets change ce qu'il fait.** Un dossier posé sur la page
 > d'accueil ouvre **un nouveau bureau**, en plein écran, avec son propre
 > fond d'écran — c'est le cas de `DA`, `graphic design` et `pellicules`.
-> Un dossier rangé *à l'intérieur* d'un de ceux-là ouvre une **fenêtre**
-> sur le bureau où il est posé, sans quitter la page.
+> Un dossier rangé *à l'intérieur* d'un de ceux-là ouvre **sa page** :
+> fond clair, son titre, le texte que tu écris dans son `_index.md`, et
+> ses photos dessous. Pas de fond d'écran, pas de fenêtre — c'est une
+> page de projet, comme `grocery list`.
 
 ### Changer le fond d'écran d'un bureau
 

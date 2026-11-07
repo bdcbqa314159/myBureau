@@ -701,10 +701,16 @@ def new_bureau(into: str, name: str) -> dict:
         raise Refused("donne-lui un nom, sans guillemets.")
     folder = _free_folder(d, name)
     folder.mkdir()
+    # WHICH TEMPLATE, and it is decided by WHERE. A folder on the home
+    # desk is a bureau: its own desk, its own wallpaper, its word in the
+    # bandeau. A folder anywhere else is a piece of work and opens the
+    # project page — title, description, photographs. Getting this wrong
+    # builds perfectly and gives her a desk where she asked for a page.
+    template = "section.html" if d == CONTENT.resolve() else "page.html"
     moves = []
     for lang in _languages_of(d, "_index"):
         f = folder / ("_index.md" if not lang else "_index.{}.md".format(lang))
-        f.write_text('+++\ntitle = "{}"\ntemplate = "section.html"\n+++\n\n\n'.format(name),
+        f.write_text('+++\ntitle = "{}"\ntemplate = "{}"\n+++\n\n\n'.format(name, template),
                      encoding="utf-8")
         moves.append({"from": "", "to": rel(f)})
     moves.append({"from": "", "to": rel(folder)})

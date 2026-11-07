@@ -291,11 +291,12 @@ def case_the_panel_sees_what_the_site_renders(d: pathlib.Path) -> list[tuple[str
         if len(desk["on"]) and len(shown) < len(desk["on"]):
             wrong_count.append(desk["path"])
 
-    # What the panel SAYS a folder will do, against what the site did.
-    # The rule has a clause that catches people out — an empty folder
-    # opens a page wherever it is — so a panel that got this wrong would
-    # promise a window and deliver a page.
-    lied = []
+    # NO FOLDER OPENS A WINDOW. A second-class folder used to open a
+    # little window listing its contents; it goes to its own page now,
+    # which is what the brief asked for. Two ways that could come back —
+    # a data-window left on a folder icon, or a folder navigating to a
+    # page nobody built — and the second is silent in a browser.
+    windowed, pageless = [], []
     by_path = {k["path"]: k for k in tree["desks"]}
     for desk in tree["desks"]:
         rel = desk["path"][len("content"):].strip("/")
@@ -303,23 +304,23 @@ def case_the_panel_sees_what_the_site_renders(d: pathlib.Path) -> list[tuple[str
         if not html:
             continue
         for child in desk["on"]:
-            k = by_path.get(child["path"])
-            if k is None:                       # not a folder
+            # about me.txt is a window and carries the home desk's own
+            # path, so by_path would find it and call it a folder.
+            if child["kind"] != "folder":
                 continue
-            slug = child["path"][len("content/"):].replace("/", "-")
-            windowed = 'data-window="folder-{}"'.format(slug) in html
-            said = k["opens_as"]
-            if windowed != (said == "window"):
-                lied.append((child["path"], said, "window" if windowed else "page"))
+            here = child["path"][len("content/"):]
+            if 'data-window="folder-{}"'.format(here.replace("/", "-")) in html:
+                windowed.append(child["path"])
+            if not page(d, here + "/index.html"):
+                pageless.append(child["path"])
 
     return [
         ("builds", ok),
         ("the panel reads every desk the site has",
          len(tree["desks"]) == len(list((d / "content").rglob("_index.md")))),
-        ("and what it says a folder will do is what the site does",
-         lied == []),
-        ("including the empty one, which opens a page where a window would be",
-         by_path.get("content/da/vide", {}).get("opens_as") == "page"),
+        ("no folder on any desk opens a window", windowed == []),
+        ("and every folder navigates to a page that was really built",
+         pageless == []),
         ("everything it would draw is really on that desk", missing == []),
         ("about me.txt is one of the things it draws, and the desk has it",
          any(c["kind"] == "about" for c in by_path["content"]["on"])
@@ -375,8 +376,8 @@ def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]
         ("the demo's own desks each kept their own",
          len({wall("da/index.html"), wall("graphic-design/index.html"),
               wall("travail-selectionne/index.html")}) == 3),
-        ("and a sub-bureau of those follows its parent",
-         wall("da/maison-cosette/index.html") == wall("da/index.html")),
+        ("but a folder ON a desk has no wallpaper at all — it is a page",
+         wall("da/maison-cosette/index.html") == "none"),
         ("no front matter in the whole site still types a wallpaper path",
          not any("wallpaper =" in f.read_text(encoding="utf-8")
                  for f in (d / "content").rglob("_index*.md"))),
@@ -432,9 +433,10 @@ def case_alt_text(d: pathlib.Path) -> list[tuple[str, bool]]:
 def dangling(h: str) -> list[str]:
     """Every data-window on a page that has no dialog to open.
 
-    This is the failure mode folder windows are built on top of: the icon
-    renders, the build is clean, and the click does nothing at all. Worth
-    asserting on every page of every case rather than once.
+    The icon renders, the build is clean, and the click does nothing at
+    all — which is why this is asserted on every page of every case
+    rather than once. It is also what now proves folder windows are
+    gone: nothing may point at one.
     """
     have = set(re.findall(r'<dialog[^>]*id="([^"]+)"', h))
     return [w for w in re.findall(r'data-window="([^"]+)"', h) if w not in have]
@@ -473,72 +475,81 @@ def case_top_level_navigates(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
-def case_second_level_window(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """A folder INSIDE a bureau opens as a window on that bureau's desk."""
+def case_second_level_page(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A folder INSIDE a bureau opens its own page, not a window.
+
+    It used to open a little window listing its contents, on top of the
+    bureau's wallpaper. Neither was asked for: "les dossiers ou certains
+    elements ouvriront une nouvelle page qui presentera le projet de
+    maniere tres simple". So a folder at that depth is a piece of work,
+    and it gets the project page — title, description, photographs.
+    """
     p = d / "content" / "graphic-design" / "sous-dossier"
     p.mkdir()
-    (p / "_index.md").write_text(FRONT.format(
-        title="sous dossier", extra='template = "section.html"\n'))
-    q = p / "une-chose"
-    q.mkdir()
-    (q / "index.md").write_text(FRONT.format(title="une chose.pdf", extra=""))
+    (p / "_index.md").write_text(
+        FRONT.format(title="sous dossier", extra='template = "page.html"\n')
+        + "Une description, deux lignes.\n", encoding="utf-8")
+    shutil.copyfile(ROOT / "content/da/theodora/01.jpg", p / "01.jpg")
+    shutil.copyfile(ROOT / "content/da/theodora/02.jpg", p / "02.jpg")
     ok, log = build(d)
-    h = page(d, "graphic-design/index.html")
-    win = re.search(
-        r'<dialog class="win win-folder" id="folder-graphic-design-sous-dossier">.*?</dialog>',
-        h, re.S)
+    desk = page(d, "graphic-design/index.html")
+    own = page(d, "graphic-design/sous-dossier/index.html")
     return [
         ("builds", ok),
-        ("the window is on the bureau's desk", bool(win)),
-        ("the folder icon opens it",
-         'data-window="folder-graphic-design-sous-dossier"' in h),
-        ("what is inside is in the window",
-         bool(win) and "une chose.pdf" in win.group(0)),
-        ("the contents flow rather than being pinned to the desk",
-         bool(win) and "icon is-flow" in win.group(0)),
-        ("the folder is still a link, so it works without JavaScript",
-         bool(re.search(r'href="[^"]*graphic-design/sous-dossier/"', h))),
-        ("the home desk is untouched by it",
-         'id="folder-graphic-design-sous-dossier"' not in page(d, "index.html")),
-        ("no dangling window reference", dangling(h) == []),
+        ("no window is built for it on the bureau's desk",
+         "win-folder" not in desk),
+        ("and its icon does not try to open one",
+         'data-window="folder-graphic-design-sous-dossier"' not in desk),
+        ("the icon is a plain link to its page, so it works without JavaScript",
+         bool(re.search(r'href="[^"]*graphic-design/sous-dossier/"', desk))),
+        ("that page is the project page, not another desk",
+         'class="project"' in own and '<main class="desk"' not in own),
+        ("it carries no wallpaper", "--wallpaper" not in own),
+        ("its description is on it", "Une description, deux lignes." in own),
+        ("and its photographs are, the first one opening the page",
+         own.count("proj-open") == 1 and own.count("<figure") >= 2),
+        ("no dangling window reference", dangling(desk) == []),
     ]
 
 
 def case_three_deep(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """A folder inside a window navigates — one level of windows per desk.
+    """Depth has no floor any more, because nothing opens a window.
 
-    There is no recursion in this template engine, so there has to be a
-    floor. The floor must NAVIGATE rather than leave an icon wired to a
-    dialog nobody built.
+    There is no recursion in this template engine, which is why the old
+    rule needed one: a window per desk, and the level below it had to
+    navigate or be an icon wired to a dialog nobody built. Every folder
+    under the home desk goes to its own page now, so the floor is gone —
+    and what still has to hold is that no page at any depth points at a
+    window that is not there.
     """
     p = d / "content" / "un"
     p.mkdir()
     (p / "_index.md").write_text(FRONT.format(
-        title="un", extra='template = "section.html"\n'))
+        title="un", extra='template = "section.html"\n'), encoding="utf-8")
     q = p / "deux"
     q.mkdir()
     (q / "_index.md").write_text(FRONT.format(
-        title="deux", extra='template = "section.html"\n'))
+        title="deux", extra='template = "page.html"\n'), encoding="utf-8")
     r = q / "trois"
     r.mkdir()
     (r / "_index.md").write_text(FRONT.format(
-        title="trois", extra='template = "section.html"\n'))
+        title="trois", extra='template = "page.html"\n'), encoding="utf-8")
     s = r / "projet"
     s.mkdir()
-    (s / "index.md").write_text(FRONT.format(title="projet.pdf", extra=""))
+    (s / "index.md").write_text(FRONT.format(title="projet.pdf", extra=""),
+                                encoding="utf-8")
     ok, log = build(d)
     un = page(d, "un/index.html")
-    deux = re.search(r'<dialog class="win win-folder" id="folder-un-deux">.*?</dialog>',
-                     un, re.S)
     every = list((d / "public").rglob("*.html"))
     return [
         ("builds", ok),
-        ("a folder on a bureau's desk gets a window", bool(deux)),
-        ("a folder inside that window navigates instead",
-         bool(deux) and 'data-window="folder-un-deux-trois"' not in deux.group(0)
-                     and "un/deux/trois/" in deux.group(0)),
-        ("the deepest bureau is still reachable as its own desk",
-         "projet.pdf" in page(d, "un/deux/trois/index.html")),
+        ("a folder on a bureau's desk opens a page, not a window",
+         "win-folder" not in un and 'data-window="folder-un-deux"' not in un),
+        ("and it is a plain link to that page", "un/deux/" in un),
+        ("the folder below it is a page too, at whatever depth",
+         'class="project"' in page(d, "un/deux/trois/index.html")),
+        ("the project at the bottom still has its own page",
+         "projet.pdf" in page(d, "un/deux/trois/projet/index.html")),
         ("no page anywhere has a dangling window reference",
          all(dangling(f.read_text(encoding="utf-8")) == [] for f in every)),
     ]
@@ -1045,28 +1056,31 @@ def case_a_film_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
 
 
 def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """A video inside a folder, opened from the window rather than a desk.
+    """A project inside a folder that is now a page.
 
-    The dialog lives on whichever page shows the icon. An icon in the
-    `maison cosette` window on the DA desk needs its film on the DA desk,
-    or the click does nothing.
+    The folder used to open a window, and the film's dialog had to be on
+    the desk that showed the window. The folder is a page now, and the
+    hole that replaces that one is quieter: a project inside it would be
+    BUILT and linked from nowhere at all. So the page lists what is
+    inside it, and the film plays on its own page.
     """
     q = d / "content" / "da" / "maison-cosette" / "un-film"
     q.mkdir()
-    (q / "index.md").write_text(FRONT.format(title="un film.mov", extra=""))
+    (q / "index.md").write_text(FRONT.format(title="un film.mov", extra=""),
+                                encoding="utf-8")
     (q / "clip.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
     ok, log = build(d)
-    h = page(d, "da/index.html")
-    win = re.search(
-        r'<dialog class="win win-folder" id="folder-da-maison-cosette">.*?</dialog>',
-        h, re.S)
+    folder = page(d, "da/maison-cosette/index.html")
+    own = page(d, "da/maison-cosette/un-film/index.html")
     return [
         ("builds", ok),
-        ("the maison cosette window is on the DA desk", bool(win)),
-        ("the film inside it points at a film window",
-         bool(win) and 'data-window="film-da-maison-cosette-un-film"' in win.group(0)),
-        ("and that film window is on the DA desk too",
-         'id="film-da-maison-cosette-un-film"' in h),
+        ("the folder is a page, with no window on the DA desk",
+         "win-folder" not in page(d, "da/index.html")),
+        ("the project inside it is listed on that page",
+         'class="proj-inside"' in folder and "un film.mov" in folder),
+        ("and the link goes where the project was really built",
+         "da/maison-cosette/un-film/" in folder and own != ""),
+        ("the film itself is on its own page", "<video" in own),
         ("no page has a dangling window reference",
          all(dangling(f.read_text(encoding="utf-8")) == []
              for f in (d / "public").rglob("*.html"))),
@@ -1087,7 +1101,7 @@ CASES = [
     ("a bureau that declares a wallpaper", case_declared_wallpaper),
     ("alt text written in front matter", case_alt_text),
     ("a bureau on the home desk goes to its own page", case_top_level_navigates),
-    ("a folder inside a bureau opens as a window", case_second_level_window),
+    ("a folder inside a bureau opens its own page", case_second_level_page),
     ("a folder three levels down", case_three_deep),
     ("what a file does when you click it", case_what_a_file_does),
     ("prune keeps what the site asks for", case_prune_keeps_what_the_site_asks_for),
@@ -1099,7 +1113,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
-    ("a film opened from inside a folder window", case_film_in_a_folder),
+    ("a project inside a folder that is a page", case_film_in_a_folder),
 ]
 
 

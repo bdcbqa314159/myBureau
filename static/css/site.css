@@ -82,9 +82,6 @@
 
   /* win95 bevel */
   --face: #c0c0c0;
-  /* the same face, sheer — a folder window lets her wallpaper through.
-     Kept beside --face so the two cannot drift when the palette moves. */
-  --face-sheer: rgb(192 192 192 / .78);
   --lit:  #f2f2f2;
   --dim:  #828282;
   --title:#000082;
@@ -378,14 +375,6 @@ img.will-fade.is-in { opacity: 1; }
   padding: 3px;
   box-shadow: 0 1px 2px rgb(0 0 0 / .26);
 }
-/* In a folder window the icons are a list at list size, and the window
-   is already a panel — the lift would be a second frame inside a frame. */
-.icon.is-flow img.is-photo {
-  max-height: 3.3rem;
-  padding: 2px;
-  box-shadow: 0 1px 2px rgb(0 0 0 / .16);
-}
-
 /* The shadow lives on the ANCHOR, not on the image inside it.
    A filtered element is rasterised to a bitmap at its own size. With the
    filter on the <img> and the transform on its parent, the parent's
@@ -489,9 +478,8 @@ img.will-fade.is-in { opacity: 1; }
 /* ====================================================================
    preview window — a picture looked at, not navigated to
    --------------------------------------------------------------------
-   Modal, unlike a folder window. Pressing space on a Mac does not take
-   you anywhere and does not leave the desk half-usable behind it: it
-   shows you the thing. So this one gets the backdrop and the browser's
+   Modal. Pressing space on a Mac does not take you anywhere and does not
+   leave the desk half-usable behind it: it shows you the thing. So this one gets the backdrop and the browser's
    own Escape, and the desk waits.
 
    The body loses .win-body's padding, because a preview is the picture —
@@ -552,105 +540,6 @@ img.will-fade.is-in { opacity: 1; }
 }
 .preview-note p + p { margin-top: .8em; }
 
-/* ====================================================================
-   folder window — a folder opened on the desk instead of replacing it
-   --------------------------------------------------------------------
-   Not modal, so no backdrop dims the desk and the z-index has to be
-   declared: a show()n dialog is an ordinary positioned element, and
-   without this it opens UNDER the bandeau and the dock at 900.
-   ==================================================================== */
-.win-folder {
-  width: min(40rem, 90vw);
-  z-index: 1000;
-  /* Solid is the floor. The translucent version is layered on below,
-     behind @supports, so a browser without backdrop-filter gets a window
-     that is plainly readable rather than a tinted one it cannot blur. */
-  background: var(--face);
-  /* The cascade step, set by desk.ts as the window opens, folded into the
-     same translate that centres it — so the second folder does not land
-     exactly on the first. A window that has been DRAGGED is pinned by
-     left/top with translate:none, and ignores all of this. */
-  translate: calc(-50% + var(--cascade, 0) * 1.15rem)
-             calc(-50% + var(--cascade, 0) * 1.15rem);
-}
-
-/* ---- letting the wallpaper through -------------------------------
-   A folder window sits ON her photograph, and a flat grey rectangle
-   stops the photograph dead. So the panel is tinted rather than opaque
-   and the wall behind it is blurred: enough to SUGGEST what is under it,
-   not enough to read as a hole.
-
-   .78 and a heavy blur are both deliberate. The labels inside are black
-   text, and black on an unknown photograph is a contrast gamble — at
-   this weight the panel stays light whatever is behind it, and the blur
-   removes the detail that would fight the icons. Thinner than this and
-   the window starts depending on which wallpaper she picked.
-
-   The title bar stays SOLID. It is the thing you grab, and a handle you
-   can half-see through does not read as a handle.
-
-   Only the folder window. A preview is a picture and a film is a film:
-   both want their own ground, not hers. */
-@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .win-folder {
-    background: var(--face-sheer);
-    -webkit-backdrop-filter: blur(14px) saturate(1.15);
-    backdrop-filter: blur(14px) saturate(1.15);
-  }
-  /* A light lift under the labels, for the one case the tint cannot
-     cover: a bright wallpaper directly behind black text. */
-  .win-folder .icon.is-flow span { text-shadow: 0 1px 2px rgb(255 255 255 / .55); }
-}
-
-/* Asked for less transparency at the system level, get less of it. The
-   window is still a window; it just stops being a window onto anything. */
-@media (prefers-reduced-transparency: reduce) {
-  .win-folder {
-    background: var(--face);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-  .win-folder .icon.is-flow span { text-shadow: none; }
-}
-
-/* The same bevel as the close button beside it, because it is the same
-   kind of thing: a titlebar control. An <a> rather than a button —
-   it goes somewhere, and it still goes there with no JavaScript. */
-.win-expand {
-  display: grid; place-items: center;
-  min-width: 1.5rem; min-height: 1.35rem;
-  color: #000; text-decoration: none; font-size: .78em;
-  background: var(--face);
-  box-shadow: inset 1px 1px 0 var(--lit), inset -1px -1px 0 var(--dim);
-}
-.win-expand:active {
-  box-shadow: inset -1px -1px 0 var(--lit), inset 1px 1px 0 var(--dim);
-}
-
-/* The contents are a LIST, not a surface — so the icons flow in a grid
-   and the percentages in the content files mean nothing in here. */
-.win-files {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(6.2rem, 1fr));
-  gap: 1.15rem .5rem;
-  max-height: 58vh; overflow-y: auto;
-  /* .win sets touch-action:none so a window drags cleanly by its bar.
-     That also blocks panning INSIDE it, which on a phone makes a long
-     folder a list you can see a third of. */
-  touch-action: pan-y;
-}
-
-/* An icon in a window, against grey, at list size. On the desk it is
-   white text with a heavy shadow because it sits on a photograph; in
-   here that shadow is a smear on a flat panel. */
-.icon.is-flow {
-  position: static; width: auto;
-  color: #000; text-shadow: none; filter: none;
-  font-size: var(--f-2);
-}
-.icon.is-flow img { width: 3.3rem; margin-inline: auto; }
-.icon.is-flow:hover, .icon.is-flow:focus-visible { filter: none; scale: 1.06; }
-.icon.is-flow:focus-visible { outline-offset: 3px; }
 .win-controls { display: flex; gap: .3rem; align-items: center; }
 .win-controls form { display: contents; }
 
@@ -845,6 +734,15 @@ body.project .bar { color: var(--ink); text-shadow: none; }
     gap: clamp(2rem, 9vw, 4rem);
   }
 }
+/* The projects inside a folder, listed under its own photographs.
+   A row of plain links: this is a way out, not a second gallery. */
+.proj-inside {
+  display: flex; flex-wrap: wrap; gap: .3rem 1.4rem;
+  padding: 1.6rem var(--pad) 0;
+  font-size: var(--f-3);
+}
+.proj-inside a { color: inherit; }
+
 .proj-back {
   display: inline-block; margin: clamp(3rem, 6vw, 6rem) var(--pad);
   font-size: var(--f-2); font-weight: var(--w-bold); text-decoration: none;

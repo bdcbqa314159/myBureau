@@ -1,11 +1,28 @@
 {% extends "base.html" %}
-{% block title %}{{ page.title }} — {{ id.title }}{% endblock %}
+
+{#- A PROJECT, AND NOW A FOLDER TOO.
+
+    A second-class folder — a folder sitting on a desk rather than on the
+    home desk — used to open as a desk of its own, wallpaper and all, or
+    as a little window listing what was in it. Both were wrong, and both
+    were ours rather than hers: the brief says "les dossiers OU certains
+    éléments ouvriront une nouvelle page qui présentera le projet de
+    manière très simple". A folder at that depth is a piece of work, and
+    a piece of work is this page.
+
+    So the same template serves both, and `w` is whichever one Zola
+    handed us — taken inside each block, because Zola allows nothing but
+    `extends` and `block` at the top level of a child template. Everything below reads `w` and does not care which it was:
+    a section and a page both carry a title, a body, and the files
+    colocated beside them. -#}
+{% block title %}{% if page is defined %}{% set w = page %}{% else %}{% set w = section %}{% endif %}{{ w.title }} — {{ id.title }}{% endblock %}
 {% block bodyclass %}project{% endblock %}
-{% block bar_mid %}<span class="bar-mid is-page">{{ page.title }}</span>{% endblock %}
+{% block bar_mid %}{% if page is defined %}{% set w = page %}{% else %}{% set w = section %}{% endif %}<span class="bar-mid is-page">{{ w.title }}</span>{% endblock %}
 {% block content %}
-<main class="proj" style="view-transition-name:vt-{{ page.path | slugify }}">
-  <h1 class="sr-only">{{ page.title }}</h1>
-  <div class="proj-intro">{{ page.content | safe }}</div>
+{% if page is defined %}{% set w = page %}{% else %}{% set w = section %}{% endif %}
+<main class="proj" style="view-transition-name:vt-{{ w.path | slugify }}">
+  <h1 class="sr-only">{{ w.title }}</h1>
+  <div class="proj-intro">{{ w.content | safe }}</div>
 
   {#- THE RHYTHM OF THE PAGE, from the prototype: the first photograph
       opens it at full width, and everything after it sits in pairs with
@@ -37,7 +54,7 @@
   {% set_global reel = "" %}
   {% set_global sheet = "" %}
   {% set_global dossier = "" %}
-  {% for a in page.assets %}
+  {% for a in w.assets %}
     {% set leaf = a | split(pat="/") | last %}
     {% if leaf | split(pat=".") | last | lower in config.extra.video_types %}{% set_global reel = a %}{% endif %}
     {% if leaf | split(pat=".") | last | lower in config.extra.doc_types %}{% set_global dossier = a %}{% endif %}
@@ -63,7 +80,7 @@
   {% if dossier %}
     <figure class="proj-open proj-doc">
       <iframe src="{{ get_url(path=dossier) }}#toolbar=0&amp;navpanes=0"
-              title="{{ page.title }}" loading="lazy"></iframe>
+              title="{{ w.title }}" loading="lazy"></iframe>
     </figure>
     {% set_global shown = 1 %}
   {% endif %}
@@ -80,8 +97,15 @@
      icon and poster.* is the film's still — neither is one of the
      project's photographs, and showing the poster under the film it
      belongs to is showing the same frame twice. #}
-  {% for asset in page.assets %}
+  {#- A SECTION AND A PAGE DO NOT SPELL THEIR ASSETS THE SAME. A page's
+      are paths under content/; a section's are urls, language prefix and
+      all — and `/en/…/01.jpg` is not a file anybody can resize.
+      `colocated_path` is the folder each of them actually sits in, and
+      it means the same thing for both. -#}
+  {% set here = w.colocated_path %}
+  {% for asset in w.assets %}
     {% set file = asset | split(pat="/") | last %}
+    {% set asset = here ~ file %}
     {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" and file | split(pat=".") | first != "poster" %}
       {# the first picture is the page; everything below it can arrive later.
          Resized at build time, with the original proportions declared so
@@ -97,7 +121,7 @@
 
          It lives in the content file, so it is already per-language. #}
       {% set alt = "" %}
-      {% if page.extra.alt and page.extra.alt[file] %}{% set alt = page.extra.alt[file] %}{% endif %}
+      {% if w.extra.alt and w.extra.alt[file] %}{% set alt = w.extra.alt[file] %}{% endif %}
             {% set shape = get_image_metadata(path=asset) %}
       {% set one = resize_image(path=asset, width=900, op="fit_width", format="webp", quality=78) %}
       {% set two = resize_image(path=asset, width=1800, op="fit_width", format="webp", quality=78) %}
@@ -122,10 +146,29 @@
   {% endfor %}
   {% if paired %}</div>{% endif %}
 
+  {#- WHAT IS INSIDE, when this page is a folder.
+
+      A folder can hold projects of its own, and a page that shows only
+      its own photographs would leave them built and linked from
+      nowhere — reachable by typing the url and by nothing else. That is
+      the silent kind of broken, so they are listed, plainly, under the
+      work. A project has no children and never reaches this. -#}
+  {% if section is defined and (section.pages | length > 0 or section.subsections | length > 0) %}
+    <nav class="proj-inside" aria-label="{{ section.title }}">
+      {% for sub in section.pages %}
+        <a href="{{ sub.permalink }}">{{ sub.title }}</a>
+      {% endfor %}
+      {% for q in section.subsections %}
+        {% set one = get_section(path=q) %}
+        <a href="{{ one.permalink }}">{{ one.title }}</a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+
   {# ancestors gives a FILE PATH — get_section turns it into a URL.
      Linking the path directly produced /da/_index.md, a 404 on every
      project page in the site. #}
-  {% set home = get_section(path=page.ancestors | last) %}
+  {% set home = get_section(path=w.ancestors | last) %}
   <a class="proj-back" href="{{ home.permalink }}">← {{ trans(key='back_to', lang=lang) }} {{ home.title }}</a>
 </main>
 {% endblock %}
