@@ -548,8 +548,8 @@ def case_second_level_page(d: pathlib.Path) -> list[tuple[str, bool]]:
          'class="project"' in own and '<main class="desk"' not in own),
         ("it carries no wallpaper", "--wallpaper" not in own),
         ("its description is on it", "Une description, deux lignes." in own),
-        ("and its photographs are, the first one opening the page",
-         own.count("proj-open") == 1 and own.count("<figure") >= 2),
+        ("and its photographs are, every one of them at full width",
+         own.count("proj-open") == 2 and "proj-pairs" not in own),
         ("no dangling window reference", dangling(desk) == []),
     ]
 
@@ -1142,6 +1142,45 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_a_subfolder_page_is_one_column(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A subfolder is a blank page: title, text, work in ONE COLUMN.
+
+    Every photograph takes the whole width — all the space there is for
+    a picture — and you keep going down. A project is the other
+    rhythm, the prototype's: one opener and then pairs. Both are
+    asserted, because a change that collapsed everything to one column
+    would satisfy the first and quietly ruin the second.
+
+    And no pinning here. The fridge is travail sélectionné's and
+    nowhere else's, so a subfolder's photographs carry no width, no
+    offset and no angle of their own.
+    """
+    folder = d / "content" / "da" / "une-serie"
+    folder.mkdir()
+    (folder / "_index.md").write_text(FRONT.format(
+        title="une série", extra='template = "page.html"\n'), encoding="utf-8")
+    for n in ("01.jpg", "02.jpg", "03.jpg"):
+        shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", folder / n)
+    ok, log = build(d)
+    sub = page(d, "da/une-serie/index.html")
+    project = page(d, "graphic-design/grocery-list/index.html")
+    return [
+        ("builds", ok),
+        ("every photograph on a subfolder page takes the whole width",
+         sub.count('class="proj-open"') == 3),
+        ("so there is no pairs container on it at all",
+         "proj-pairs" not in sub),
+        ("and nothing on it is pinned — that is the road's business",
+         "--w:" not in sub and "--x:" not in sub and "--r:" not in sub),
+        ("a PROJECT still opens with one and pairs the rest",
+         project.count('class="proj-open"') == 1 and "proj-pairs" in project),
+        ("the route is on travail sélectionné and on nothing else",
+         'class="proj-route"' in page(d, "travail-selectionne/index.html")
+         and 'class="proj-route"' not in sub
+         and 'class="proj-route"' not in page(d, "da/index.html")),
+    ]
+
+
 def case_the_sheet_has_buttons(d: pathlib.Path) -> list[tuple[str, bool]]:
     """Four buttons that change the STATE of her text, never a word.
 
@@ -1574,6 +1613,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("a subfolder page is one column", case_a_subfolder_page_is_one_column),
     ("the sheet has buttons that cannot edit", case_the_sheet_has_buttons),
     ("about me.txt is read as a text file", case_about_is_read_as_a_text_file),
     ("a picture on a desk is one picture", case_a_picture_is_one_picture),

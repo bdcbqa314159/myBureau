@@ -24,7 +24,15 @@
   <h1 class="sr-only">{{ w.title }}</h1>
   <div class="proj-intro">{{ w.content | safe }}</div>
 
-  {#- THE RHYTHM OF THE PAGE, from the prototype: the first photograph
+  {#- TWO RHYTHMS, AND WHICH ONE DEPENDS ON WHAT THIS PAGE IS.
+
+      A SUBFOLDER — maison cosette, Atelier Mirabelle, Logofolio — is a
+      blank page: its name, its text, and then its work in ONE COLUMN,
+      every photograph taking the whole width. Each picture gets all the
+      space there is, and you keep going down. No pairs, and no pinning:
+      the fridge belongs to travail sélectionné and nowhere else.
+
+      A PROJECT keeps the rhythm from the prototype: the first photograph
       opens it at full width, and everything after it sits in pairs with
       cream around them. One big thing, then quieter ones — which is what
       stops a project reading as a pile of images at one size.
@@ -40,6 +48,10 @@
 
       There are no macros in this engine, so the pairs container is opened
       and closed inside the loop with a flag. `paired` is the flag. -#}
+  {#- A section is a subfolder; a page is a project. One flag, read
+      twice below, so the two rhythms cannot disagree about which page
+      they are on. -#}
+  {% set one_column = section is defined %}
   {% set_global shown = 0 %}
   {% set_global paired = false %}
 
@@ -131,7 +143,7 @@
             {% set shape = get_image_metadata(path=asset) %}
       {% set one = resize_image(path=asset, width=900, op="fit_width", format="webp", quality=78) %}
       {% set two = resize_image(path=asset, width=1800, op="fit_width", format="webp", quality=78) %}
-      {%- if shown == 0 -%}
+      {%- if shown == 0 or one_column -%}
         <figure class="proj-open"><img src="{{ one.url }}"
           srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
           sizes="100vw"
