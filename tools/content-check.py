@@ -1055,6 +1055,55 @@ def case_a_film_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_a_picture_opens_plain(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A photograph opens with nothing around it; a film keeps its frame.
+
+    She asked for the picture plain — no title bar, no close box, no
+    bevel. That is a deletion, and a deletion is the easy thing to put
+    back by accident, so what the frame used to carry is asserted here
+    one piece at a time: the name a screen reader reads, the way out,
+    and the step to the page.
+
+    The film is the control. It has controls of its own, a minimise and
+    a thought written beside it, so it keeps its bar — and a change that
+    strips BOTH would otherwise look exactly like a change that worked.
+    """
+    p = d / "content" / "da" / "une-photo"
+    p.mkdir()
+    (p / "index.md").write_text(FRONT.format(title="une photo.jpg", extra=""),
+                                encoding="utf-8")
+    shutil.copyfile(ROOT / "content/da/theodora/01.jpg", p / "01.jpg")
+    q = d / "content" / "da" / "un-clip"
+    q.mkdir()
+    (q / "index.md").write_text(FRONT.format(title="un clip.mov", extra=""),
+                                encoding="utf-8")
+    (q / "clip.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
+    ok, log = build(d)
+    h = page(d, "da/index.html")
+    pic = re.search(r'<dialog class="win win-preview" id="preview-da-une-photo".*?</dialog>',
+                    h, re.S)
+    film = re.search(r'<dialog class="win win-film" id="film-da-un-clip".*?</dialog>',
+                     h, re.S)
+    return [
+        ("builds", ok),
+        ("the photograph still opens on the desk", bool(pic)),
+        ("with no title bar around it",
+         bool(pic) and "win-bar" not in pic.group(0)),
+        ("no close box and no page button either",
+         bool(pic) and "win-expand" not in pic.group(0)
+                   and "<button" not in pic.group(0)),
+        ("but it still says what it is, for a screen reader",
+         bool(pic) and 'aria-label="une photo.jpg"' in pic.group(0)),
+        ("and the picture itself is the way to its page",
+         bool(pic) and re.search(r'<a class="preview-body" href="[^"]*da/une-photo/"',
+                                 pic.group(0)) is not None),
+        ("the film is the control, and keeps its frame",
+         bool(film) and "win-bar" in film.group(0)),
+        ("nothing on the desk points at a window that is not there",
+         dangling(h) == []),
+    ]
+
+
 def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A project inside a folder that is now a page.
 
@@ -1113,6 +1162,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("a picture opens plain, a film keeps its frame", case_a_picture_opens_plain),
     ("a project inside a folder that is a page", case_film_in_a_folder),
 ]
 

@@ -180,15 +180,15 @@ Folders ship in four colourways — `folder.svg` (amber), `folder-rust`,
 One rule, and two exceptions that fall out of it rather than being
 configured.
 
-> **A click shows you the thing.** It does not take you anywhere. The ⬜
-> in a window's title bar is the deliberate second step to the page.
+> **A click shows you the thing.** It does not take you anywhere. A
+> second click on the thing itself is the deliberate step to the page.
 
 | you click | you get |
 |---|---|
 | a folder **on the home desk** | its own desk, its own wallpaper — a new page |
 | a folder **anywhere else** | its own page — title, description, photographs |
 | a project with a **video** in it | the film window, text beside it, minimisable |
-| any other project | a **preview** window, modal, Escape closes it |
+| any other project | the photograph, plain — no frame; Escape or a click off it closes |
 | a project with **no image at all** | its page — there is nothing to preview |
 | a photograph in **pellicules** | that photograph, in a window |
 
