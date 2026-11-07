@@ -651,21 +651,23 @@ document.querySelectorAll(".win-preview").forEach((win) => {
     });
 });
 // ---------------------------------------------------------------------
-// The three buttons above about me.txt
+// The four buttons above about me.txt
 //
-// They change the STATE of her text and never a word of it: whether it
-// wraps, and how big it is. Nothing here writes to the document.
+// They change the STATE of her text and never a word of it: its weight,
+// its slope, its size. Nothing here writes to the document.
 //
 // The strip is hidden by CSS unless `html.js` is set, so a visitor with
 // no script never sees a control that cannot work.
 // ---------------------------------------------------------------------
 const sheet = document.querySelector(".about-sheet");
 if (sheet !== null) {
-    const wrap = document.querySelector("[data-wrap]");
-    wrap?.addEventListener("click", () => {
-        const off = sheet.classList.toggle("is-nowrap");
-        // pressed means "wrapping is on", which is the opposite of the class
-        wrap.setAttribute("aria-pressed", off ? "false" : "true");
+    // Bold and italic are STATES, so each button says whether it is on.
+    // Nothing is written: a class goes on the sheet and comes off again.
+    document.querySelectorAll("[data-style]").forEach((b) => {
+        const name = b.dataset["style"] === "bold" ? "is-bold" : "is-italic";
+        b.addEventListener("click", () => {
+            b.setAttribute("aria-pressed", String(sheet.classList.toggle(name)));
+        });
     });
     // Bounded both ways. A size control that can be pressed until the
     // text is unreadable — or until it vanishes — is not a control.

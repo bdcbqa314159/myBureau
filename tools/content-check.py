@@ -1101,10 +1101,10 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
 
 
 def case_the_sheet_has_buttons(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """Three buttons that change the STATE of her text, never a word.
+    """Four buttons that change the STATE of her text, never a word.
 
-    Wrapping and size are what a plain-text editor lets you change
-    about somebody else's file. The promise is the second half: these
+    Bold, italic and two sizes — the toolbar every plain editor has
+    had for thirty years, and each one a class on the sheet. The promise is the second half: these
     cannot edit. That is asserted against the source rather than
     guessed, because "it only toggles a class" is true right up until
     somebody adds a feature.
@@ -1127,7 +1127,7 @@ def case_the_sheet_has_buttons(d: pathlib.Path) -> list[tuple[str, bool]]:
 
     src = (d / "src" / "desk.ts").read_text(encoding="utf-8") if (d / "src").exists() \
         else (ROOT / "src" / "desk.ts").read_text(encoding="utf-8")
-    start = src.find("The three buttons above about me.txt")
+    start = src.find("The four buttons above about me.txt")
     end = src.find('[data-close]', start)
     block = src[start:end] if start != -1 else ""
     writes = ("innerHTML", "textContent", "innerText", "insertAdjacent",
@@ -1136,17 +1136,23 @@ def case_the_sheet_has_buttons(d: pathlib.Path) -> list[tuple[str, bool]]:
     return [
         ("builds", ok),
         ("the buttons are in the window, above her words", bool(strip)),
-        ("there are three of them",
-         bool(strip) and strip.group(0).count("<button") == 3),
-        ("wrapping is a state, and says so to a screen reader",
-         bool(strip) and 'aria-pressed' in strip.group(0)),
-        ("the two that are only a letter carry a real name",
-         bool(strip) and strip.group(0).count("aria-label=") == 2),
+        ("there are four of them",
+         bool(strip) and strip.group(0).count("<button") == 4),
+        ("bold and italic are states, and say so to a screen reader",
+         bool(strip) and strip.group(0).count("aria-pressed") == 2),
+        ("every one of them carries a real name — a face of one letter is not one",
+         bool(strip) and strip.group(0).count("aria-label=") == 4),
+        ("bold and italic reach the text, rather than only lighting the button",
+         ".about-sheet.is-bold" in rules and ".about-sheet.is-italic" in rules),
+        ("and each button's face does what the button does",
+         '.sheet-tools button[data-style="bold"]' in rules
+         and '.sheet-tools button[data-style="italic"]' in rules),
         ("they are hidden when there is no script to work them",
          any("display: none" in b for b in rules.get(".sheet-tools", []))
          and ".js .sheet-tools" in rules),
         ("each language gets its own words, not the French ones twice",
-         "Retour à la ligne" in home and "Word wrap" in page(d, "en/index.html")),
+         'aria-label="Gras"' in home
+         and 'aria-label="Bold"' in page(d, "en/index.html")),
         ("and nothing in that script can write to her text",
          block != "" and not any(w in block for w in writes)),
     ]
