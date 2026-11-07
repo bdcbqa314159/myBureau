@@ -56,9 +56,9 @@
         anywhere near it: this is our own bevel, as the whole 1995 look
         here is. -#}
     {#- THREE BUTTONS, AND THEY CHANGE THE STATE OF THE TEXT AND NEVER
-        ITS CONTENT. Wrapping and size are what a plain-text editor
-        actually let you change about somebody else's file, and neither
-        one can edit a word of hers.
+        ITS CONTENT. Bold, italic and size are what the toolbar of
+        every plain editor has had for thirty years, and not one of
+        them can edit a word of hers — they are classes on the sheet.
 
         They are inside the window so they belong to the document, and
         they are only rendered as controls when there is a script to
@@ -70,9 +70,12 @@
         screen reader that wrapping is a state and not an action. The
         two size buttons are actions, so they do not. -#}
     <div class="sheet-tools">
-      <button type="button" data-wrap aria-pressed="true"
-              title="{{ trans(key='sheet_wrap', lang=lang) }}">{{ trans(key='sheet_wrap', lang=lang) }}</button>
-      <span class="sheet-tools-gap"></span>
+      <button type="button" data-style="bold" aria-pressed="false"
+              aria-label="{{ trans(key='sheet_bold', lang=lang) }}"
+              title="{{ trans(key='sheet_bold', lang=lang) }}">B</button>
+      <button type="button" data-style="italic" aria-pressed="false"
+              aria-label="{{ trans(key='sheet_italic', lang=lang) }}"
+              title="{{ trans(key='sheet_italic', lang=lang) }}">I</button>
       <button type="button" data-size="-1"
               aria-label="{{ trans(key='sheet_smaller', lang=lang) }}"
               title="{{ trans(key='sheet_smaller', lang=lang) }}">A&minus;</button>
