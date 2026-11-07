@@ -406,8 +406,8 @@ def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]
         ("a wallpaper left beside a page is not rendered as one of her"
          " photographs, which is what it would be without the rule",
          page(d, "affiche/index.html").count("<figure") == 1),
-        ("nor does it become a folder's face in a listing",
-         bool(re.search(r'<a class="place" href="[^"]*dedans/">\s*<span',
+        ("nor does it put a folder on the route wearing a wallpaper",
+         bool(re.search(r'<a class="stop is-bare" href="[^"]*dedans/">',
                         page(d, "affiche/index.html")))),
         ("no front matter in the whole site still types a wallpaper path",
          not any("wallpaper =" in f.read_text(encoding="utf-8")
@@ -1468,6 +1468,9 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     (r / "index.md").write_text(FRONT.format(title="une photo.jpg", extra=""),
                                 encoding="utf-8")
     shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", r / "01.jpg")
+    # a second photograph in the SAME project: the route must show both,
+    # which is the whole change — one face per thing was the old answer
+    shutil.copyfile(ROOT / "content/da/theodora-02/01.jpg", r / "02.jpg")
     # and one with nothing to show at all, which is where a broken
     # picture would appear if the partial assumed there was always one
     s = d / "content" / "da" / "maison-cosette" / "rien"
@@ -1477,21 +1480,25 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     ok, log = build(d)
     folder = page(d, "da/maison-cosette/index.html")
     own = page(d, "da/maison-cosette/un-film/index.html")
-    places = re.search(r'<nav class="proj-places".*?</nav>', folder, re.S)
-    empty = re.search(r'<a class="place" href="[^"]*rien/">.*?</a>',
-                      places.group(0) if places else "", re.S)
+    route = re.search(r'<nav class="proj-route".*?</nav>', folder, re.S)
+    inside = route.group(0) if route else ""
+    empty = re.search(r'<a class="stop is-bare" href="[^"]*rien/">.*?</a>',
+                      inside, re.S)
+
     return [
         ("builds", ok),
         ("the folder is a page, with no window on the DA desk",
          "win-folder" not in page(d, "da/index.html")),
-        ("what is inside is listed on that page",
-         bool(places) and "un film.mov" in places.group(0)),
-        ("each one is a place and not a bare word",
-         bool(places) and places.group(0).count('class="place"') == 3),
-        ("a thing with a photograph wears it",
-         bool(places) and re.search(r'une-photo/">\s*<img', places.group(0)) is not None),
-        ("a thing with nothing to show renders no picture at all",
+        ("what is inside is on the route",
+         bool(route) and "un film.mov" in inside),
+        ("a thing with a photograph wears it, at its own proportion",
+         bool(re.search(r'<a class="stop" href="[^"]*une-photo/">\s*<img', inside))),
+        ("a thing with nothing to show is a stop wearing only its name",
          bool(empty) and "<img" not in empty.group(0)),
+        ("a film is not represented by its poster, which is not a photograph",
+         bool(re.search(r'<a class="stop is-bare" href="[^"]*un-film/">', inside))),
+        ("EVERY photograph is a stop, not one face for the whole thing",
+         len(re.findall(r'<a class="stop" href="[^"]*une-photo/">', inside)) == 2),
         ("and the link goes where the project was really built",
          "da/maison-cosette/un-film/" in folder and own != ""),
         ("the film itself is on its own page", "<video" in own),
