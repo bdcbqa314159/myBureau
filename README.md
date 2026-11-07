@@ -157,7 +157,13 @@ fills with the work rather than with grey symbols.
 Most explicit wins:
 
 1. a file named `icon.*` in the project folder — her artwork. It is the
-   icon and it is never shown among the project's photographs.
+   icon and it is never shown among the project's photographs. **An
+   `icon.gif` animates**: it is served through `get_url` rather than the
+   resizer, so the file reaches the desk byte for byte, loop block
+   intact. That is how a dense document — a twenty-page dossier with
+   nothing to show on a desk — gets a moving preview whose click still
+   opens the document. Routing icons through `resize_image` would
+   flatten every one of them silently, which is why a check asserts it.
 2. `icon = "img/icons/folder-rust.svg"` in the front matter
 3. the first image in the folder
 4. the extension in the **title**, when the folder holds no image at all:
