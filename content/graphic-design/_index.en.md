@@ -1,6 +1,6 @@
 +++
 title = "graphic design"
-template = "page.html"
+template = "section.html"
 
 [extra]
 icon = "img/icons/folder-olive.svg"

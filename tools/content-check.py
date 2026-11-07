@@ -396,11 +396,22 @@ def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]
          wall("scenographie/dedans/index.html") == fr),
         ("a bureau with no wallpaper anywhere above it still is not black",
          wall("nue/index.html").startswith("wall-home")),
-        ("the demo's own desk kept its own",
+        # THE THREE BEHAVIOURS, named here because they drifted once:
+        # the brief puts DA and graphic design together — "Page DA :
+        # même concept que la page graphic design" — and both are
+        # desks. travail sélectionné is the page with the route on it,
+        # and pellicules is the gallery. Each is a different thing and
+        # none of them is the default.
+        ("DA is a desk and keeps its own wallpaper",
          wall("da/index.html").startswith("wallpaper.")),
-        ("a first-class folder that opens a PAGE has no wallpaper",
-         wall("graphic-design/index.html") == "none"
-         and wall("travail-selectionne/index.html") == "none"),
+        ("graphic design is a desk too, as the brief pairs it with DA",
+         wall("graphic-design/index.html").startswith("wallpaper.")
+         and '<main class="desk"' in page(d, "graphic-design/index.html")),
+        ("travail sélectionné is the PAGE, so it has no wallpaper",
+         wall("travail-selectionne/index.html") == "none"
+         and 'class="proj-route"' in page(d, "travail-selectionne/index.html")),
+        ("and the route belongs to it alone, not to a desk",
+         'class="proj-route"' not in page(d, "graphic-design/index.html")),
         ("and neither does a folder on a desk — it is a page too",
          wall("da/maison-cosette/index.html") == "none"),
         ("a wallpaper left beside a page is not rendered as one of her"
