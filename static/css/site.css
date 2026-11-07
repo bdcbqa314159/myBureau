@@ -577,6 +577,44 @@ img.will-fade.is-in { opacity: 1; }
   color: #000;
 }
 .about-sheet p + p { margin-top: 1em; }
+
+/* ---- the three buttons above the sheet ---------------------------
+   They change how her words are SHOWN and never what they say:
+   wrapping, and size. That is the honest half of what a plain-text
+   editor offers for somebody else's file.
+
+   Hidden unless a script is there to work them. `html.js` is set
+   before first paint, so this never flashes a row of dead controls
+   at a visitor with no JavaScript. */
+.sheet-tools { display: none; }
+.js .sheet-tools {
+  display: flex; align-items: center; gap: .35rem;
+  margin-bottom: .55rem;
+}
+.sheet-tools-gap { flex: 1; }
+.sheet-tools button {
+  font: inherit; font-family: var(--font-ui); font-size: var(--f-3);
+  padding: .15rem .6rem; min-height: 1.6rem;
+  color: #000; background: var(--face);
+  border: 1px solid #000;
+  box-shadow: inset 1px 1px 0 var(--lit), inset -1px -1px 0 var(--dim);
+}
+.sheet-tools button:active,
+.sheet-tools button[aria-pressed="true"] {
+  box-shadow: inset -1px -1px 0 var(--lit), inset 1px 1px 0 var(--dim);
+}
+
+/* WRAPPING OFF is the one that looks like nothing until you try it: a
+   paragraph becomes one long line and the sheet scrolls sideways,
+   which is exactly what the editors this borrows from did. */
+.about-sheet.is-nowrap { white-space: pre; overflow-x: auto; }
+
+/* SIZE, in three steps and no further. A control that can be pressed
+   until the text is unreadable is not a control. */
+.about-sheet[data-size-step="-1"] { font-size: calc(var(--f-3) * 0.88); }
+.about-sheet[data-size-step="1"]  { font-size: calc(var(--f-3) * 1.18); }
+.about-sheet[data-size-step="2"]  { font-size: calc(var(--f-3) * 1.4); }
+
 /* The caret sits after the last thing she wrote. An empty inline block
    rather than a character, so a screen reader never announces it and
    nobody can select it into a copied quote. */

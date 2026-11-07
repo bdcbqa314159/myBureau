@@ -55,7 +55,32 @@
         No menu strip, no scrollbar drawn by hand, no product's name
         anywhere near it: this is our own bevel, as the whole 1995 look
         here is. -#}
-    <div class="about-sheet">{{ section.content | safe }}</div>
+    {#- THREE BUTTONS, AND THEY CHANGE THE STATE OF THE TEXT AND NEVER
+        ITS CONTENT. Wrapping and size are what a plain-text editor
+        actually let you change about somebody else's file, and neither
+        one can edit a word of hers.
+
+        They are inside the window so they belong to the document, and
+        they are only rendered as controls when there is a script to
+        make them work: `html.js` is set before first paint, and the
+        CSS hides this strip without it. Buttons that do nothing are
+        worse than no buttons.
+
+        A page button carries `aria-pressed`, which is what tells a
+        screen reader that wrapping is a state and not an action. The
+        two size buttons are actions, so they do not. -#}
+    <div class="sheet-tools">
+      <button type="button" data-wrap aria-pressed="true"
+              title="{{ trans(key='sheet_wrap', lang=lang) }}">{{ trans(key='sheet_wrap', lang=lang) }}</button>
+      <span class="sheet-tools-gap"></span>
+      <button type="button" data-size="-1"
+              aria-label="{{ trans(key='sheet_smaller', lang=lang) }}"
+              title="{{ trans(key='sheet_smaller', lang=lang) }}">A&minus;</button>
+      <button type="button" data-size="1"
+              aria-label="{{ trans(key='sheet_bigger', lang=lang) }}"
+              title="{{ trans(key='sheet_bigger', lang=lang) }}">A+</button>
+    </div>
+    <div class="about-sheet" data-size-step="0">{{ section.content | safe }}</div>
   </div>
 </dialog>
 {% endblock %}

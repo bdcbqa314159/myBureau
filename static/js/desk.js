@@ -650,6 +650,42 @@ document.querySelectorAll(".win-preview").forEach((win) => {
             win.close();
     });
 });
+// ---------------------------------------------------------------------
+// The three buttons above about me.txt
+//
+// They change the STATE of her text and never a word of it: whether it
+// wraps, and how big it is. Nothing here writes to the document.
+//
+// The strip is hidden by CSS unless `html.js` is set, so a visitor with
+// no script never sees a control that cannot work.
+// ---------------------------------------------------------------------
+const sheet = document.querySelector(".about-sheet");
+if (sheet !== null) {
+    const wrap = document.querySelector("[data-wrap]");
+    wrap?.addEventListener("click", () => {
+        const off = sheet.classList.toggle("is-nowrap");
+        // pressed means "wrapping is on", which is the opposite of the class
+        wrap.setAttribute("aria-pressed", off ? "false" : "true");
+    });
+    // Bounded both ways. A size control that can be pressed until the
+    // text is unreadable — or until it vanishes — is not a control.
+    const MIN = -1;
+    const MAX = 2;
+    document.querySelectorAll("[data-size]").forEach((b) => {
+        b.addEventListener("click", () => {
+            const by = Number(b.dataset["size"]) || 0;
+            const now = Number(sheet.dataset["sizeStep"]) || 0;
+            const next = Math.min(MAX, Math.max(MIN, now + by));
+            sheet.dataset["sizeStep"] = String(next);
+            // Say so when a button has stopped doing anything, rather than
+            // leaving someone pressing a control that looks live.
+            document.querySelectorAll("[data-size]").forEach((o) => {
+                const step = Number(o.dataset["size"]) || 0;
+                o.disabled = (step < 0 && next === MIN) || (step > 0 && next === MAX);
+            });
+        });
+    });
+}
 document.querySelectorAll("[data-close]").forEach((b) => {
     b.addEventListener("click", () => b.closest("dialog")?.close());
 });
