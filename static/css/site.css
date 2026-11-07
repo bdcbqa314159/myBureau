@@ -548,7 +548,50 @@ img.will-fade.is-in { opacity: 1; }
   padding: clamp(1.4rem, 3.5vw, 2.6rem);
   max-width: 54ch;
 }
-.about-body p + p { margin-top: 1em; }
+
+/* ---- the sheet: her words as a text file being read ---------------
+   Her prototype shows `about me.txt` as a screenshot of a plain-text
+   editor, so the window holds a DOCUMENT rather than a styled
+   paragraph. Three things do all of the work:
+
+     SUNKEN      the bevel runs the other way round from a button —
+                 dark on the top and left — so the sheet reads as a
+                 hole in the window rather than a panel on it
+     MONOSPACE   --font-ui, the same stack the rest of the chrome
+                 already uses. Nothing new is loaded and nothing is
+                 taken from anybody's product
+     A CARET     blinking at the end of the last line, which is the
+                 whole of what says "this is being typed"
+
+   Her text is her writing, so it keeps a readable measure and a line
+   height meant for prose: monospace at 54ch is a document, monospace
+   edge to edge is a terminal. */
+.about-sheet {
+  background: #fff;
+  border: 1px solid #000;
+  box-shadow: inset 1px 1px 0 var(--dim), inset -1px -1px 0 var(--lit);
+  padding: clamp(.9rem, 2.2vw, 1.4rem);
+  font-family: var(--font-ui);
+  font-size: var(--f-3);
+  line-height: 1.7;
+  color: #000;
+}
+.about-sheet p + p { margin-top: 1em; }
+/* The caret sits after the last thing she wrote. An empty inline block
+   rather than a character, so a screen reader never announces it and
+   nobody can select it into a copied quote. */
+.about-sheet > :last-child::after {
+  content: "";
+  display: inline-block;
+  width: .5ch; height: 1.05em;
+  margin-left: .12em; vertical-align: -.18em;
+  background: #000;
+  animation: caret 1.06s step-end infinite;
+}
+@keyframes caret { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .about-sheet > :last-child::after { animation: none; }
+}
 /* The portrait above the words. A white edge and a small lift, which is
    the polaroid in her prototype; bounded by height so a tall photograph
    does not push the text off the bottom of the window. */
