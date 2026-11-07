@@ -1429,15 +1429,38 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     (q / "index.md").write_text(FRONT.format(title="un film.mov", extra=""),
                                 encoding="utf-8")
     (q / "clip.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
+    (q / "poster.jpg").write_bytes(
+        (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes())
+    # one with a photograph, so a face can be found
+    r = d / "content" / "da" / "maison-cosette" / "une-photo"
+    r.mkdir()
+    (r / "index.md").write_text(FRONT.format(title="une photo.jpg", extra=""),
+                                encoding="utf-8")
+    shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", r / "01.jpg")
+    # and one with nothing to show at all, which is where a broken
+    # picture would appear if the partial assumed there was always one
+    s = d / "content" / "da" / "maison-cosette" / "rien"
+    s.mkdir()
+    (s / "_index.md").write_text(FRONT.format(
+        title="rien", extra='template = "page.html"\n'), encoding="utf-8")
     ok, log = build(d)
     folder = page(d, "da/maison-cosette/index.html")
     own = page(d, "da/maison-cosette/un-film/index.html")
+    places = re.search(r'<nav class="proj-places".*?</nav>', folder, re.S)
+    empty = re.search(r'<a class="place" href="[^"]*rien/">.*?</a>',
+                      places.group(0) if places else "", re.S)
     return [
         ("builds", ok),
         ("the folder is a page, with no window on the DA desk",
          "win-folder" not in page(d, "da/index.html")),
-        ("the project inside it is listed on that page",
-         'class="proj-inside"' in folder and "un film.mov" in folder),
+        ("what is inside is listed on that page",
+         bool(places) and "un film.mov" in places.group(0)),
+        ("each one is a place and not a bare word",
+         bool(places) and places.group(0).count('class="place"') == 3),
+        ("a thing with a photograph wears it",
+         bool(places) and re.search(r'une-photo/">\s*<img', places.group(0)) is not None),
+        ("a thing with nothing to show renders no picture at all",
+         bool(empty) and "<img" not in empty.group(0)),
         ("and the link goes where the project was really built",
          "da/maison-cosette/un-film/" in folder and own != ""),
         ("the film itself is on its own page", "<video" in own),
