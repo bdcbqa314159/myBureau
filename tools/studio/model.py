@@ -153,30 +153,6 @@ def desk(folder: pathlib.Path) -> dict:
     return d
 
 
-def opens_as(d: dict, depth: int) -> str:
-    """What clicking this folder does — which depends on WHERE it is.
-
-    Straight out of section.html, and the last clause is the one that
-    surprises people:
-
-        on the home desk   a page of its own, and a place in the bandeau
-        anywhere else      a window on the desk it sits on
-        a gallery          a page, wherever it is
-        EMPTY              a page, wherever it is — a window listing
-                           nothing is worse than the page
-
-    So a folder just created is empty and therefore opens a page, even
-    where a window was wanted. It becomes a window the moment something
-    is put in it. Without being told that, making a folder inside a
-    bureau and clicking it looks broken while being exactly right.
-    """
-    if d["gallery"]:
-        return "page"
-    if not d["on"]:
-        return "page"
-    return "page" if depth <= 1 else "window"
-
-
 def identity() -> dict:
     """What the top bar says, and which of the two blocks is in use."""
     text = (ROOT / "config.toml").read_text(encoding="utf-8")
@@ -198,7 +174,6 @@ def tree() -> dict:
         d = desk(f.parent)
         rel = str(f.parent.relative_to(CONTENT))
         d["depth"] = 0 if rel == "." else len(rel.split("/"))
-        d["opens_as"] = opens_as(d, d["depth"])
         d["empty"] = not d["on"]
         d["holds"] = len(d["on"])
         # Whether anything may be filed into it. A gallery renders its own
@@ -228,7 +203,7 @@ def tree() -> dict:
             k = known.get(child["path"])
             if k is None:
                 continue                      # a project: not a desk anywhere
-            for field in ("gallery", "depth", "opens_as", "empty", "holds",
+            for field in ("gallery", "depth", "empty", "holds",
                           "can_receive"):
                 child[field] = k[field]
 

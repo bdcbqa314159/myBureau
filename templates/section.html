@@ -86,42 +86,37 @@
 <h1 class="sr-only">{{ section.title }}</h1>
 {% set_global slot = 0 %}
 
-  {# FOLDERS — a directory with an _index.md is a bureau of its own.
-     What clicking one does depends on WHERE it is, and the brief is
-     explicit about both halves:
+  {# FOLDERS — a directory with an _index.md. What clicking one does
+     depends on WHERE it is, and the brief is explicit about both halves:
 
-       on the HOME desk      it opens a new page, a new desk, with its
-                             own wallpaper. "les dossiers comme DA ouvre
-                             une nouvelle page, comme un nouveau bureau."
+       on the HOME desk      a new page, a new desk, with its own
+                             wallpaper. "les dossiers comme DA ouvre une
+                             nouvelle page, comme un nouveau bureau."
                              These are the same four places the bandeau
                              reaches, and they have to agree with it.
 
-       anywhere else         it opens a WINDOW on the desk it sits on.
-                             The desk stays, several can be open, and
-                             nothing is navigated.
+       anywhere else         a BLANK PAGE — the project page, with its
+                             title, its description and its work on it.
+                             "les dossiers ou certains éléments
+                             ouvriront une nouvelle page qui présentera
+                             le projet de manière très simple."
 
-     One level of windows per desk, which is the whole rule. A folder
-     inside a window has no window of its own and navigates to its desk —
-     so there is no depth to run out of, and no icon wired to a dialog
-     that was never rendered.
+     A second-class folder used to open a little window listing its
+     contents, on a desk with a wallpaper behind it. Both were ours and
+     neither was asked for; the window is gone and page.html renders
+     these folders now. So nothing on any desk opens a window any more,
+     and there is no depth to run out of.
 
-     A gallery and an empty folder navigate wherever they are: a window
-     listing photographs, or listing nothing, is worse than the page.
-
-     `href` is untouched in every case. With no JavaScript every one of
-     these is a plain link to a working desk. #}
-  {% set top = section.ancestors | length == 0 %}
+     `href` is untouched either way. With no JavaScript every one of
+     these is a plain link to a page that works. #}
   {% for p in section.subsections %}
     {% set sub = get_section(path=p) %}
     {% set_global ic_title = sub.title %}{% set_global ic_href = sub.permalink %}
     {% set_global ic_path = sub.path %}{% set_global ic_assets = sub.assets %}
     {% set_global ic_declared = sub.extra.icon %}{% set_global ic_x = sub.extra.x %}{% set_global ic_y = sub.extra.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "folder" %}
-    {% set_global ic_flow = false %}
     {% set_global ic_opens = "" %}
-    {% if not top and (sub.pages | length > 0 or sub.subsections | length > 0) %}
-      {% set_global ic_window = "folder-" ~ (sub.path | slugify) %}
-    {% else %}{% set_global ic_window = "" %}{% endif %}
+    {% set_global ic_window = "" %}
     {% include "_icon.html" %}
     {% if not sub.extra.x %}{% set_global slot = slot + 1 %}{% endif %}
   {% endfor %}
@@ -135,7 +130,7 @@
     {% set_global ic_path = p.path %}{% set_global ic_assets = p.assets %}
     {% set_global ic_declared = p.extra.icon %}{% set_global ic_x = p.extra.x %}{% set_global ic_y = p.extra.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}
-    {% set_global ic_flow = false %}{% set_global ic_window = "" %}
+    {% set_global ic_window = "" %}
     {% set_global ic_opens = p.extra.opens | default(value="") %}
     {% include "_icon.html" %}
     {% if not p.extra.x %}{% set_global slot = slot + 1 %}{% endif %}
@@ -147,7 +142,6 @@
     {% set_global ic_path = item.name %}{% set_global ic_assets = [] %}
     {% set_global ic_declared = item.icon %}{% set_global ic_x = item.x %}{% set_global ic_y = item.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}
-    {% set_global ic_flow = false %}
     {% set_global ic_window = item.window | default(value="") %}
     {% set_global ic_opens = "" %}
     {% include "_icon.html" %}
@@ -182,21 +176,7 @@
   {% set_global fp = p %}{% include "_preview.html" %}
 {% endfor %}
 
-{# a window for each folder on this desk, and everything inside it that
-   opens rather than navigates — but not on the home desk, where folders
-   are places you go to #}
-{% if section.ancestors | length > 0 %}
-  {% for q in section.subsections %}
-    {% set one = get_section(path=q) %}
-    {% if one.pages | length > 0 or one.subsections | length > 0 %}
-      {% set_global fw = one %}{% include "_folder.html" %}
-    {% endif %}
-    {% for r in one.pages %}
-      {% set_global ff = r %}{% include "_film.html" %}
-      {% set_global fp = r %}{% include "_preview.html" %}
-    {% endfor %}
-  {% endfor %}
-{% endif %}
+
 
 {% block windows %}{% endblock %}
 {% endblock %}

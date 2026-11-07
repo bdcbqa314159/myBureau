@@ -9,10 +9,6 @@
                 grid, so undeclared icons never stack on each other
       ic_opens  `opens = "page"` from the front matter, for a project
                 that should skip the preview and go straight to its page
-      ic_flow   set inside a folder window, where the icons are a list
-                and the desk's percentages mean nothing. The style
-                attribute is still written and CSS ignores it — one
-                class is a smaller change than a second code path
       ic_path   the full path, slugified — two projects called
                 "calendar" in different bureaus must not collide
 -#}
@@ -153,7 +149,7 @@
     test — a link to this site contains it, a link away from it does not. -#}
 {%- set parts = ic_href | split(pat=config.base_url) | length -%}
 {%- set away = (scheme == "https" or scheme == "http") and parts == 1 -%}
-<a class="icon{% if ic_flow %} is-flow{% endif %}"{% if ic_flow %} draggable="false"{% endif %} href="{{ ic_href }}"{% if away %} target="_blank" rel="noopener noreferrer"{% endif %}
+<a class="icon" href="{{ ic_href }}"{% if away %} target="_blank" rel="noopener noreferrer"{% endif %}
    style="--x:{{ ic_x | default(value=ac) }}%; --y:{{ ic_y | default(value=ar) }}%; view-transition-name:vt-{{ ic_path | slugify }}"
    data-vt="{{ ic_path | slugify }}"
    {%- if ic_kind == "folder" %} data-folder{% endif -%}

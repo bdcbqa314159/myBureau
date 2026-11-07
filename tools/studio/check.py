@@ -179,11 +179,19 @@ def main() -> int:
     check("asking twice does not collide",
           (tmp / "content" / "da" / "mon-essai-2").is_dir())
 
+    # WHICH TEMPLATE A NEW FOLDER GETS, and it depends on where it is
+    # put. On the home desk a folder is a bureau — its own desk, its own
+    # wallpaper, its word in the bandeau. Anywhere else it is a piece of
+    # work and opens the project page. Both build perfectly with the
+    # wrong one, which is why this is checked rather than trusted.
     b = verbs.new_bureau("content/da", "Sous Bureau")
     nb = tmp / b["made"]
-    check("a new bureau declares the template that makes it a desk",
-          'template = "section.html"' in (nb / "_index.md").read_text(encoding="utf-8"))
+    check("a folder made inside a bureau opens a page, not a desk",
+          'template = "page.html"' in (nb / "_index.md").read_text(encoding="utf-8"))
     check("and exists in both languages too", (nb / "_index.en.md").exists())
+    top = tmp / verbs.new_bureau("content", "Un Bureau")["made"]
+    check("but one made on the home desk is a desk, with its own wallpaper",
+          'template = "section.html"' in (top / "_index.md").read_text(encoding="utf-8"))
 
     try:
         verbs.new_project("content/da/theodora", "Dedans")
@@ -299,11 +307,11 @@ def main() -> int:
     if as_child and as_desk:
         a, b = as_child[0], as_desk[0]
         same = all(a.get(k) == b.get(k)
-                   for k in ("gallery", "depth", "opens_as", "empty", "holds",
+                   for k in ("gallery", "depth", "empty", "holds",
                              "photographs", "x", "y", "icon"))
         check("and the two descriptions agree on every fact", same,
               str({k: (a.get(k), b.get(k)) for k in
-                   ("gallery", "depth", "opens_as", "empty", "holds")}))
+                   ("gallery", "depth", "empty", "holds")}))
         check("whichever way she reaches it, it knows it is a gallery",
               a.get("gallery") is True and b.get("gallery") is True)
         check("and it knows about its photographs", len(a.get("photographs", [])) > 0)
@@ -369,7 +377,8 @@ def main() -> int:
 
     verbs.move("content/da/maison-cosette", "content/graphic-design")
     check("a bureau moves with its children",
-          (tmp / "content/graphic-design/maison-cosette/jojo/index.md").exists())
+          (tmp / "content/graphic-design/maison-cosette/_index.md").exists()
+          and (tmp / "content/graphic-design/maison-cosette/01.jpg").exists())
     verbs.undo()
 
     for bad in [("content/da", "content/da/maison-cosette")]:
