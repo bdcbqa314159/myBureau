@@ -1,9 +1,9 @@
 +++
-title = "confidence glow project"
+title = "theodora 02.jpeg"
 
 [extra]
-x = 62
-y = 16
+x = 45
+y = 23
 +++
 
 Texte de présentation à venir.

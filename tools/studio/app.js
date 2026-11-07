@@ -352,7 +352,7 @@ let dragging = null;
 const esc = (s) => String(s).replace(/[<>&"]/g, (c) =>
   ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c]));
 
-/* The url the site serves this thing at — content/da/theodora is /da/theodora/ */
+/* The url the site serves this thing at — content/da/theodora-01 is /da/theodora-01/ */
 const urlOf = (o) => "/site/" + o.path.replace(/^content\/?/, "") + (o.path === "content" ? "" : "/");
 
 /* Two ways to look at a thing, because they answer different questions.

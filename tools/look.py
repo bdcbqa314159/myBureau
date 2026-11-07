@@ -25,6 +25,7 @@ STATIC = ROOT / "static"
 
 IMAGE_TYPES = {"jpg", "jpeg", "png", "webp", "avif", "gif"}
 VIDEO_TYPES = {"mp4", "webm", "mov", "m4v"}
+DOC_TYPES = {"pdf"}
 # things a design program exports that this site will not show
 LOOKS_LIKE_AN_IMAGE = {"tif", "tiff", "bmp", "heic", "heif", "psd", "ai", "svg", "raw", "dng", "cr2", "nef"}
 
@@ -135,6 +136,34 @@ def main() -> int:
             notes.append((str(md.relative_to(ROOT)), [
                 "no pictures and almost no text — this page is empty",
                 "   fix: add images to the folder, or write something under the +++",
+            ]))
+
+    # 5b. two photographs behind one icon -> the second is unreachable
+    #
+    # A thing on a desk that opens as a photograph is ONE photograph.
+    # Put two in, and the desk shows one icon: the second exists, is
+    # built, and can only be reached by opening the first. A film, a
+    # document and a page are all allowed to hold several — each says so
+    # in a way the engine already reads, so none of them lands here.
+    for md in sorted(CONTENT.rglob("index.md")):
+        folder = md.parent
+        if 'opens = "page"' in md.read_text(encoding="utf-8", errors="replace"):
+            continue
+        files = [f for f in folder.iterdir() if f.is_file()]
+        exts = {f.suffix.lstrip(".").lower() for f in files}
+        if exts & VIDEO_TYPES or exts & DOC_TYPES:
+            continue
+        pictures = [f for f in files
+                    if f.suffix.lstrip(".").lower() in IMAGE_TYPES
+                    and f.stem.lower() not in ("icon", "poster")]
+        if len(pictures) > 1:
+            notes.append((str(folder.relative_to(ROOT)), [
+                f"{len(pictures)} photos ici, mais une seule icone sur le"
+                " bureau — on ne peut ouvrir les autres qu'en passant par"
+                " la premiere",
+                "   fix: un dossier par photo, chacune avec son nom",
+                '   ou, si c\'est une page avec plusieurs images voulues :'
+                ' ajoute opens = "page" dans [extra]',
             ]))
 
     # 6. a text file that is nearly index.md -> the folder is not on the site

@@ -1,5 +1,5 @@
 +++
-title = "confidence glow project"
+title = "confidence glow 01.jpg"
 
 [extra]
 x = 62

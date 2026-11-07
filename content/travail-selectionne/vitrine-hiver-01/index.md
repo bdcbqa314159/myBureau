@@ -1,5 +1,5 @@
 +++
-title = "vitrine d'hiver.png"
+title = "vitrine d'hiver 01.png"
 +++
 
 Texte de présentation à venir.

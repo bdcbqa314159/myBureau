@@ -52,30 +52,51 @@ for _i, (_seed, _w, _h) in enumerate(_GALLERY, start=1):
     PLAN.append((f"content/pellicules/{_i:02d}.jpg", _seed, _w, _h))
 
 # ---- project pages ----
-_PROJECTS = [
-    "graphic-design/grocery-list", "graphic-design/calendar",
-    "graphic-design/douze-regards", "graphic-design/atelier-mirabelle/terrasses",
-    "graphic-design/atelier-mirabelle/facades", "graphic-design/logofolio/marks",
-    "graphic-design/logofolio/wordmarks", "da/theodora",
-    "da/confidence-glow", "da/maison-cosette/jojo",
-    "da/maison-cosette/lookbook",
-    "travail-selectionne/nocturne", "travail-selectionne/vitrine-hiver",
-    "travail-selectionne/papier-calque",
-]
+# folder -> how many photographs live in it. A folder that OPENS A PAGE
+# holds several on purpose; a photograph on a desk holds exactly one,
+# which is the rule `a picture on a desk is one picture` asserts.
+#
+# This list was stale twice over before being rewritten: it still named
+# the sub-projects that were flattened away when second-class folders
+# became pages, so running it recreated the structure that change had
+# just removed.
+_PROJECTS = {
+    "graphic-design/grocery-list": 2,       # the landing page
+    "graphic-design/calendar": 2,           # a document, with its cover
+    "graphic-design/douze-regards": 2,      # a document
+    "graphic-design/atelier-mirabelle": 4,  # a folder, so a page
+    "graphic-design/logofolio": 4,          # a folder, so a page
+    "da/maison-cosette": 4,                 # a folder, so a page
+    "da/theodora-01": 1,
+    "da/theodora-02": 1,
+    "da/confidence-glow-01": 1,
+    "da/confidence-glow-02": 1,
+    "travail-selectionne/papier-calque": 2, # a document
+    "travail-selectionne/nocturne-01": 1,
+    "travail-selectionne/nocturne-02": 1,
+    "travail-selectionne/vitrine-hiver-01": 1,
+    "travail-selectionne/vitrine-hiver-02": 1,
+}
 # A seed draws whatever it draws. Where the draw did not suit the page
 # it sits on, the seed is chosen by hand here instead.
+#
+# THESE PATHS MOVE WHEN THE CONTENT MOVES, and repointing them is not
+# optional: each one is here because a random photograph came back
+# carrying something that does not belong on somebody's portfolio. Lose
+# the entry and the next run draws that picture again.
 RESEEDED = {
-    "content/graphic-design/atelier-mirabelle/terrasses/01.jpg": "terrasses-01",
+    # the terrasses photographs now sit in the folder itself, at 03/04
+    "content/graphic-design/atelier-mirabelle/03.jpg": "terrasses-01",
     # the first draw carried an airline's livery on a tail fin
-    "content/travail-selectionne/nocturne/01.jpg": "nocturne-01",
+    "content/travail-selectionne/nocturne-01/01.jpg": "nocturne-01",
     # first draw: a sportswear logo on a shoe, over a rooftop drop.
     # second: an identifiable face, which no other placeholder here has.
-    "content/travail-selectionne/vitrine-hiver/01.jpg": "vitrine-03",
+    "content/travail-selectionne/vitrine-hiver-01/01.jpg": "vitrine-03",
 }
 
-for _p in _PROJECTS:
+for _p, _count in _PROJECTS.items():
     _name = _p.replace("/", "-")
-    for _n in (1, 2):
+    for _n in range(1, _count + 1):
         _rel = f"content/{_p}/{_n:02d}.jpg"
         PLAN.append((_rel, RESEEDED.get(_rel, f"{_name}-{_n}"), 1800, 1200))
 
