@@ -43,7 +43,19 @@
         width="{{ shape.width }}" height="{{ shape.height }}" alt=""
         loading="lazy" decoding="async"></figure>
     {%- endif -%}
-    {{ section.content | safe }}
+    {#- HER WORDS, ON A SHEET. In the prototype `about me.txt` is a
+        screenshot of a plain-text editor, and the name says the same
+        thing: it is a .txt, so it should look like one being read.
+
+        A sheet rather than a styled paragraph, because what makes it
+        read as a text file is the SUNKEN edge — the document is a hole
+        in the window, not a panel on top of it. That is one shadow,
+        and it is the same four tokens the rest of the chrome uses.
+
+        No menu strip, no scrollbar drawn by hand, no product's name
+        anywhere near it: this is our own bevel, as the whole 1995 look
+        here is. -#}
+    <div class="about-sheet">{{ section.content | safe }}</div>
   </div>
 </dialog>
 {% endblock %}

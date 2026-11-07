@@ -1100,6 +1100,51 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_about_is_read_as_a_text_file(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """`about me.txt` is a .txt, and is read as one.
+
+    Her prototype shows it as a screenshot of a plain-text editor. The
+    window holds a sheet: sunken, monospace, with a caret blinking after
+    the last line. Each of those is one declaration, and each is the
+    kind of thing that disappears in a refactor without anything else
+    noticing — the page still builds and her words are still there.
+
+    The reduced-motion rule is asserted on purpose, and it lives inside
+    a media query: a blinking block is exactly what somebody who asked
+    for less motion asked to be rid of, and a CSS check that cannot see
+    into @media would report this file clean while the rule was gone.
+    """
+    ok, log = build(d)
+    home = page(d, "index.html")
+    win = re.search(r'<dialog class="win win-about".*?</dialog>', home, re.S)
+
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    rules = {}
+    for sel, bodytext in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        rules.setdefault(sel.strip(), []).append(bodytext)
+    sheet = " ".join(rules.get(".about-sheet", []))
+    caret = " ".join(rules.get(".about-sheet > :last-child::after", []))
+
+    return [
+        ("builds", ok),
+        ("her words are on a sheet inside the window",
+         bool(win) and 'class="about-sheet"' in win.group(0)),
+        ("and they are still her words, not swallowed by the markup",
+         bool(win) and "Texte de présentation à venir." in win.group(0)),
+        ("the sheet is monospace, from the stack the chrome already uses",
+         "var(--font-ui)" in sheet),
+        ("it is sunken, so it reads as a document and not a panel",
+         "inset" in sheet and "box-shadow" in sheet),
+        ("there is a caret after the last line", "animation" in caret),
+        ("and it stops blinking for anyone who asked for less motion",
+         any("animation: none" in b
+             for sel, bodies in rules.items() if "about-sheet" in sel
+             for b in bodies)
+         and "prefers-reduced-motion" in css),
+    ]
+
+
 def case_a_picture_is_one_picture(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A photograph on a desk is ONE photograph, never a pile of them.
 
@@ -1360,6 +1405,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("about me.txt is read as a text file", case_about_is_read_as_a_text_file),
     ("a picture on a desk is one picture", case_a_picture_is_one_picture),
     ("a closed window stays closed", case_a_closed_dialog_stays_closed),
     ("a .DS_Store does not stop the preview", case_finder_droppings),
