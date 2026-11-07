@@ -1100,6 +1100,58 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_the_sheet_has_buttons(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Three buttons that change the STATE of her text, never a word.
+
+    Wrapping and size are what a plain-text editor lets you change
+    about somebody else's file. The promise is the second half: these
+    cannot edit. That is asserted against the source rather than
+    guessed, because "it only toggles a class" is true right up until
+    somebody adds a feature.
+
+    They are also asserted to be absent without a script. A row of
+    controls that cannot work is worse than no row, and `html.js` is
+    set before first paint precisely so this can be decided in CSS.
+    """
+    ok, log = build(d)
+    home = page(d, "index.html")
+    win = re.search(r'<dialog class="win win-about".*?</dialog>', home, re.S)
+    strip = re.search(r'<div class="sheet-tools">.*?</div>',
+                      win.group(0) if win else "", re.S)
+
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    rules = {}
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        rules.setdefault(sel.strip(), []).append(body)
+
+    src = (d / "src" / "desk.ts").read_text(encoding="utf-8") if (d / "src").exists() \
+        else (ROOT / "src" / "desk.ts").read_text(encoding="utf-8")
+    start = src.find("The three buttons above about me.txt")
+    end = src.find('[data-close]', start)
+    block = src[start:end] if start != -1 else ""
+    writes = ("innerHTML", "textContent", "innerText", "insertAdjacent",
+              "appendChild", "createTextNode", ".remove()")
+
+    return [
+        ("builds", ok),
+        ("the buttons are in the window, above her words", bool(strip)),
+        ("there are three of them",
+         bool(strip) and strip.group(0).count("<button") == 3),
+        ("wrapping is a state, and says so to a screen reader",
+         bool(strip) and 'aria-pressed' in strip.group(0)),
+        ("the two that are only a letter carry a real name",
+         bool(strip) and strip.group(0).count("aria-label=") == 2),
+        ("they are hidden when there is no script to work them",
+         any("display: none" in b for b in rules.get(".sheet-tools", []))
+         and ".js .sheet-tools" in rules),
+        ("each language gets its own words, not the French ones twice",
+         "Retour à la ligne" in home and "Word wrap" in page(d, "en/index.html")),
+        ("and nothing in that script can write to her text",
+         block != "" and not any(w in block for w in writes)),
+    ]
+
+
 def case_about_is_read_as_a_text_file(d: pathlib.Path) -> list[tuple[str, bool]]:
     """`about me.txt` is a .txt, and is read as one.
 
@@ -1405,6 +1457,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("the sheet has buttons that cannot edit", case_the_sheet_has_buttons),
     ("about me.txt is read as a text file", case_about_is_read_as_a_text_file),
     ("a picture on a desk is one picture", case_a_picture_is_one_picture),
     ("a closed window stays closed", case_a_closed_dialog_stays_closed),
