@@ -1055,6 +1055,58 @@ def case_a_film_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_a_closed_dialog_stays_closed(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """No stylesheet may set `display` on a window that is not open.
+
+    A closed <dialog> is hidden by exactly one rule, and it is in the
+    BROWSER's stylesheet: `dialog:not([open]) { display: none }`. Any
+    author rule that sets display on the same element beats it —
+    whatever the specificity, because author styles win over the user
+    agent's. There is no warning. The build is clean, every check here
+    was green, and the site opened with every photograph on the desk at
+    once, full-screen and stacked, with nothing reachable underneath.
+
+    The dialog class names are read from the built HTML rather than
+    typed here, so a window added later is covered without anyone
+    remembering this. A rule for something INSIDE a window is fine; it
+    is the window's own element that must stay hidden.
+    """
+    ok, log = build(d)
+    dialogs = set()
+    for f in (d / "public").rglob("*.html"):
+        for cls in re.findall(r'<dialog[^>]*class="([^"]*)"',
+                              f.read_text(encoding="utf-8")):
+            dialogs.update(cls.split())
+
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    # INNERMOST BLOCKS ONLY, which is what reaches inside @media: an
+    # @media's own body still contains braces, so it never matches as a
+    # rule, and the rules within it do. A check that split on braces
+    # instead was blind to every rule in a media query, and that is how
+    # a display: none on the editor shipped once before.
+    offences = []
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        if not re.search(r"(^|[;\s])display\s*:", body):
+            continue
+        for one in sel.split(","):
+            last = re.split(r"[\s>+~]+", one.strip())[-1]
+            classes = set(re.findall(r"\.([A-Za-z0-9_-]+)", last))
+            if classes & dialogs and "[open]" not in last:
+                offences.append(one.strip())
+
+    inside_a_window = [s for s in offences if " " in s]
+    return [
+        ("builds", ok),
+        ("the site really does have windows to check",
+         len(dialogs) > 1),
+        ("no stylesheet sets display on a window that is not open",
+         offences == []),
+        ("and the rule did not pass by looking at the wrong thing",
+         inside_a_window == []),
+    ]
+
+
 def case_finder_droppings(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A .DS_Store under content/ must not stop the preview.
 
@@ -1205,6 +1257,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("a closed window stays closed", case_a_closed_dialog_stays_closed),
     ("a .DS_Store does not stop the preview", case_finder_droppings),
     ("a picture opens plain, a film keeps its frame", case_a_picture_opens_plain),
     ("a project inside a folder that is a page", case_film_in_a_folder),
