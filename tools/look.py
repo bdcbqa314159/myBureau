@@ -36,8 +36,22 @@ def front_matter(p: pathlib.Path) -> str:
 
 
 def unseen_by_git() -> list:
-    """Files under content/ that git is ignoring."""
-    files = [p for p in CONTENT.rglob("*") if p.is_file()]
+    """Files under content/ that git is ignoring.
+
+    HIDDEN FILES ARE NOT HERS. macOS writes a `.DS_Store` into every
+    folder a Finder window has ever been opened on, and those are
+    ignored by git exactly as they should be. Reporting them said three
+    files were missing from the site and told her to commit Finder's
+    droppings — advice that is worse than the problem it describes, on a
+    run it refused to let through at all.
+
+    Nothing this site shows is a hidden file: a content file is a `.md`
+    or a photograph she dropped in. So the scan looks at what she put
+    there and nothing else. This also covers `._name.jpg`, the other
+    half AppleDouble leaves on a non-Mac disk.
+    """
+    files = [p for p in CONTENT.rglob("*")
+             if p.is_file() and not p.name.startswith(".")]
     if not files or not (ROOT / ".git").exists():
         return []                 # a scratch copy of the site, not a clone
     done = subprocess.run(
