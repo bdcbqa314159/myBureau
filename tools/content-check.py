@@ -340,7 +340,7 @@ def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]
     content lives.
     """
     photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
-    other = (ROOT / "content" / "graphic-design" / "wallpaper.jpg").read_bytes()
+    other = (ROOT / "content" / "da" / "wallpaper.jpg").read_bytes()
     # a brand new bureau, with nothing but a wallpaper dropped in
     p = d / "content" / "scenographie"
     p.mkdir()
@@ -353,6 +353,29 @@ def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]
     q.mkdir()
     (q / "_index.md").write_text(FRONT.format(
         title="dedans", extra='template = "section.html"\n'))
+    # A FOLDER THAT OPENS A PAGE, with a wallpaper still beside it —
+    # which is the state every converted desk is in. Without a rule the
+    # wallpaper is rendered as her first photograph, full width, at the
+    # top of the page. The real content cannot test this: its dead
+    # wallpapers were deleted, so the check would pass by having
+    # nothing to find.
+    w = d / "content" / "affiche"
+    w.mkdir()
+    (w / "_index.md").write_text(FRONT.format(
+        title="affiche", extra='template = "page.html"\n'), encoding="utf-8")
+    (w / "wallpaper.jpg").write_bytes(other)
+    (w / "01.jpg").write_bytes(photo)
+    # A folder inside it holding NOTHING BUT a wallpaper, which is the
+    # only arrangement where the listing rule bites: `01.jpg` sorts
+    # before `wallpaper.jpg`, so wherever a real photograph exists it
+    # wins on order alone and the rule is never consulted. A converted
+    # desk with no photographs of its own is exactly this folder.
+    wd = w / "dedans"
+    wd.mkdir()
+    (wd / "_index.md").write_text(FRONT.format(
+        title="dedans", extra='template = "page.html"\n'), encoding="utf-8")
+    (wd / "wallpaper.jpg").write_bytes(other)
+
     # and one with nothing at all, anywhere above it
     n = d / "content" / "nue"
     n.mkdir()
@@ -373,11 +396,19 @@ def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]
          wall("scenographie/dedans/index.html") == fr),
         ("a bureau with no wallpaper anywhere above it still is not black",
          wall("nue/index.html").startswith("wall-home")),
-        ("the demo's own desks each kept their own",
-         len({wall("da/index.html"), wall("graphic-design/index.html"),
-              wall("travail-selectionne/index.html")}) == 3),
-        ("but a folder ON a desk has no wallpaper at all — it is a page",
+        ("the demo's own desk kept its own",
+         wall("da/index.html").startswith("wallpaper.")),
+        ("a first-class folder that opens a PAGE has no wallpaper",
+         wall("graphic-design/index.html") == "none"
+         and wall("travail-selectionne/index.html") == "none"),
+        ("and neither does a folder on a desk — it is a page too",
          wall("da/maison-cosette/index.html") == "none"),
+        ("a wallpaper left beside a page is not rendered as one of her"
+         " photographs, which is what it would be without the rule",
+         page(d, "affiche/index.html").count("<figure") == 1),
+        ("nor does it become a folder's face in a listing",
+         bool(re.search(r'<a class="place" href="[^"]*dedans/">\s*<span',
+                        page(d, "affiche/index.html")))),
         ("no front matter in the whole site still types a wallpaper path",
          not any("wallpaper =" in f.read_text(encoding="utf-8")
                  for f in (d / "content").rglob("_index*.md"))),
