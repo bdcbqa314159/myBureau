@@ -12,6 +12,11 @@ y = 58
 "05.jpg" = 24
 "08.jpg" = 64
 
+[extra.angle]
+"02.jpg" = -3
+"05.jpg" = 4
+"08.jpg" = 1
+
 [extra.offset]
 "02.jpg" = 8
 "05.jpg" = -26

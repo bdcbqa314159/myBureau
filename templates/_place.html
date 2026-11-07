@@ -23,9 +23,13 @@
         [extra.offset]
         "01.jpg" = -12       # per cent off the centre, + is right
 
-    Both optional. Declare neither and the stylesheet gives it a place
-    from a repeating rhythm, so a folder nobody has arranged still
-    looks pinned rather than stacked in a column.
+        [extra.angle]
+        "01.jpg" = -2        # degrees, how it hangs
+
+    All three optional, and independent: an angle may be declared
+    without a width. Declare none and the stylesheet gives the
+    photograph a place from a repeating rhythm, so a folder nobody has
+    arranged still looks pinned rather than stacked in a column.
 
     EVERY PICTURE IT HOLDS, rather than one face for the whole thing.
     A folder of four photographs arrived as a single cropped thumbnail
@@ -61,6 +65,9 @@
     {%- endif -%}
     {%- if pl_extra.offset and pl_extra.offset[leaf] -%}
       {%- set_global pin = pin ~ "--x:" ~ pl_extra.offset[leaf] ~ "%;" -%}
+    {%- endif -%}
+    {%- if pl_extra.angle and pl_extra.angle[leaf] -%}
+      {%- set_global pin = pin ~ "--r:" ~ pl_extra.angle[leaf] ~ "deg;" -%}
     {%- endif -%}
     <a class="stop" href="{{ pl_href }}"{% if pin %} style="{{ pin }}"{% endif %}>
       <img src="{{ small.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
