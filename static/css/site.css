@@ -856,14 +856,28 @@ body.project .bar { color: var(--ink); text-shadow: none; }
     gap: clamp(2rem, 9vw, 4rem);
   }
 }
-/* The projects inside a folder, listed under its own photographs.
-   A row of plain links: this is a way out, not a second gallery. */
-.proj-inside {
-  display: flex; flex-wrap: wrap; gap: .3rem 1.4rem;
-  padding: 1.6rem var(--pad) 0;
-  font-size: var(--f-3);
+/* WHAT IS INSIDE A FOLDER, under its own photographs.
+   Each thing wears its own face, because a folder of photographs listed
+   as filenames tells you where they are and nothing about what they
+   are. Auto-fill rather than a fixed column count: a folder holding two
+   things should not render two cards and a column of air. */
+.proj-places {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: 1.6rem 1.2rem;
+  padding: 2.4rem var(--pad) 0;
 }
-.proj-inside a { color: inherit; }
+.place { display: grid; gap: .5rem; color: inherit; text-decoration: none; }
+.place img {
+  display: block; width: 100%; height: auto;
+  /* One shape for every face, so a portrait and a panorama do not make
+     the row jump. The picture is cropped here and never on its own
+     page, where the work is actually being looked at. */
+  aspect-ratio: 4 / 3; object-fit: cover;
+  background: rgb(0 0 0 / .06);
+}
+.place span { font-size: var(--f-3); }
+.place:hover span, .place:focus-visible span { text-decoration: underline; }
 
 .proj-back {
   display: inline-block; margin: clamp(3rem, 6vw, 6rem) var(--pad);

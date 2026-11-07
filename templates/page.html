@@ -148,19 +148,28 @@
 
   {#- WHAT IS INSIDE, when this page is a folder.
 
-      A folder can hold projects of its own, and a page that shows only
-      its own photographs would leave them built and linked from
-      nowhere — reachable by typing the url and by nothing else. That is
-      the silent kind of broken, so they are listed, plainly, under the
-      work. A project has no children and never reaches this. -#}
+      A folder can hold projects of its own, and a page showing only its
+      own photographs would leave them built and linked from nowhere —
+      reachable by typing the url and by nothing else. That is the
+      silent kind of broken.
+
+      They were a row of words for one change, which said where they
+      were and nothing about what they are. A folder of photographs read
+      as a list of filenames. So each one is a PLACE now: its own face,
+      its own name, the whole block a link. A project has no children
+      and never reaches this. -#}
   {% if section is defined and (section.pages | length > 0 or section.subsections | length > 0) %}
-    <nav class="proj-inside" aria-label="{{ section.title }}">
+    <nav class="proj-places" aria-label="{{ section.title }}">
       {% for sub in section.pages %}
-        <a href="{{ sub.permalink }}">{{ sub.title }}</a>
+        {% set_global pl_title = sub.title %}{% set_global pl_href = sub.permalink %}
+        {% set_global pl_here = sub.colocated_path %}{% set_global pl_assets = sub.assets %}
+        {% include "_place.html" %}
       {% endfor %}
       {% for q in section.subsections %}
         {% set one = get_section(path=q) %}
-        <a href="{{ one.permalink }}">{{ one.title }}</a>
+        {% set_global pl_title = one.title %}{% set_global pl_href = one.permalink %}
+        {% set_global pl_here = one.colocated_path %}{% set_global pl_assets = one.assets %}
+        {% include "_place.html" %}
       {% endfor %}
     </nav>
   {% endif %}

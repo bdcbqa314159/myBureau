@@ -1,0 +1,43 @@
+{#- ONE THING INSIDE A FOLDER, shown as a place rather than a word.
+
+    Expects, set with set_global before the include:
+
+      pl_title   what she called it
+      pl_href    where it goes
+      pl_here    its colocated_path — the folder it sits in, which is a
+                 real path for a section and for a page alike. `assets`
+                 is not: a section spells them as urls with the language
+                 in front, and `/en/…/01.jpg` is not a file anybody can
+                 resize.
+      pl_assets  its files, for the names only
+
+    THE FACE. Same order as the desk icon, so a folder does not wear one
+    picture in one place and another picture in the other: a file called
+    `icon.*` if she dropped one in, otherwise the first photograph,
+    otherwise nothing and the name carries it alone. `poster.*` is a
+    film's still and never the face.
+
+    A place with no picture is a real case — an empty folder, a project
+    holding only a document — and it must not render a broken image. -#}
+{%- set_global pl_face = "" -%}
+{%- for a in pl_assets -%}
+  {%- set leaf = a | split(pat="/") | last -%}
+  {%- set stem = leaf | split(pat=".") | first -%}
+  {%- set ext = leaf | split(pat=".") | last | lower -%}
+  {%- if ext in config.extra.image_types and stem != "poster" -%}
+    {%- if stem == "icon" -%}
+      {%- set_global pl_face = pl_here ~ leaf -%}
+    {%- elif pl_face == "" -%}
+      {%- set_global pl_face = pl_here ~ leaf -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+<a class="place" href="{{ pl_href }}">
+  {%- if pl_face != "" -%}
+    {%- set shape = get_image_metadata(path=pl_face) -%}
+    {%- set small = resize_image(path=pl_face, width=600, op="fit_width", format="webp", quality=78) -%}
+    <img src="{{ small.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
+         alt="" loading="lazy" decoding="async">
+  {%- endif -%}
+  <span>{{ pl_title }}</span>
+</a>
