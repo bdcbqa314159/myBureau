@@ -1,4 +1,4 @@
-{#- ONE THING INSIDE A FOLDER, shown as a place rather than a word.
+{#- ONE THING INSIDE A FOLDER, laid along the route.
 
     Expects, set with set_global before the include:
 
@@ -11,33 +11,42 @@
                  resize.
       pl_assets  its files, for the names only
 
-    THE FACE. Same order as the desk icon, so a folder does not wear one
-    picture in one place and another picture in the other: a file called
-    `icon.*` if she dropped one in, otherwise the first photograph,
-    otherwise nothing and the name carries it alone. `poster.*` is a
-    film's still and never the face.
+    EVERY PICTURE IT HOLDS, rather than one face for the whole thing.
+    A folder of four photographs arrived as a single cropped thumbnail
+    with its name underneath: that said a folder existed and nothing
+    about the work inside it. Each photograph is its own stop now, and
+    all of a thing's stops lead to the same place.
 
-    A place with no picture is a real case — an empty folder, a project
-    holding only a document — and it must not render a broken image. -#}
-{%- set_global pl_face = "" -%}
+    It is also the honest way to put more pictures on the page. These
+    are photographs already in the site and already looked at; drawing
+    new ones means new random draws, and a draw comes back with
+    whatever it comes back with — which is why placeholders.py carries
+    a map of seeds chosen by hand.
+
+    NOT her photographs, and never a stop: `icon.*` is the face on the
+    desk, `poster.*` is a film's still, `wallpaper.*` is the ground a
+    desk used to stand on.
+
+    A thing with no picture at all is real — an empty folder, a project
+    holding only a document — and it must stay reachable, so it arrives
+    as a stop wearing nothing but its name. -#}
+{%- set_global pl_shown = 0 -%}
 {%- for a in pl_assets -%}
   {%- set leaf = a | split(pat="/") | last -%}
   {%- set stem = leaf | split(pat=".") | first -%}
   {%- set ext = leaf | split(pat=".") | last | lower -%}
-  {%- if ext in config.extra.image_types and stem != "poster" and stem != "wallpaper" -%}
-    {%- if stem == "icon" -%}
-      {%- set_global pl_face = pl_here ~ leaf -%}
-    {%- elif pl_face == "" -%}
-      {%- set_global pl_face = pl_here ~ leaf -%}
-    {%- endif -%}
+  {%- if ext in config.extra.image_types and stem != "poster" and stem != "wallpaper" and stem != "icon" -%}
+    {%- set src = pl_here ~ leaf -%}
+    {%- set shape = get_image_metadata(path=src) -%}
+    {%- set small = resize_image(path=src, width=900, op="fit_width", format="webp", quality=78) -%}
+    <a class="stop" href="{{ pl_href }}">
+      <img src="{{ small.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
+           alt="" loading="lazy" decoding="async">
+      <span>{{ pl_title }}</span>
+    </a>
+    {%- set_global pl_shown = pl_shown + 1 -%}
   {%- endif -%}
 {%- endfor -%}
-<a class="place" href="{{ pl_href }}">
-  {%- if pl_face != "" -%}
-    {%- set shape = get_image_metadata(path=pl_face) -%}
-    {%- set small = resize_image(path=pl_face, width=600, op="fit_width", format="webp", quality=78) -%}
-    <img src="{{ small.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
-         alt="" loading="lazy" decoding="async">
-  {%- endif -%}
-  <span>{{ pl_title }}</span>
-</a>
+{%- if pl_shown == 0 -%}
+  <a class="stop is-bare" href="{{ pl_href }}"><span>{{ pl_title }}</span></a>
+{%- endif -%}

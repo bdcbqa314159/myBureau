@@ -856,28 +856,64 @@ body.project .bar { color: var(--ink); text-shadow: none; }
     gap: clamp(2rem, 9vw, 4rem);
   }
 }
-/* WHAT IS INSIDE A FOLDER, under its own photographs.
-   Each thing wears its own face, because a folder of photographs listed
-   as filenames tells you where they are and nothing about what they
-   are. Auto-fill rather than a fixed column count: a folder holding two
-   things should not render two cards and a column of air. */
-.proj-places {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
-  gap: 1.6rem 1.2rem;
-  padding: 2.4rem var(--pad) 0;
+/* WHAT IS INSIDE A FOLDER: a horizontal route of photographs.
+   --------------------------------------------------------------------
+   One line, scrolled sideways. Every picture inside the folder is a
+   stop on it, and all of a thing's stops lead to that thing.
+
+   A COMMON HEIGHT AND A FREE WIDTH is what makes a row of photographs
+   read as one line rather than a wall: each picture keeps its own
+   proportion — nothing is cropped anywhere on this site — and a
+   panorama simply takes more of the line than a portrait does.
+
+   The scroll is the x axis only. `overscroll-behavior-inline: contain`
+   stops a sideways flick at the end of the route from turning into the
+   browser's back gesture, which on a trackpad is very easy to do by
+   accident. */
+.proj-route {
+  display: flex; align-items: flex-end;
+  gap: .9rem;
+  padding: 2.6rem var(--pad);
+  overflow-x: auto; overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scroll-padding-inline: var(--pad);
+  /* .win sets touch-action:none on windows; this is not one, and a
+     route that cannot be swiped on a phone is a route nobody sees the
+     end of. */
+  touch-action: pan-x;
 }
-.place { display: grid; gap: .5rem; color: inherit; text-decoration: none; }
-.place img {
-  display: block; width: 100%; height: auto;
-  /* One shape for every face, so a portrait and a panorama do not make
-     the row jump. The picture is cropped here and never on its own
-     page, where the work is actually being looked at. */
-  aspect-ratio: 4 / 3; object-fit: cover;
-  background: rgb(0 0 0 / .06);
+.stop {
+  position: relative; flex: 0 0 auto;
+  height: clamp(10rem, 30vh, 20rem);
+  color: inherit; text-decoration: none;
 }
-.place span { font-size: var(--f-3); }
-.place:hover span, .place:focus-visible span { text-decoration: underline; }
+.stop img { display: block; height: 100%; width: auto; }
+
+/* THE NAME, which is not under the picture any more.
+   It sits over the foot of its own stop and is invisible until the
+   picture is pointed at or focused. It stays in the document the whole
+   time, so a screen reader always has it — this is a thing being
+   hidden from the eye, not from the page. */
+.stop span {
+  position: absolute; inset-inline: 0; bottom: 0;
+  padding: .45rem .55rem;
+  font-size: var(--f-2);
+  color: #fff; background: rgb(0 0 0 / .55);
+  opacity: 0; transition: opacity .14s var(--ease);
+}
+.stop:hover span, .stop:focus-visible span { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .stop span { transition: none; } }
+
+/* A thing with no picture to show still has to be reachable, so it is
+   a stop wearing only its name — and that name is always visible,
+   because there is nothing else for it to sit on. */
+.stop.is-bare {
+  display: grid; place-items: center;
+  min-width: 10rem; padding: 0 1rem;
+  background: var(--face);
+  box-shadow: inset 1px 1px 0 var(--dim), inset -1px -1px 0 var(--lit);
+}
+.stop.is-bare span { position: static; opacity: 1; background: none; color: #000; }
 
 .proj-back {
   display: inline-block; margin: clamp(3rem, 6vw, 6rem) var(--pad);

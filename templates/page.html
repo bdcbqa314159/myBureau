@@ -159,13 +159,17 @@
       reachable by typing the url and by nothing else. That is the
       silent kind of broken.
 
-      They were a row of words for one change, which said where they
-      were and nothing about what they are. A folder of photographs read
-      as a list of filenames. So each one is a PLACE now: its own face,
-      its own name, the whole block a link. A project has no children
-      and never reaches this. -#}
+      They were a row of words, then a grid of cropped thumbnails with
+      the names underneath. Both said where things were and little about
+      what they are.
+
+      So: a ROUTE. Every photograph inside this folder, at its own
+      proportion, along one horizontal line you scroll. Nothing is
+      cropped and no name sits under anything — the pictures are the
+      page, and a name appears when you point at one or reach it with
+      the keyboard. A project has no children and never reaches this. -#}
   {% if section is defined and (section.pages | length > 0 or section.subsections | length > 0) %}
-    <nav class="proj-places" aria-label="{{ section.title }}">
+    <nav class="proj-route" aria-label="{{ section.title }}">
       {% for sub in section.pages %}
         {% set_global pl_title = sub.title %}{% set_global pl_href = sub.permalink %}
         {% set_global pl_here = sub.colocated_path %}{% set_global pl_assets = sub.assets %}
