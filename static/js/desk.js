@@ -637,6 +637,19 @@ document.querySelectorAll('a[href^="#"]').forEach((link) => {
             target.showModal();
     });
 });
+// A frameless preview has no ✕ to press, so a click that lands on the
+// dialog itself — anywhere off the photograph — closes it. The picture
+// is a link and swallows its own clicks, so this fires only on the dark.
+//
+// Escape already worked and still does: the dialog is modal. This is the
+// pointer half of the same thing, and without it someone on a trackpad
+// with no keyboard in reach is stuck looking at a picture.
+document.querySelectorAll(".win-preview").forEach((win) => {
+    win.addEventListener("click", (e) => {
+        if (e.target === win)
+            win.close();
+    });
+});
 document.querySelectorAll("[data-close]").forEach((b) => {
     b.addEventListener("click", () => b.closest("dialog")?.close());
 });

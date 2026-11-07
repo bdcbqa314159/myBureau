@@ -36,17 +36,28 @@
     to its own page: a brochure with a cover photograph in the folder
     would otherwise get a preview dialog here that no icon ever opens. -#}
 {% if pv_clip == "" and pv_doc == "" and pv_still and fp.extra.opens != "page" %}
-<dialog class="win win-preview" id="preview-{{ fp.path | slugify }}">
-  <div class="win-bar">
-    <span>{{ fp.title }}</span>
-    <div class="win-controls">
-      <a class="win-expand" href="{{ fp.permalink }}"
-         aria-label="{{ trans(key='window_page', lang=lang) }}"
-         title="{{ trans(key='window_page', lang=lang) }}">&#x2b1c;</a>
-      <form method="dialog"><button aria-label="{{ trans(key='window_close', lang=lang) }}">&#x2715;</button></form>
-    </div>
-  </div>
-  <div class="win-body preview-body">
+{#- NO FRAME. A photograph is the work; a title bar, a close box and a
+    bevel around it are furniture from 1995 standing between her picture
+    and the person looking at it. She asked for the picture plain, so
+    the window is the picture and nothing else.
+
+    What the frame used to carry has to go somewhere:
+
+      the NAME      aria-label, so a screen reader still says what it is
+      CLOSING       Escape, which a modal dialog does for itself, and a
+                    click anywhere off the picture — added in desk.ts,
+                    because without the ✕ that was the only way out
+      the PAGE      the picture itself is the link. The README calls the
+                    second step to the page deliberate, and it still is;
+                    it is the photograph now rather than a ⬜.
+
+    The film keeps its frame — it has controls, a minimise, and a
+    thought written beside it, none of which is a picture.
+-#}
+<dialog class="win win-preview" id="preview-{{ fp.path | slugify }}"
+        aria-label="{{ fp.title }}">
+  <a class="preview-body" href="{{ fp.permalink }}"
+     aria-label="{{ trans(key='window_page', lang=lang) }}">
     {% for asset in fp.assets %}
       {% set file = asset | split(pat="/") | last %}
       {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" and file | split(pat=".") | first != "poster" %}
@@ -60,7 +71,6 @@
              alt="{{ alt }}" loading="lazy" decoding="async">
       {% endif %}
     {% endfor %}
-    {% if fp.content %}<div class="preview-note">{{ fp.content | safe }}</div>{% endif %}
-  </div>
+  </a>
 </dialog>
 {% endif %}

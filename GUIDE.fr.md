@@ -276,9 +276,13 @@ dossier — le léopard, le croco — en mettant un `icon.png` à côté de son
 ### Ce qui se passe quand on clique
 
 Une seule règle : **un clic montre la chose**, il ne t'emmène pas
-ailleurs. Un aperçu s'ouvre sur le bureau, comme la barre d'espace sur un
-Mac. Et dans le coin de la fenêtre, le bouton **⬜** ouvre la vraie page
-du projet, en grand, si tu veux aller plus loin.
+ailleurs. La photo s'ouvre sur le bureau, en grand et **sans cadre
+autour** — comme la barre d'espace sur un Mac. Échap la referme, ou un
+clic à côté. Et un clic **sur la photo** ouvre la vraie page du projet,
+si tu veux aller plus loin.
+
+Le film, lui, garde son cadre : il a ses boutons, et le texte écrit à
+côté de lui.
 
 Deux exceptions, et elles tombent toutes seules :
 
