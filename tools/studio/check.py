@@ -111,11 +111,24 @@ def main() -> int:
     proj = "content/graphic-design/grocery-list"
     d = tmp / "content" / "graphic-design" / "grocery-list"
     pixels = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
+
+    # COUNTED, NEVER TYPED. This block used to name 03.jpg in nine
+    # places, which meant it was really asserting "the landing page
+    # holds exactly two photographs" — and it broke the moment the demo
+    # gained more. What it is for is the NUMBERING, so the numbers are
+    # derived from what is in the folder.
+    def jpgs() -> list:
+        return sorted(f.name for f in d.iterdir() if f.suffix == ".jpg")
+
+    held = jpgs()
+    added = "{:02d}.jpg".format(len(held) + 1)
+    in_order = ["{:02d}.jpg".format(i) for i in range(1, len(held) + 2)]
+
     verbs.add_image(proj, "whatever.jpg", pixels)
-    names = sorted(f.name for f in d.iterdir() if f.suffix == ".jpg")
+    names = jpgs()
     check("a dropped photograph is numbered, not left with its own name",
-          "03.jpg" in names and "whatever.jpg" not in names, str(names))
-    check("and arrives byte for byte", (d / "03.jpg").read_bytes() == pixels)
+          added in names and "whatever.jpg" not in names, str(names))
+    check("and arrives byte for byte", (d / added).read_bytes() == pixels)
 
     try:
         verbs.add_image(proj, "notes.txt", b"x")
@@ -124,12 +137,11 @@ def main() -> int:
         check("refuses a file the site cannot show", True)
 
     first = (d / "01.jpg").read_bytes()
-    third = (d / "03.jpg").read_bytes()
-    verbs.reorder(proj, ["03.jpg", "01.jpg", "02.jpg"])
-    check("reordering renumbers without losing one",
-          sorted(f.name for f in d.iterdir() if f.suffix == ".jpg") == ["01.jpg", "02.jpg", "03.jpg"])
-    check("and the photograph that was third is now first — so it is the icon",
-          (d / "01.jpg").read_bytes() == third)
+    newest = (d / added).read_bytes()
+    verbs.reorder(proj, [added] + held)
+    check("reordering renumbers without losing one", jpgs() == in_order)
+    check("and the photograph that was last is now first — so it is the icon",
+          (d / "01.jpg").read_bytes() == newest)
     check("nothing is left holding a temporary name",
           not any("studio-hold" in f.name for f in d.iterdir()))
 
@@ -145,7 +157,7 @@ def main() -> int:
     verbs.undo()
     check("undo reverses a reorder", (d / "01.jpg").read_bytes() == first)
     verbs.undo()
-    check("undo removes a photograph that was added", not (d / "03.jpg").exists())
+    check("undo removes a photograph that was added", not (d / added).exists())
     # the next entry back is the bare project's placement, not theodora's
     verbs.undo()
     bare_t = (bare / "index.md").read_text(encoding="utf-8")

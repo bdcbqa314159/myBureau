@@ -62,17 +62,17 @@ for _i, (_seed, _w, _h) in enumerate(_GALLERY, start=1):
 # became pages, so running it recreated the structure that change had
 # just removed.
 _PROJECTS = {
-    "graphic-design/grocery-list": 2,       # the landing page
-    "graphic-design/calendar": 2,           # a document, with its cover
-    "graphic-design/douze-regards": 2,      # a document
-    "graphic-design/atelier-mirabelle": 4,  # a folder, so a page
-    "graphic-design/logofolio": 4,          # a folder, so a page
-    "da/maison-cosette": 4,                 # a folder, so a page
+    "graphic-design/grocery-list": 6,       # the landing page
+    "graphic-design/calendar": 4,           # a document, with its cover
+    "graphic-design/douze-regards": 4,      # a document
+    "graphic-design/atelier-mirabelle": 9,  # a folder, so a page
+    "graphic-design/logofolio": 9,          # a folder, so a page
+    "da/maison-cosette": 9,                 # a folder, so a page
     "da/theodora-01": 1,
     "da/theodora-02": 1,
     "da/confidence-glow-01": 1,
     "da/confidence-glow-02": 1,
-    "travail-selectionne/papier-calque": 2, # a document
+    "travail-selectionne/papier-calque": 4, # a document
     "travail-selectionne/nocturne-01": 1,
     "travail-selectionne/nocturne-02": 1,
     "travail-selectionne/vitrine-hiver-01": 1,

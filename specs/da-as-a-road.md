@@ -19,41 +19,52 @@ default.
 
 ## The data model — the part the panel reads and writes
 
-Each child of DA is **one stop on the road**. A stop keeps everything it
-already is: its own name, its own alt text, its own page. It gains two
-numbers, in the front matter it already has, beside `x` and `y`:
+Each **photograph** is one stop on the road — not each child. A folder
+holding nine photographs puts nine stops on it, and all nine lead to
+that folder.
+
+A stop takes two numbers, declared **per file** in the front matter of
+the folder that holds it. This is the shape `[extra.alt]` already uses,
+so there is one convention rather than two:
 
 ```toml
 +++
-title = "theodora 01.jpeg"
+title = "Atelier Mirabelle"
+template = "page.html"
 
-[extra]
-x = 32          # where it sits on a DESK, untouched
-y = 12
-width = 62      # how wide on the ROAD, per cent of the road
-offset = 0      # how far off the centre line, per cent, + is right
+[extra.width]
+"02.jpg" = 72        # per cent of the page
+"05.jpg" = 24
+
+[extra.offset]
+"02.jpg" = 8         # per cent off the centre line, + is right
+"05.jpg" = -26
 +++
 ```
 
 | field | type | default | range |
 |---|---|---|---|
-| `width` | integer, per cent | `62` | 20–100 |
-| `offset` | integer, per cent | `0` | −30 to 30 |
+| `width` | integer, per cent | from the rhythm | 20–100 |
+| `offset` | integer, per cent | from the rhythm | −30 to 30 |
 
 Rules the panel can rely on:
 
-- **Both are optional.** A stop with neither declared is centred at the
-  default width. Nothing has to be migrated for the road to render.
-- **`x`/`y` and `width`/`offset` coexist and never interfere.** A thing
-  has a position on a desk and a size on a road; moving it between the
-  two does not lose either.
-- **Order is filename order**, as everywhere else in this engine.
-  Rearranging the road is renumbering, which the panel already does for
-  photographs.
-- **Both are written to every language file**, like `x`/`y`. A stop that
-  is wide in French and narrow in English is a bug, not a feature.
+- **Both are optional, and both are per file.** A photograph nobody has
+  touched takes its place from a repeating five-step rhythm in the
+  stylesheet, so an unarranged folder still reads as pinned rather than
+  stacked in a column. Nothing has to be migrated.
+- **They never interfere with `x`/`y`.** A thing has a position on a
+  desk and its photographs have places on a road; moving between the
+  two loses neither.
+- **Order is filename order**, as everywhere else. Rearranging is
+  renumbering, which the panel already does for photographs.
+- **Written to every language file**, like `x`/`y`. A photograph wide
+  in French and narrow in English is a bug.
 - **Out of range is clamped, not refused.** A number she drags to is
   never an error.
+- **Below 46rem the road straightens**: every stop full width, no
+  offset, no rotation. The pinning is a wide-screen idea — a picture at
+  24 per cent of a phone is a stamp.
 
 ## Acceptance criteria
 

@@ -163,22 +163,26 @@
       the names underneath. Both said where things were and little about
       what they are.
 
-      So: a ROUTE. Every photograph inside this folder, at its own
-      proportion, along one horizontal line you scroll. Nothing is
-      cropped and no name sits under anything — the pictures are the
-      page, and a name appears when you point at one or reach it with
-      the keyboard. A project has no children and never reaches this. -#}
+      So: a ROUTE, and it runs DOWN. Every photograph inside this
+      folder pinned to a tall surface at its own width and its own
+      place left or right of the line — a fridge door, not a column
+      and not a grid. Nothing is cropped, no name sits under anything,
+      and the page scrolls the way a page scrolls.
+
+      A project has no children and never reaches this. -#}
   {% if section is defined and (section.pages | length > 0 or section.subsections | length > 0) %}
     <nav class="proj-route" aria-label="{{ section.title }}">
       {% for sub in section.pages %}
         {% set_global pl_title = sub.title %}{% set_global pl_href = sub.permalink %}
         {% set_global pl_here = sub.colocated_path %}{% set_global pl_assets = sub.assets %}
+        {% set_global pl_extra = sub.extra %}
         {% include "_place.html" %}
       {% endfor %}
       {% for q in section.subsections %}
         {% set one = get_section(path=q) %}
         {% set_global pl_title = one.title %}{% set_global pl_href = one.permalink %}
         {% set_global pl_here = one.colocated_path %}{% set_global pl_assets = one.assets %}
+        {% set_global pl_extra = one.extra %}
         {% include "_place.html" %}
       {% endfor %}
     </nav>
