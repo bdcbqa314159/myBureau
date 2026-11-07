@@ -10,6 +10,22 @@
                  in front, and `/en/…/01.jpg` is not a file anybody can
                  resize.
       pl_assets  its files, for the names only
+      pl_extra   its [extra], for the pinning below
+
+    PINNED, LIKE A FRIDGE. Each photograph takes its own width and its
+    own place left or right of the line, declared per FILE in the
+    folder's front matter — the same shape `[extra.alt]` already uses,
+    so there is one convention to learn rather than two:
+
+        [extra.width]
+        "01.jpg" = 48        # per cent of the page
+
+        [extra.offset]
+        "01.jpg" = -12       # per cent off the centre, + is right
+
+    Both optional. Declare neither and the stylesheet gives it a place
+    from a repeating rhythm, so a folder nobody has arranged still
+    looks pinned rather than stacked in a column.
 
     EVERY PICTURE IT HOLDS, rather than one face for the whole thing.
     A folder of four photographs arrived as a single cropped thumbnail
@@ -39,7 +55,14 @@
     {%- set src = pl_here ~ leaf -%}
     {%- set shape = get_image_metadata(path=src) -%}
     {%- set small = resize_image(path=src, width=900, op="fit_width", format="webp", quality=78) -%}
-    <a class="stop" href="{{ pl_href }}">
+    {%- set_global pin = "" -%}
+    {%- if pl_extra.width and pl_extra.width[leaf] -%}
+      {%- set_global pin = pin ~ "--w:" ~ pl_extra.width[leaf] ~ "%;" -%}
+    {%- endif -%}
+    {%- if pl_extra.offset and pl_extra.offset[leaf] -%}
+      {%- set_global pin = pin ~ "--x:" ~ pl_extra.offset[leaf] ~ "%;" -%}
+    {%- endif -%}
+    <a class="stop" href="{{ pl_href }}"{% if pin %} style="{{ pin }}"{% endif %}>
       <img src="{{ small.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
            alt="" loading="lazy" decoding="async">
       <span>{{ pl_title }}</span>

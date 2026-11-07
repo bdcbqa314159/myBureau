@@ -1471,6 +1471,14 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     # a second photograph in the SAME project: the route must show both,
     # which is the whole change — one face per thing was the old answer
     shutil.copyfile(ROOT / "content/da/theodora-02/01.jpg", r / "02.jpg")
+    # and it PINS one of them by hand, which is the whole point of the
+    # route being a fridge rather than a column. Nothing in the real
+    # content had to declare this when the code was written, so without
+    # a fixture that does, the path is never executed and the check
+    # passes by finding nothing.
+    (r / "index.md").write_text(
+        '+++\ntitle = "une photo.jpg"\n\n[extra.width]\n"02.jpg" = 37\n\n'
+        '[extra.offset]\n"02.jpg" = -18\n+++\n\nUn texte.\n', encoding="utf-8")
     # and one with nothing to show at all, which is where a broken
     # picture would appear if the partial assumed there was always one
     s = d / "content" / "da" / "maison-cosette" / "rien"
@@ -1480,6 +1488,11 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     ok, log = build(d)
     folder = page(d, "da/maison-cosette/index.html")
     own = page(d, "da/maison-cosette/un-film/index.html")
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    rules = {}
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        rules.setdefault(sel.strip(), []).append(body)
     route = re.search(r'<nav class="proj-route".*?</nav>', folder, re.S)
     inside = route.group(0) if route else ""
     empty = re.search(r'<a class="stop is-bare" href="[^"]*rien/">.*?</a>',
@@ -1498,7 +1511,14 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("a film is not represented by its poster, which is not a photograph",
          bool(re.search(r'<a class="stop is-bare" href="[^"]*un-film/">', inside))),
         ("EVERY photograph is a stop, not one face for the whole thing",
-         len(re.findall(r'<a class="stop" href="[^"]*une-photo/">', inside)) == 2),
+         len(re.findall(r'<a class="stop"[^>]*href="[^"]*une-photo/"', inside)) == 2),
+        ("a photograph pinned by hand carries its own width and place",
+         '--w:37%;--x:-18%;' in inside),
+        ("and one nobody pinned carries none, so the rhythm places it",
+         bool(re.search(r'<a class="stop" href="[^"]*une-photo/">\s*<img', inside))),
+        ("the route runs DOWN the page — a grid, not a sideways scroller",
+         any("display: grid" in b for b in rules.get(".proj-route", []))
+         and not any("overflow-x" in b for b in rules.get(".proj-route", []))),
         ("and the link goes where the project was really built",
          "da/maison-cosette/un-film/" in folder and own != ""),
         ("the film itself is on its own page", "<video" in own),

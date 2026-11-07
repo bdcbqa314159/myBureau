@@ -856,44 +856,55 @@ body.project .bar { color: var(--ink); text-shadow: none; }
     gap: clamp(2rem, 9vw, 4rem);
   }
 }
-/* WHAT IS INSIDE A FOLDER: a horizontal route of photographs.
+/* WHAT IS INSIDE A FOLDER: a vertical route, pinned like a fridge.
    --------------------------------------------------------------------
-   One line, scrolled sideways. Every picture inside the folder is a
-   stop on it, and all of a thing's stops lead to that thing.
+   The route runs DOWN. Every photograph inside the folder is pinned to
+   it at its own width and its own place left or right of the centre
+   line — a fridge door rather than a column, and nothing like a grid.
+   The page scrolls the way a page scrolls; there is no second scroller
+   and no snapping.
 
-   A COMMON HEIGHT AND A FREE WIDTH is what makes a row of photographs
-   read as one line rather than a wall: each picture keeps its own
-   proportion — nothing is cropped anywhere on this site — and a
-   panorama simply takes more of the line than a portrait does.
+   TWO NUMBERS DO ALL OF IT, and both are custom properties so the same
+   stylesheet serves a photograph she has placed by hand and one nobody
+   has touched:
 
-   The scroll is the x axis only. `overscroll-behavior-inline: contain`
-   stops a sideways flick at the end of the route from turning into the
-   browser's back gesture, which on a trackpad is very easy to do by
-   accident. */
+     --w   how wide, per cent of the page
+     --x   how far off the centre line, per cent, + is right
+
+   Declared per file in the folder's front matter (see _place.html),
+   and otherwise taken from the rhythm below.
+
+   THE RHYTHM exists so a folder nobody has arranged still reads as
+   pinned. Five steps, because four falls into an obvious alternation
+   and the repeat is then easy to see. The small rotations are what say
+   "put here by a hand" rather than "laid out by a machine" — they are
+   under a degree and a half, which reads as placed rather than
+   crooked. */
 .proj-route {
-  display: flex; align-items: flex-end;
-  gap: .9rem;
-  padding: 2.6rem var(--pad);
-  overflow-x: auto; overflow-y: hidden;
-  overscroll-behavior-inline: contain;
-  scroll-padding-inline: var(--pad);
-  /* .win sets touch-action:none on windows; this is not one, and a
-     route that cannot be swiped on a phone is a route nobody sees the
-     end of. */
-  touch-action: pan-x;
+  display: grid; justify-items: center;
+  gap: clamp(2.2rem, 6vh, 5rem);
+  padding: clamp(2.5rem, 7vh, 5rem) var(--pad);
 }
 .stop {
-  position: relative; flex: 0 0 auto;
-  height: clamp(10rem, 30vh, 20rem);
+  position: relative;
+  width: var(--w, 46%);
+  translate: var(--x, 0%) 0;
+  rotate: var(--r, 0deg);
   color: inherit; text-decoration: none;
 }
-.stop img { display: block; height: 100%; width: auto; }
+.stop img { display: block; width: 100%; height: auto; }
 
-/* THE NAME, which is not under the picture any more.
+.stop:nth-child(5n+1) { --w: 52%; --x: -13%; --r: -1.1deg; }
+.stop:nth-child(5n+2) { --w: 34%; --x:  19%; --r:  0.9deg; }
+.stop:nth-child(5n+3) { --w: 44%; --x:   2%; --r:  1.3deg; }
+.stop:nth-child(5n+4) { --w: 28%; --x: -21%; --r: -0.7deg; }
+.stop:nth-child(5n+5) { --w: 60%; --x:   7%; --r:  0.5deg; }
+
+/* THE NAME, which is not under the picture.
    It sits over the foot of its own stop and is invisible until the
    picture is pointed at or focused. It stays in the document the whole
-   time, so a screen reader always has it — this is a thing being
-   hidden from the eye, not from the page. */
+   time, so a screen reader always has it — this is a thing hidden from
+   the eye, not from the page. */
 .stop span {
   position: absolute; inset-inline: 0; bottom: 0;
   padding: .45rem .55rem;
@@ -904,16 +915,29 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 .stop:hover span, .stop:focus-visible span { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .stop span { transition: none; } }
 
-/* A thing with no picture to show still has to be reachable, so it is
-   a stop wearing only its name — and that name is always visible,
-   because there is nothing else for it to sit on. */
+/* A thing with no picture still has to be reachable, so it is a stop
+   wearing only its name, and that name is always visible because there
+   is nothing else for it to sit on. */
 .stop.is-bare {
   display: grid; place-items: center;
-  min-width: 10rem; padding: 0 1rem;
+  min-height: 7rem; padding: 1rem;
   background: var(--face);
   box-shadow: inset 1px 1px 0 var(--dim), inset -1px -1px 0 var(--lit);
 }
 .stop.is-bare span { position: static; opacity: 1; background: none; color: #000; }
+
+/* ON A PHONE THE ROUTE STRAIGHTENS. There is no room to be off-centre:
+   a picture at 28% of a phone is a stamp, and one pushed 21% sideways
+   has a third of itself off the screen. So the pinning is a wide-screen
+   idea, and the narrow one is simply the photographs, one after
+   another. */
+@media (max-width: 46rem) {
+  .stop, .stop:nth-child(5n+1), .stop:nth-child(5n+2), .stop:nth-child(5n+3),
+  .stop:nth-child(5n+4), .stop:nth-child(5n+5) {
+    --w: 100%; --x: 0%; --r: 0deg;
+  }
+  .stop span { opacity: 1; }
+}
 
 .proj-back {
   display: inline-block; margin: clamp(3rem, 6vw, 6rem) var(--pad);
