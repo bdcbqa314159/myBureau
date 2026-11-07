@@ -59,12 +59,12 @@ def main() -> int:
     # ---- the file she wrote survives being edited -------------------
     home = tmp / "content" / "_index.md"
     before = home.read_text(encoding="utf-8")
-    verbs.place("content/da/theodora", 44, 18)
+    verbs.place("content/da/theodora-01", 44, 18)
     check("an unrelated content file is not touched at all",
           home.read_text(encoding="utf-8") == before)
 
-    theo = tmp / "content" / "da" / "theodora" / "index.md"
-    theo_en = tmp / "content" / "da" / "theodora" / "index.en.md"
+    theo = tmp / "content" / "da" / "theodora-01" / "index.md"
+    theo_en = tmp / "content" / "da" / "theodora-01" / "index.en.md"
     check("the position is written", 'x = 44' in theo.read_text(encoding="utf-8"))
     check("and to the OTHER language too, which is the whole trap",
           'x = 44' in theo_en.read_text(encoding="utf-8"))
@@ -76,9 +76,9 @@ def main() -> int:
           "template = " in da and da.count("#") >= 0 and "title = " in da)
 
     # a file whose comments we can name
-    probe = tmp / "content" / "da" / "theodora" / "index.md"
+    probe = tmp / "content" / "da" / "theodora-01" / "index.md"
     probe.write_text('+++\ntitle = "t.jpg"\n\n[extra]\n# ne touche pas a cette ligne\nx = 1\ny = 2\n+++\n\nUn texte.\n', encoding="utf-8")
-    verbs.place("content/da/theodora", 7, 9)
+    verbs.place("content/da/theodora-01", 7, 9)
     after = probe.read_text(encoding="utf-8")
     check("a comment inside [extra] is still there, word for word",
           "# ne touche pas a cette ligne" in after, after)
@@ -103,9 +103,14 @@ def main() -> int:
             check("refuses " + bad, True)
 
     # ---- photographs -------------------------------------------------
-    proj = "content/da/theodora"
-    d = tmp / "content" / "da" / "theodora"
-    pixels = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    # The subject is the LANDING PAGE, not a photograph on a desk. A
+    # desk photograph is one photograph now, so adding a second to one
+    # would be testing the verbs against something the site refuses to
+    # be — and these cases are about numbering, reordering and undo,
+    # which only mean anything where several photographs belong.
+    proj = "content/graphic-design/grocery-list"
+    d = tmp / "content" / "graphic-design" / "grocery-list"
+    pixels = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
     verbs.add_image(proj, "whatever.jpg", pixels)
     names = sorted(f.name for f in d.iterdir() if f.suffix == ".jpg")
     check("a dropped photograph is numbered, not left with its own name",
@@ -164,7 +169,7 @@ def main() -> int:
         check("undo refuses once the journal is empty", True)
     check("and content/ is still a buildable tree",
           (tmp / "content" / "_index.md").exists()
-          and (tmp / "content" / "da" / "theodora" / "index.md").exists())
+          and (tmp / "content" / "da" / "theodora-01" / "index.md").exists())
 
     # ---- making things, and dressing them ----------------------------
     out = verbs.new_project("content/da", "Mon Essai", "film")
@@ -194,12 +199,12 @@ def main() -> int:
           'template = "section.html"' in (top / "_index.md").read_text(encoding="utf-8"))
 
     try:
-        verbs.new_project("content/da/theodora", "Dedans")
+        verbs.new_project("content/da/theodora-01", "Dedans")
         check("a project cannot be made inside a project", False)
     except verbs.Refused:
         check("a project cannot be made inside a project", True)
 
-    pixels = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    pixels = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
     verbs.set_icon("content/da", "whatever.png", pixels)
     check("a BUREAU can be given a face, which it never could before",
           (tmp / "content" / "da" / "icon.png").exists())
@@ -247,7 +252,7 @@ def main() -> int:
 
     # ---- a film can receive a film ----------------------------------
     clip = b"\x00\x00\x00\x18ftypmp42" + b"0" * 200
-    pixels = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    pixels = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
     out = verbs.new_project("content/da", "Nuit", "film")
     film = out["made"]
     verbs.add_video(film, "whatever.mp4", clip)
@@ -332,8 +337,8 @@ def main() -> int:
         # refuses for a different reason entirely ("il y est déjà") and
         # the comparison is answering the wrong question
         probe_item = ("content/graphic-design/calendar"
-                      if d["path"] in ("content/da", "content/da/theodora")
-                      else "content/da/theodora")
+                      if d["path"] in ("content/da", "content/da/theodora-01")
+                      else "content/da/theodora-01")
         if d["path"] in (probe_item, "content"):
             _sh.rmtree(probe, ignore_errors=True); continue
         allowed = True
@@ -353,7 +358,7 @@ def main() -> int:
     # nothing may be filed into a gallery: it renders photographs only
     for fn, args in ((verbs.new_project, ("content/pellicules", "Essai")),
                      (verbs.new_bureau, ("content/pellicules", "Essai")),
-                     (verbs.move, ("content/da/theodora", "content/pellicules"))):
+                     (verbs.move, ("content/da/theodora-01", "content/pellicules"))):
         try:
             fn(*args)
             check("a gallery refuses to be filed into (%s)" % fn.__name__, False)
@@ -362,18 +367,18 @@ def main() -> int:
                   "galerie" in str(exc), str(exc))
 
     # ---- moving and throwing away, the two Finder trips -------------
-    verbs.move("content/da/theodora", "content/graphic-design")
+    verbs.move("content/da/theodora-01", "content/graphic-design")
     check("a project moves whole, into another bureau",
-          (tmp / "content/graphic-design/theodora/index.md").exists()
-          and not (tmp / "content/da/theodora").exists())
+          (tmp / "content/graphic-design/theodora-01/index.md").exists()
+          and not (tmp / "content/da/theodora-01").exists())
     check("and every language went with it",
-          (tmp / "content/graphic-design/theodora/index.en.md").exists())
+          (tmp / "content/graphic-design/theodora-01/index.en.md").exists())
     check("as did its photographs",
-          (tmp / "content/graphic-design/theodora/01.jpg").exists())
+          (tmp / "content/graphic-design/theodora-01/01.jpg").exists())
     verbs.undo()
     check("undo puts it back where it was",
-          (tmp / "content/da/theodora/index.md").exists()
-          and not (tmp / "content/graphic-design/theodora").exists())
+          (tmp / "content/da/theodora-01/index.md").exists()
+          and not (tmp / "content/graphic-design/theodora-01").exists())
 
     verbs.move("content/da/maison-cosette", "content/graphic-design")
     check("a bureau moves with its children",
@@ -388,20 +393,20 @@ def main() -> int:
         except verbs.Refused:
             check("a folder cannot be put inside itself", True)
     try:
-        verbs.move("content/da/theodora", "content/da/confidence-glow")
+        verbs.move("content/da/theodora-01", "content/da/confidence-glow-01")
         check("and not inside a project either", False)
     except verbs.Refused:
         check("and not inside a project either", True)
 
-    verbs.throw_away("content/da/theodora")
+    verbs.throw_away("content/da/theodora-01")
     check("throwing a project away takes the whole folder",
-          not (tmp / "content/da/theodora").exists())
+          not (tmp / "content/da/theodora-01").exists())
     check("to the bin, not to nowhere",
           any(p.name == "index.md" for p in verbs.TRASH.rglob("*")))
     verbs.undo()
     check("and undo brings all of it back",
-          (tmp / "content/da/theodora/index.md").exists()
-          and (tmp / "content/da/theodora/01.jpg").exists())
+          (tmp / "content/da/theodora-01/index.md").exists()
+          and (tmp / "content/da/theodora-01/01.jpg").exists())
 
     try:
         verbs.throw_away("content")
@@ -434,7 +439,7 @@ TINY_PDF = b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%
 def doc_cases(tmp: pathlib.Path) -> None:
     """A dossier, and the guardrails around which file goes where."""
     print("\n  -- a dossier PDF --\n")
-    pixels = (ROOT / "content/da/theodora/01.jpg").read_bytes()
+    pixels = (ROOT / "content/da/theodora-01/01.jpg").read_bytes()
     clip = b"\x00\x00\x00\x18ftypmp42"
 
     def refused(fn, *a, **k):
@@ -527,7 +532,7 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     """A file is what its bytes say, the gallery decides at the verb, the
     bin does not grow for ever, and a photograph can be described."""
     print("\n  -- what a file really is, and what it can be told --\n")
-    pixels = (ROOT / "content/da/theodora/01.jpg").read_bytes()
+    pixels = (ROOT / "content/da/theodora-01/01.jpg").read_bytes()
     pdf = TINY_PDF
     heic = b"\x00\x00\x00\x18ftypheic" + b"\x00" * 40
     mp4 = b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 40
@@ -541,7 +546,7 @@ def honesty_cases(tmp: pathlib.Path) -> None:
             return str(why)
         return ""
 
-    proj = "content/da/theodora"
+    proj = "content/da/theodora-01"
     # The one that broke the build: zola dies on get_image_metadata, so a
     # drag that said it worked left a site that would not compile.
     say = refused(verbs.add_image, proj, "cover.jpg", pdf)
@@ -782,13 +787,13 @@ def gate_cases(tmp: pathlib.Path) -> None:
           "art director" in now and now.startswith("+++"))
 
     # ---- the refusals name the file ---------------------------------
-    broken = tmp / "content" / "da" / "theodora" / "index.en.md"
+    broken = tmp / "content" / "da" / "theodora-01" / "index.en.md"
     was = broken.read_text(encoding="utf-8")
     broken.write_text("Pas d'en-tete ici.\n", encoding="utf-8")
     for what, fn, args in [
-            ("set_body", verbs.set_body, ("content/da/theodora", "en", "Texte.")),
-            ("retitle", verbs.retitle, ("content/da/theodora", "en", "Nom")),
-            ("set_alt", verbs.set_alt, ("content/da/theodora", "01.jpg", "Une photo."))]:
+            ("set_body", verbs.set_body, ("content/da/theodora-01", "en", "Texte.")),
+            ("retitle", verbs.retitle, ("content/da/theodora-01", "en", "Nom")),
+            ("set_alt", verbs.set_alt, ("content/da/theodora-01", "01.jpg", "Une photo."))]:
         say = refused(fn, *args)
         check("{} on a broken file names it".format(what),
               "index.en.md" in say, say)
@@ -799,12 +804,12 @@ def gate_cases(tmp: pathlib.Path) -> None:
     # breaking the English one found the problem before anything was
     # written and the check passed on sort order rather than on the code
     # being right. Breaking the French one is the real test.
-    fr = tmp / "content" / "da" / "theodora" / "index.md"
+    fr = tmp / "content" / "da" / "theodora-01" / "index.md"
     for which, other in ((broken, fr), (fr, broken)):
         keep_a = which.read_text(encoding="utf-8")
         keep_b = other.read_text(encoding="utf-8")
         which.write_text("Pas d'en-tete.\n", encoding="utf-8")
-        say = refused(verbs.place, "content/da/theodora", 40, 40)
+        say = refused(verbs.place, "content/da/theodora-01", 40, 40)
         check("place refuses when {} is broken".format(which.name),
               say != "", "it went ahead")
         check("  and names that file", which.name in say, say)
@@ -816,7 +821,7 @@ def gate_cases(tmp: pathlib.Path) -> None:
         keep_a, keep_b = (which.read_text(encoding="utf-8"),
                           other.read_text(encoding="utf-8"))
         which.write_text("Pas d'en-tete.\n", encoding="utf-8")
-        refused(verbs.set_alt, "content/da/theodora", "01.jpg", "Une photo.")
+        refused(verbs.set_alt, "content/da/theodora-01", "01.jpg", "Une photo.")
         check("set_alt left {} alone when {} was broken"
               .format(other.name, which.name),
               other.read_text(encoding="utf-8") == keep_b)
@@ -826,7 +831,7 @@ def gate_cases(tmp: pathlib.Path) -> None:
 def identity_cases(tmp: pathlib.Path) -> None:
     """The portrait in `about me.txt`, and the two words in the top bar."""
     print("\n  -- about me.txt, and the bandeau --\n")
-    pixels = (ROOT / "content/da/theodora/01.jpg").read_bytes()
+    pixels = (ROOT / "content/da/theodora-01/01.jpg").read_bytes()
 
     def refused(fn, *a, **k):
         try:
@@ -1037,7 +1042,7 @@ def serve() -> None:
         n0 = json.loads(get("/api/tree").read())["n"]
         post_do = urllib.request.Request(
             "http://127.0.0.1:{}/api/do?t={}".format(port, token),
-            data=json.dumps({"verb": "place", "item": "content/da/theodora",
+            data=json.dumps({"verb": "place", "item": "content/da/theodora-01",
                              "x": 66, "y": 44}).encode(),
             headers={"Content-Type": "application/json"}, method="POST")
         said = json.loads(urllib.request.urlopen(post_do, timeout=10).read())["n"]
@@ -1063,7 +1068,7 @@ def serve() -> None:
         check("nor one addressed absolutely",
               code_for("/media//etc/passwd", token) in (403, 404))
         check("but it does serve a photograph that is inside",
-              code_for("/media/content/da/theodora/01.jpg", token) == 200)
+              code_for("/media/content/da/theodora-01/01.jpg", token) == 200)
 
         def post(path, payload):
             req = urllib.request.Request(
@@ -1072,10 +1077,10 @@ def serve() -> None:
                 headers={"Content-Type": "application/json"}, method="POST")
             return json.loads(urllib.request.urlopen(req, timeout=10).read())
 
-        out = post("/api/do", {"verb": "place", "item": "content/da/theodora",
+        out = post("/api/do", {"verb": "place", "item": "content/da/theodora-01",
                                "x": 71, "y": 23})
-        moved = (tmp / "content/da/theodora/index.md").read_text(encoding="utf-8")
-        moved_en = (tmp / "content/da/theodora/index.en.md").read_text(encoding="utf-8")
+        moved = (tmp / "content/da/theodora-01/index.md").read_text(encoding="utf-8")
+        moved_en = (tmp / "content/da/theodora-01/index.en.md").read_text(encoding="utf-8")
         check("a drag writes the position through the server",
               "x = 71" in moved and out["did"]["x"] == 71)
         check("and both languages again, over HTTP", "x = 71" in moved_en)
@@ -1084,7 +1089,7 @@ def serve() -> None:
 
         post("/api/do", {"verb": "undo"})
         check("undo over HTTP puts it back",
-              "x = 71" not in (tmp / "content/da/theodora/index.md").read_text(encoding="utf-8"))
+              "x = 71" not in (tmp / "content/da/theodora-01/index.md").read_text(encoding="utf-8"))
 
         # THE ONE THAT ATE HER TEXT. `body` was defaulted to "", so a
         # request naming the field anything else replaced the paragraph
@@ -1109,9 +1114,9 @@ def serve() -> None:
         # to it, so two threads chose the same number and one overwrote
         # the other — while both told her it had worked.
         import threading
-        P = "content/travail-selectionne/nocturne"
+        P = "content/travail-selectionne/nocturne-01"
         had = {f.name for f in (tmp / P).iterdir()}
-        shot = (ROOT / "content/da/theodora/01.jpg").read_bytes()
+        shot = (ROOT / "content/da/theodora-01/01.jpg").read_bytes()
         got = {}
 
         def upload(i):

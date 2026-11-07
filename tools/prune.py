@@ -84,8 +84,8 @@ def wanted(rel: str, urls: set[str]) -> bool:
     /da/x.jpg from her own domain later, and a matcher that parsed the
     prefix would quietly stop matching on the day that changes.
 
-    The whole path, never the bare file name: `da/theodora/01.jpg` and
-    `en/da/theodora/01.jpg` are different files and have to be judged
+    The whole path, never the bare file name: `da/theodora-01/01.jpg` and
+    `en/da/theodora-01/01.jpg` are different files and have to be judged
     separately, or the English copy is kept because the French one is used.
     """
     return any(u.endswith("/" + rel) or u == rel for u in urls)

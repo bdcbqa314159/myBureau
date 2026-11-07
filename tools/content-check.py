@@ -99,7 +99,7 @@ def case_shouting_extension(d: pathlib.Path) -> list[tuple[str, bool]]:
     p = d / "content" / "da" / "criard"
     p.mkdir()
     (p / "index.md").write_text(FRONT.format(title="CRIARD.JPG", extra=""))
-    shutil.copyfile(ROOT / "content/da/theodora/01.jpg", p / "GRANDE.JPG")
+    shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", p / "GRANDE.JPG")
     q = d / "content" / "da" / "criard-vide"
     q.mkdir()
     (q / "index.md").write_text(FRONT.format(title="VIDE.JPG", extra=""))
@@ -339,7 +339,7 @@ def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]
     it was the only thing in this engine that did not live where the
     content lives.
     """
-    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
     other = (ROOT / "content" / "graphic-design" / "wallpaper.jpg").read_bytes()
     # a brand new bureau, with nothing but a wallpaper dropped in
     p = d / "content" / "scenographie"
@@ -417,8 +417,8 @@ def case_alt_text(d: pathlib.Path) -> list[tuple[str, bool]]:
     p.mkdir()
     (p / "index.md").write_text(
         '+++\ntitle = "decrit.jpg"\n\n[extra.alt]\n"01.jpg" = "Une plage au crepuscule."\n+++\n\nUn texte.\n')
-    shutil.copyfile(ROOT / "content/da/theodora/01.jpg", p / "01.jpg")
-    shutil.copyfile(ROOT / "content/da/theodora/02.jpg", p / "02.jpg")
+    shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", p / "01.jpg")
+    shutil.copyfile(ROOT / "content/da/theodora-02/01.jpg", p / "02.jpg")
     ok, log = build(d)
     h = page(d, "da/decrit/index.html")
     return [
@@ -489,8 +489,8 @@ def case_second_level_page(d: pathlib.Path) -> list[tuple[str, bool]]:
     (p / "_index.md").write_text(
         FRONT.format(title="sous dossier", extra='template = "page.html"\n')
         + "Une description, deux lignes.\n", encoding="utf-8")
-    shutil.copyfile(ROOT / "content/da/theodora/01.jpg", p / "01.jpg")
-    shutil.copyfile(ROOT / "content/da/theodora/02.jpg", p / "02.jpg")
+    shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", p / "01.jpg")
+    shutil.copyfile(ROOT / "content/da/theodora-02/01.jpg", p / "02.jpg")
     ok, log = build(d)
     desk = page(d, "graphic-design/index.html")
     own = page(d, "graphic-design/sous-dossier/index.html")
@@ -579,7 +579,7 @@ def case_what_a_file_does(d: pathlib.Path) -> list[tuple[str, bool]]:
         for f in files:
             (q / f).write_bytes(
                 b"\x00\x00\x00\x18ftypmp42" if f.endswith(".mp4")
-                else (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes())
+                else (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes())
     ok, log = build(d)
     h = page(d, "da/index.html")
     desk = re.search(r'<main class="desk".*?</main>', h, re.S)
@@ -686,7 +686,7 @@ def case_every_page_can_say_what_it_is(d: pathlib.Path) -> list[tuple[str, bool]
     and every photograph in the gallery was a link called nothing. Nothing
     looks wrong either way, which is exactly why it stayed broken.
     """
-    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
     g = d / "content" / "pellicules"
     (g / "sans-alt.jpg").write_bytes(photo)
     # one WITH alt text, to prove the label is not doubled up
@@ -708,7 +708,7 @@ def case_every_page_can_say_what_it_is(d: pathlib.Path) -> list[tuple[str, bool]
         ("every page has an h1",
          all(re.search(r"<h1\b", p.read_text(encoding='utf-8')) for p in pages)),
         ("a project page's h1 is its title",
-         bool(re.search(r'<h1[^>]*>theodora\.jpeg</h1>', page(d, "da/theodora/index.html")))),
+         bool(re.search(r'<h1[^>]*>theodora 01\.jpeg</h1>', page(d, "da/theodora-01/index.html")))),
         ("a desk's h1 is the bureau's name",
          bool(re.search(r'<h1[^>]*>DA</h1>', page(d, "da/index.html")))),
         ("no photograph in the gallery is a link called nothing", unnamed == []),
@@ -733,7 +733,7 @@ def case_about_is_a_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     # languages, so the English window has to find it too — a translated
     # section reports its assets under /en/, and reaching for a file that
     # was never there is how the wallpaper broke twice.
-    shutil.copyfile(ROOT / "content/da/theodora/01.jpg",
+    shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg",
                     d / "content" / "about.jpg")
     ok, log = build(d)
     h = page(d, "index.html")
@@ -835,7 +835,7 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
     cover.mkdir()
     (cover / "index.md").write_text(FRONT.format(title="grocery.pdf", extra=""))
     (cover / "grocery.pdf").write_bytes(TINY_PDF)
-    shutil.copyfile(ROOT / "content/da/theodora/01.jpg", cover / "01.jpg")
+    shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", cover / "01.jpg")
 
     ok, log = build(d)
     desk = page(d, "da/index.html")
@@ -890,7 +890,7 @@ def case_gallery_photographs_open(d: pathlib.Path) -> list[tuple[str, bool]]:
     rendered, both build perfectly and both end in a click that does
     nothing — and in a gallery that is every photograph after the first.
     """
-    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
     g = d / "content" / "pellicules"
     # two names that slugify close to each other, plus one already there
     (g / "Vue 13.JPG").write_bytes(photo)
@@ -921,7 +921,7 @@ def case_the_project_page_has_a_rhythm(d: pathlib.Path) -> list[tuple[str, bool]
     never cleared leaves an unclosed <div>, which browsers paper over and
     nobody notices until a layout goes strange three pages later.
     """
-    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
     base = d / "content" / "da"
     for name, n in (("une-seule", 1), ("quatre", 4), ("aucune", 0)):
         q = base / name
@@ -968,7 +968,7 @@ def case_icon_is_the_work(d: pathlib.Path) -> list[tuple[str, bool]]:
     Nothing should have to be drawn or named for that to be true, so the
     first picture in the folder is the icon unless she says otherwise.
     """
-    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
     base = d / "content" / "da"
     for name, files in (
         ("par-defaut", ("01.jpg", "02.jpg")),
@@ -1015,7 +1015,7 @@ def case_a_film_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
     page it would have reached did not show the film at all, which is
     also what a visitor with no JavaScript has always been given.
     """
-    photo = (ROOT / "content" / "da" / "theodora" / "01.jpg").read_bytes()
+    photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
     base = d / "content" / "da"
     for name, extra in (("film-page", 'opens = "page"\n'), ("film-normal", "")):
         q = base / name
@@ -1052,6 +1052,109 @@ def case_a_film_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("a film page works without JavaScript too — the video is in the page",
          "<video" in normal_html),
         ("nothing dangles", dangling(desk) == []),
+    ]
+
+
+def _grouped_pictures(root: pathlib.Path) -> list[str]:
+    """Desk items that open as a photograph and hold more than one.
+
+    A thing on a desk that opens as a PHOTOGRAPH is one photograph. Four
+    kinds are deliberately not that, and each says so in a way the
+    engine already reads:
+
+        a film          there is a video beside the index.md
+        a document      there is a pdf beside it
+        a page          `opens = "page"` — grocery list, the landing
+                        page from the prototype, several images on
+                        purpose
+        a folder        _index.md, not index.md — it IS a page now
+
+    The gallery never reaches here: its photographs sit in the section
+    itself and there is no index.md to find.
+    """
+    # The three lists live in config.toml and nowhere else, so a format
+    # added there is covered here without this being edited.
+    conf = (root / "config.toml").read_text(encoding="utf-8")
+
+    def kinds(key: str) -> set[str]:
+        m = re.search(r"^" + key + r"\s*=\s*\[([^\]]*)\]", conf, re.M)
+        return set(re.findall(r'"([^"]+)"', m.group(1))) if m else set()
+
+    images, videos, docs = kinds("image_types"), kinds("video_types"), kinds("doc_types")
+
+    out = []
+    for md in sorted((root / "content").rglob("index.md")):
+        folder = md.parent
+        if 'opens = "page"' in md.read_text(encoding="utf-8"):
+            continue
+        files = [f for f in folder.iterdir() if f.is_file()]
+        exts = {f.suffix.lstrip(".").lower() for f in files}
+        if exts & videos or exts & docs:
+            continue
+        pictures = [f for f in files
+                    if f.suffix.lstrip(".").lower() in images
+                    and f.stem.lower() not in ("icon", "poster")]
+        if len(pictures) > 1:
+            out.append("{} ({} photographs)".format(
+                folder.relative_to(root), len(pictures)))
+    return out
+
+
+def case_a_picture_is_one_picture(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A photograph on a desk is ONE photograph, never a pile of them.
+
+    Her prototype has no stack: `theodora.jpeg`, `colombia.png`, `jojo
+    for maison cosette.png` are each their own file lying on the desk.
+    Grouping two photographs behind one icon makes the second one
+    reachable only by opening the first, which is not what a desk does.
+
+    Both halves are checked. A rule that merely counted would pass by
+    finding nothing to count, so the second half plants an offender and
+    requires it to be caught — and the film, the document and the page
+    are left alone to prove the exemptions still hold.
+    """
+    before = _grouped_pictures(d)
+
+    # a deliberate offender: two photographs behind one icon
+    bad = d / "content" / "da" / "deux-photos"
+    bad.mkdir()
+    (bad / "index.md").write_text(FRONT.format(title="deux photos.jpg", extra=""),
+                                  encoding="utf-8")
+    for n in ("01.jpg", "02.jpg"):
+        shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", bad / n)
+
+    # and three that are allowed to hold several, one per exemption
+    page = d / "content" / "da" / "une-page"
+    page.mkdir()
+    (page / "index.md").write_text(
+        FRONT.format(title="une page.jpg", extra='\n[extra]\nopens = "page"\n'),
+        encoding="utf-8")
+    film = d / "content" / "da" / "un-film-deux-photos"
+    film.mkdir()
+    (film / "index.md").write_text(FRONT.format(title="un film.mov", extra=""),
+                                   encoding="utf-8")
+    (film / "clip.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
+    doc = d / "content" / "da" / "un-doc-deux-photos"
+    doc.mkdir()
+    (doc / "index.md").write_text(FRONT.format(title="un doc.pdf", extra=""),
+                                  encoding="utf-8")
+    (doc / "brochure.pdf").write_bytes(TINY_PDF)
+    for folder in (page, film, doc):
+        for n in ("01.jpg", "02.jpg"):
+            shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", folder / n)
+
+    after = _grouped_pictures(d)
+    ok, log = build(d)
+    return [
+        ("no desk item in the site groups photographs behind one icon",
+         before == []),
+        ("two photographs behind one icon are caught",
+         any("deux-photos" in s for s in after)),
+        ("a page may hold several — that is what a page is",
+         not any("une-page" in s for s in after)),
+        ("so may a film", not any("un-film" in s for s in after)),
+        ("and so may a document", not any("un-doc" in s for s in after)),
+        ("and the site still builds with all of them in it", ok),
     ]
 
 
@@ -1167,7 +1270,7 @@ def case_a_picture_opens_plain(d: pathlib.Path) -> list[tuple[str, bool]]:
     p.mkdir()
     (p / "index.md").write_text(FRONT.format(title="une photo.jpg", extra=""),
                                 encoding="utf-8")
-    shutil.copyfile(ROOT / "content/da/theodora/01.jpg", p / "01.jpg")
+    shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", p / "01.jpg")
     q = d / "content" / "da" / "un-clip"
     q.mkdir()
     (q / "index.md").write_text(FRONT.format(title="un clip.mov", extra=""),
@@ -1257,6 +1360,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("a picture on a desk is one picture", case_a_picture_is_one_picture),
     ("a closed window stays closed", case_a_closed_dialog_stays_closed),
     ("a .DS_Store does not stop the preview", case_finder_droppings),
     ("a picture opens plain, a film keeps its frame", case_a_picture_opens_plain),

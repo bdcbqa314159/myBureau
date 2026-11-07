@@ -2,6 +2,7 @@
 title = "grocery list.png"
 
 [extra]
+opens = "page"
 x = 64
 y = 40
 +++
