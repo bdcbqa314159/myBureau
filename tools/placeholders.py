@@ -28,14 +28,15 @@ PICSUM = "https://picsum.photos/seed/{seed}/{w}/{h}"
 
 # (path relative to the repo, seed, width, height)
 PLAN: list[tuple[str, str, int, int]] = [
-    # ---- wallpapers: the largest surface, and the one that decides
+    # ---- wallpapers. Only the home desk and DA are desks now; a
+    # folder that opens a page has no ground to cover, so there is no
+    # wallpaper planned for one. See specs/da-as-a-road.md.
+    # ---- the largest surface, and the one that decides
     #      whether white text and the icons survive a real photograph ----
     # no wallpaper for pellicules: body.gallery is a deliberate dark room,
     # so one declared there would be fetched, shipped and never rendered
     ("static/img/wall-home.jpg",       "bureau-home",   2000, 1125),
     ("content/da/wallpaper.jpg",                "bureau-da",      2000, 1125),
-    ("content/graphic-design/wallpaper.jpg",    "bureau-gd",      2000, 1125),
-    ("content/travail-selectionne/wallpaper.jpg", "bureau-atelier", 2000, 1125),
 ]
 
 # ---- pellicules: varied proportions, because that is what makes a

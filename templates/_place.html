@@ -24,7 +24,7 @@
   {%- set leaf = a | split(pat="/") | last -%}
   {%- set stem = leaf | split(pat=".") | first -%}
   {%- set ext = leaf | split(pat=".") | last | lower -%}
-  {%- if ext in config.extra.image_types and stem != "poster" -%}
+  {%- if ext in config.extra.image_types and stem != "poster" and stem != "wallpaper" -%}
     {%- if stem == "icon" -%}
       {%- set_global pl_face = pl_here ~ leaf -%}
     {%- elif pl_face == "" -%}

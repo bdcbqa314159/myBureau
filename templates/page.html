@@ -106,7 +106,13 @@
   {% for asset in w.assets %}
     {% set file = asset | split(pat="/") | last %}
     {% set asset = here ~ file %}
-    {% if file | split(pat=".") | last | lower in config.extra.image_types and file | split(pat=".") | first != "icon" and file | split(pat=".") | first != "poster" %}
+    {#- `wallpaper` joins icon and poster here the moment a FOLDER can
+        be a page: the wallpaper is the desk's ground, and a folder that
+        used to be a desk still has the file sitting beside its
+        _index.md. Without this it is rendered as one of her
+        photographs — full width, first on the page. -#}
+    {% set stem = file | split(pat=".") | first %}
+    {% if file | split(pat=".") | last | lower in config.extra.image_types and stem != "icon" and stem != "poster" and stem != "wallpaper" %}
       {# the first picture is the page; everything below it can arrive later.
          Resized at build time, with the original proportions declared so
          nothing shifts as each one lands. #}
