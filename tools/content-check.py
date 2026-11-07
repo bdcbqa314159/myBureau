@@ -1471,6 +1471,9 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     # a second photograph in the SAME project: the route must show both,
     # which is the whole change — one face per thing was the old answer
     shutil.copyfile(ROOT / "content/da/theodora-02/01.jpg", r / "02.jpg")
+    # a third that nothing declares anything about, so the rhythm case
+    # has a photograph of its own to be true about
+    shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", r / "03.jpg")
     # and it PINS one of them by hand, which is the whole point of the
     # route being a fridge rather than a column. Nothing in the real
     # content had to declare this when the code was written, so without
@@ -1478,7 +1481,11 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     # passes by finding nothing.
     (r / "index.md").write_text(
         '+++\ntitle = "une photo.jpg"\n\n[extra.width]\n"02.jpg" = 37\n\n'
-        '[extra.offset]\n"02.jpg" = -18\n+++\n\nUn texte.\n', encoding="utf-8")
+        '[extra.offset]\n"02.jpg" = -18\n\n'
+        # an angle on a DIFFERENT file, and no width or offset with it,
+        # because the three have to be independent: she may want one
+        # photograph hung crooked and nothing else about it changed.
+        '[extra.angle]\n"01.jpg" = 5\n+++\n\nUn texte.\n', encoding="utf-8")
     # and one with nothing to show at all, which is where a broken
     # picture would appear if the partial assumed there was always one
     s = d / "content" / "da" / "maison-cosette" / "rien"
@@ -1505,17 +1512,19 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("what is inside is on the route",
          bool(route) and "un film.mov" in inside),
         ("a thing with a photograph wears it, at its own proportion",
-         bool(re.search(r'<a class="stop" href="[^"]*une-photo/">\s*<img', inside))),
+         bool(re.search(r'<a class="stop"[^>]*href="[^"]*une-photo/"[^>]*>\s*<img', inside))),
         ("a thing with nothing to show is a stop wearing only its name",
          bool(empty) and "<img" not in empty.group(0)),
         ("a film is not represented by its poster, which is not a photograph",
          bool(re.search(r'<a class="stop is-bare" href="[^"]*un-film/">', inside))),
         ("EVERY photograph is a stop, not one face for the whole thing",
-         len(re.findall(r'<a class="stop"[^>]*href="[^"]*une-photo/"', inside)) == 2),
+         len(re.findall(r'<a class="stop"[^>]*href="[^"]*une-photo/"', inside)) == 3),
         ("a photograph pinned by hand carries its own width and place",
          '--w:37%;--x:-18%;' in inside),
-        ("and one nobody pinned carries none, so the rhythm places it",
-         bool(re.search(r'<a class="stop" href="[^"]*une-photo/">\s*<img', inside))),
+        ("an angle can be given on its own, without a width or a place",
+         '--r:5deg;' in inside and '--w:37%;--x:-18%;--r:5deg;' not in inside),
+        ("and one nobody pinned carries no style at all, so the rhythm places it",
+         len(re.findall(r'<a class="stop" href="[^"]*une-photo/">', inside)) == 1),
         ("the route runs DOWN the page — a grid, not a sideways scroller",
          any("display: grid" in b for b in rules.get(".proj-route", []))
          and not any("overflow-x" in b for b in rules.get(".proj-route", []))),

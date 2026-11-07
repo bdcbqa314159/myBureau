@@ -39,6 +39,10 @@ template = "page.html"
 [extra.offset]
 "02.jpg" = 8         # per cent off the centre line, + is right
 "05.jpg" = -26
+
+[extra.angle]
+"02.jpg" = -3        # degrees, how it hangs
+"05.jpg" = 4
 +++
 ```
 
@@ -46,9 +50,13 @@ template = "page.html"
 |---|---|---|---|
 | `width` | integer, per cent | from the rhythm | 20–100 |
 | `offset` | integer, per cent | from the rhythm | −30 to 30 |
+| `angle` | integer, degrees | from the rhythm | −8 to 8 |
 
 Rules the panel can rely on:
 
+- **All three are optional, per file, and independent.** An angle may
+  be given with no width: she may want one photograph hung crooked and
+  nothing else about it changed.
 - **Both are optional, and both are per file.** A photograph nobody has
   touched takes its place from a repeating five-step rhythm in the
   stylesheet, so an unarranged folder still reads as pinned rather than
