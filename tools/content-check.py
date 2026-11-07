@@ -1142,6 +1142,77 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_every_write_goes_through_the_gate(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """verbs.atomic() is the last gate, and nothing may step around it.
+
+    It writes through a temp file and renames, because `zola serve` is
+    watching and a plain write is visible half-finished. It also
+    refuses a content .md that would have no front matter — which is
+    the gate standing in for a corruption whose cause was never found.
+
+    Its docstring said every write came through it. Three did not:
+    `new_project`, `new_bureau` and the journal rewrite inside `undo`.
+    A false promise about a safety gate is worse than a missing gate,
+    because it is the sentence the next person reads instead of
+    checking. This asserts the sentence.
+
+    The one exception is appending a single line to the journal, which
+    is append-only by design and named here so it cannot be mistaken
+    for a fourth bypass.
+    """
+    src = (ROOT / "tools" / "studio" / "verbs.py").read_text(encoding="utf-8")
+    direct = []
+    for n, line in enumerate(src.splitlines(), 1):
+        if ".write_text(" in line or ".write_bytes(" in line:
+            # the gate's own temp file is how it does its job
+            if "tmp.write_text" in line or "tmp.write_bytes" in line:
+                continue
+            direct.append("{}: {}".format(n, line.strip()[:60]))
+    return [
+        ("nothing in verbs.py writes to disk around the gate", direct == []),
+        ("the gate still refuses a file with no front matter",
+         "_no_front_matter" in src and "raise Refused" in src),
+        ("and still writes through a temp file it renames into place",
+         "os.replace(tmp, p)" in src),
+        ("the journal's one append is the only exception, and it is named",
+         'JOURNAL.open("a"' in src),
+    ]
+
+
+def case_one_module_knows_what_a_content_file_is(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Nobody splits on the fence by hand any more.
+
+    A content file is `+++`, a header, `+++`, her words. That was
+    written out in nine places across four modules, each deciding for
+    itself what a malformed file meant. They never disagreed — they
+    were nine chances to, and the one bug nobody could explain was a
+    header going missing.
+
+    tools/frontmatter.py owns it now. This is what stops the tenth
+    copy: a new hand-rolled split is a failing check rather than
+    something noticed years later, when two of them have drifted.
+    """
+    here = sorted(list((ROOT / "tools").glob("*.py"))
+                  + list((ROOT / "tools" / "studio").glob("*.py")))
+    owner = ROOT / "tools" / "frontmatter.py"
+    rolled = []
+    for f in here:
+        if f == owner:
+            continue
+        text = f.read_text(encoding="utf-8")
+        # the docstring of the owner is allowed to name it; code is not
+        if re.search(r'split\(\s*["\']\+\+\+["\']\s*\)', text):
+            rolled.append(str(f.relative_to(ROOT)))
+    return [
+        ("the module that knows what a content file is exists", owner.is_file()),
+        ("and nothing else splits on the fence by hand", rolled == []),
+        ("the four that used to are reading from it now",
+         all("import frontmatter" in (ROOT / m).read_text(encoding="utf-8")
+             for m in ("tools/look.py", "tools/studio/model.py",
+                       "tools/studio/verbs.py", "tools/studio/check.py"))),
+    ]
+
+
 def case_a_subfolder_page_is_one_column(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A subfolder is a blank page: title, text, work in ONE COLUMN.
 
@@ -1613,6 +1684,8 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("every write goes through the gate", case_every_write_goes_through_the_gate),
+    ("one module knows what a content file is", case_one_module_knows_what_a_content_file_is),
     ("a subfolder page is one column", case_a_subfolder_page_is_one_column),
     ("the sheet has buttons that cannot edit", case_the_sheet_has_buttons),
     ("about me.txt is read as a text file", case_about_is_read_as_a_text_file),

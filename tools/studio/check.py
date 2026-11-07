@@ -25,6 +25,8 @@ import urllib.request
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 sys.path.insert(0, str(HERE))
+sys.path.insert(0, str(ROOT / "tools"))
+import frontmatter  # noqa: E402
 import verbs  # noqa: E402
 
 failed = 0
@@ -529,9 +531,10 @@ def doc_cases(tmp: pathlib.Path) -> None:
     had = home.read_text(encoding="utf-8")
     verbs.set_body("content", "fr", "Je suis directrice artistique.")
     check("writing the text keeps the front matter, comments and all",
-          home.read_text(encoding="utf-8").split("+++")[1] == had.split("+++")[1])
+          frontmatter.header(home.read_text(encoding="utf-8"))
+          == frontmatter.header(had))
     check("and the text is what she typed",
-          home.read_text(encoding="utf-8").split("+++")[2].strip()
+          frontmatter.body(home.read_text(encoding="utf-8"))
           == "Je suis directrice artistique.")
     verbs.undo()
     check("undo puts her old text back", home.read_text(encoding="utf-8") == had)

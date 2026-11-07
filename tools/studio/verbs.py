@@ -31,9 +31,13 @@ import re
 import shutil
 import signal
 import subprocess
+import sys
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+
+sys.path.insert(0, str(ROOT / "tools"))
+import frontmatter  # noqa: E402
 CONTENT = ROOT / "content"
 CONFIG = ROOT / "config.toml"
 STUDIO = ROOT / ".studio"
@@ -237,6 +241,13 @@ def atomic(p: pathlib.Path, text: str) -> None:
     this is the one place that can promise the file it leaves behind is
     one zola will read.
 
+    That sentence was false for a while and the falsehood mattered more
+    than the bug: `new_project`, `new_bureau` and the journal rewrite in
+    `undo` each wrote directly, so three paths skipped both the rename
+    and the front-matter check while the docstring said none did. If a
+    write is added, it comes through here. Appending ONE line to the
+    journal is the one exception, and it is append-only by design.
+
     It exists because a content file turned up with its front matter
     gone and the site stopped building: "Couldn't find front matter in
     `_index.en.md`". Nothing in the journal explained it, so rather than
@@ -309,7 +320,7 @@ def set_key(text: str, name: str, value, where: str = "ce fichier") -> str:
     front matter is ever touched — the split on `+++` is what keeps an
     `x = ` in the body text from being rewritten.
     """
-    parts = text.split("+++")
+    parts = frontmatter.parts(text)
     if len(parts) < 3:
         raise Refused("{} n'a pas d'en-tête entre les +++ — c'est ce fichier"
                       " qu'il faut réparer.".format(where))
@@ -324,7 +335,7 @@ def set_key(text: str, name: str, value, where: str = "ce fichier") -> str:
     else:
         fm = fm.rstrip("\n") + "\n\n[extra]\n" + line + "\n"
     parts[1] = fm
-    return "+++".join(parts)
+    return frontmatter.rejoin(parts)
 
 
 # ---------------------------------------------------------------------
@@ -429,8 +440,7 @@ def undo() -> str:
             nudge(dst)          # undoing a move has the same blind spot
         elif dst.parent.is_dir():
             nudge(dst.parent)
-    JOURNAL.write_text("\n".join(lines[:-1]) + ("\n" if lines[:-1] else ""),
-                       encoding="utf-8")
+    atomic(JOURNAL, "\n".join(lines[:-1]) + ("\n" if lines[:-1] else ""))
     return entry["verb"]
 
 
@@ -541,7 +551,7 @@ def set_alt_key(text: str, file: str, value: str,
     bare key written after it would silently belong to it instead of to
     `[extra]`.
     """
-    parts = text.split("+++")
+    parts = frontmatter.parts(text)
     if len(parts) < 3:
         raise Refused("{} n'a pas d'en-tête entre les +++ — c'est ce fichier"
                       " qu'il faut réparer.".format(where))
@@ -558,7 +568,7 @@ def set_alt_key(text: str, file: str, value: str,
     else:
         fm = fm.rstrip("\n") + "\n\n[extra.alt]\n" + line + "\n"
     parts[1] = fm
-    return "+++".join(parts)
+    return frontmatter.rejoin(parts)
 
 
 def set_body(item: str, lang: str, body: str) -> dict:
@@ -575,7 +585,7 @@ def set_body(item: str, lang: str, body: str) -> dict:
         raise Refused("il n'y a pas encore de version {} pour celui-ci"
                       " ({} n'existe pas).".format(lang, f.name))
     before = f.read_text(encoding="utf-8")
-    parts = before.split("+++")
+    parts = frontmatter.parts(before)
     if len(parts) < 3:
         # NAMING THE FILE. This said only "ce fichier n'a pas d'en-tête",
         # which reads as though the thing she had just selected were the
@@ -681,7 +691,7 @@ def new_project(into: str, name: str, kind: str = "photos") -> dict:
     moves = []
     for lang in _languages_of(d, "_index"):
         f = folder / ("index.md" if not lang else "index.{}.md".format(lang))
-        f.write_text('+++\ntitle = "{}"\n+++\n\n\n'.format(title), encoding="utf-8")
+        atomic(f, '+++\ntitle = "{}"\n+++\n\n\n'.format(title))
         moves.append({"from": "", "to": rel(f)})
     moves.append({"from": "", "to": rel(folder)})
     record("new_project", [], moves)
@@ -710,8 +720,7 @@ def new_bureau(into: str, name: str) -> dict:
     moves = []
     for lang in _languages_of(d, "_index"):
         f = folder / ("_index.md" if not lang else "_index.{}.md".format(lang))
-        f.write_text('+++\ntitle = "{}"\ntemplate = "{}"\n+++\n\n\n'.format(name, template),
-                     encoding="utf-8")
+        atomic(f, '+++\ntitle = "{}"\ntemplate = "{}"\n+++\n\n\n'.format(name, template))
         moves.append({"from": "", "to": rel(f)})
     moves.append({"from": "", "to": rel(folder)})
     record("new_bureau", [], moves)
