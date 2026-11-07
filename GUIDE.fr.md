@@ -273,6 +273,17 @@ dossier — le léopard, le croco — en mettant un `icon.png` à côté de son
 > décide : `.jpg` donne une photo, `.mov` une pellicule, le reste un
 > document.
 
+
+> **Une icône qui bouge.** Si ton `icon` est un **GIF animé**, il
+> s'anime sur le bureau. C'est fait pour les travaux qui n'ont rien à
+> montrer autrement — un dossier de vingt pages, un PDF dense : quelques
+> pages qui défilent en boucle, et le clic ouvre le document comme
+> d'habitude.
+>
+> Le fichier est copié tel quel, sans être redimensionné, donc garde-le
+> petit : quelques images, pas une vidéo déguisée.
+
+
 ### Ce qui se passe quand on clique
 
 Une seule règle : **un clic montre la chose**, il ne t'emmène pas

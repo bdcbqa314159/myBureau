@@ -36,6 +36,15 @@ FRONT = '+++\ntitle = "{title}"\n{extra}+++\n\nUn texte.\n'
 # The smallest thing a browser will accept as a PDF. The build only copies
 # it, but a file that is not a PDF would make the cases that use it prove
 # nothing about the one thing they are for.
+# The smallest thing that is recognisably a GIF, written here rather
+# than drawn, so the bytes are ours and identical on every machine. It
+# carries the NETSCAPE2.0 block, which is what makes a GIF loop — the
+# point of the whole convention.
+TINY_GIF = (b"GIF89a" + bytes([2, 0, 2, 0, 0x80, 0, 0])
+            + b"\xff\xff\xff\x00\x00\x00"
+            + b"\x21\xff\x0bNETSCAPE2.0\x03\x01\x00\x00\x00"
+            + b"\x3b")
+
 TINY_PDF = (b"%PDF-1.4\n"
             b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
             b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
@@ -1142,6 +1151,55 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_an_animated_icon_survives(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A GIF dropped in as the icon reaches the desk untouched.
+
+    A dense piece of work — a twenty-page dossier — has nothing to show
+    on a desk but a document icon. So she drops `icon.gif` beside it:
+    a few of its pages looping, and the click still opens the document.
+
+    This works today only because an icon SHE names is served through
+    `get_url`, while the first-photograph fallback goes through
+    `resize_image`. The day anyone routes icons through the resizer for
+    consistency, every animation on the site becomes a still frame and
+    nothing says so — the page builds, the icon appears, and only she
+    notices it stopped moving.
+
+    What is asserted is that the file survives: referenced directly and
+    copied byte for byte. Whether it ANIMATES is the browser's business
+    and no check here can see it.
+    """
+    p = d / "content" / "graphic-design" / "dossier"
+    p.mkdir()
+    (p / "index.md").write_text(FRONT.format(title="dossier.pdf", extra=""),
+                                encoding="utf-8")
+    (p / "brochure.pdf").write_bytes(TINY_PDF)
+    (p / "icon.gif").write_bytes(TINY_GIF)
+    # a photograph too, which the icon must WIN over — otherwise the
+    # resized still would be chosen and this would pass by accident
+    shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", p / "01.jpg")
+    ok, log = build(d)
+    desk = page(d, "graphic-design/index.html")
+    m = re.search(r'<a class="icon"[^>]*dossier[^>]*>.*?<img[^>]*src="([^"]+)"',
+                  desk, re.S)
+    src = m.group(1) if m else ""
+    out = d / "public" / "graphic-design" / "dossier" / "icon.gif"
+    return [
+        ("builds", ok),
+        ("the desk points straight at the gif she dropped in",
+         src.endswith("/icon.gif")),
+        ("it did NOT go through the resizer, which would flatten it",
+         "processed_images" not in src),
+        ("and the file arrives byte for byte, loop block and all",
+         out.is_file() and out.read_bytes() == TINY_GIF),
+        ("her icon beats the photograph beside it",
+         ".jpg" not in src and ".webp" not in src),
+        ("and the click still opens the document, not the gif",
+         'href="https://bdcbqa314159.github.io/myBureau/graphic-design/dossier/"'
+         in desk),
+    ]
+
+
 def case_every_write_goes_through_the_gate(d: pathlib.Path) -> list[tuple[str, bool]]:
     """verbs.atomic() is the last gate, and nothing may step around it.
 
@@ -1684,6 +1742,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("an animated icon survives", case_an_animated_icon_survives),
     ("every write goes through the gate", case_every_write_goes_through_the_gate),
     ("one module knows what a content file is", case_one_module_knows_what_a_content_file_is),
     ("a subfolder page is one column", case_a_subfolder_page_is_one_column),
