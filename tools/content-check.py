@@ -1055,6 +1055,49 @@ def case_a_film_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_finder_droppings(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A .DS_Store under content/ must not stop the preview.
+
+    macOS writes one into every folder a Finder window has been opened
+    on. look.py refuses the run on any file under content/ that git is
+    ignoring — a good rule, aimed at a real failure: a photograph the
+    deploy will never see, in a preview that looks right. A .DS_Store is
+    not that. It stopped her preview three times over and told her to
+    commit Finder's droppings.
+
+    So the rule has to keep biting on what it is for. Both halves are
+    checked here, because a fix that silenced the whole scan would pass
+    the first and fail nobody.
+    """
+    subprocess.run(["git", "init", "-q"], cwd=d, capture_output=True)
+    (d / ".gitignore").write_text(".DS_Store\ncontent/brouillon/\n",
+                                  encoding="utf-8")
+    for where in (".", "da"):
+        (d / "content" / where / ".DS_Store").write_bytes(b"\x00\x01Bud1")
+
+    def look() -> tuple[int, str]:
+        r = subprocess.run([sys.executable, "tools/look.py"], cwd=d,
+                           capture_output=True, text=True)
+        return r.returncode, (r.stdout or "") + (r.stderr or "")
+
+    quiet_code, quiet = look()
+
+    # and now one that really is hers, and really will not deploy
+    hers = d / "content" / "brouillon"
+    hers.mkdir()
+    (hers / "_index.md").write_text(FRONT.format(
+        title="brouillon", extra='template = "section.html"\n'), encoding="utf-8")
+    loud_code, loud = look()
+
+    return [
+        ("a .DS_Store does not refuse the run", quiet_code == 0),
+        ("and is not even mentioned", ".DS_Store" not in quiet),
+        ("but a content file git is ignoring still refuses", loud_code == 1),
+        ("and it is named, so she knows which one",
+         "content/brouillon" in loud),
+    ]
+
+
 def case_a_picture_opens_plain(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A photograph opens with nothing around it; a film keeps its frame.
 
@@ -1162,6 +1205,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("a .DS_Store does not stop the preview", case_finder_droppings),
     ("a picture opens plain, a film keeps its frame", case_a_picture_opens_plain),
     ("a project inside a folder that is a page", case_film_in_a_folder),
 ]
