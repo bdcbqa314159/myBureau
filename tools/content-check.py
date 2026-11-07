@@ -1143,7 +1143,17 @@ def case_the_sheet_has_buttons(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("every one of them carries a real name — a face of one letter is not one",
          bool(strip) and strip.group(0).count("aria-label=") == 4),
         ("bold and italic reach the text, rather than only lighting the button",
-         ".about-sheet.is-bold" in rules and ".about-sheet.is-italic" in rules),
+         any("font-weight" in b for sel, bs in rules.items()
+             if ".about-sheet.is-bold" in sel for b in bs)
+         and any("font-style" in b for sel, bs in rules.items()
+                 if ".about-sheet.is-italic" in sel for b in bs)),
+        ("the sheet states a resting weight, so bold is a real jump and not one step",
+         any("font-weight" in b for b in rules.get(".about-sheet", []))),
+        ("bold reaches the paragraphs too, which is where her words are",
+         any(".about-sheet.is-bold *" in sel for sel in rules)),
+        ("the strip is centred over the sheet",
+         any("justify-content: center" in b
+             for b in rules.get(".js .sheet-tools", []))),
         ("and each button's face does what the button does",
          '.sheet-tools button[data-style="bold"]' in rules
          and '.sheet-tools button[data-style="italic"]' in rules),

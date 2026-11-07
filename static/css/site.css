@@ -588,7 +588,8 @@ img.will-fade.is-in { opacity: 1; }
    at a visitor with no JavaScript. */
 .sheet-tools { display: none; }
 .js .sheet-tools {
-  display: flex; align-items: center; gap: .35rem;
+  display: flex; align-items: center; justify-content: center;
+  gap: .35rem;
   margin-bottom: .55rem;
 }
 /* Square and small, because each face is a single letter. A button
@@ -613,8 +614,24 @@ img.will-fade.is-in { opacity: 1; }
 /* BOLD AND ITALIC, on the whole sheet. Her words do not change; their
    weight and their slope do, which is the whole of what these two
    buttons have ever done to a file somebody else wrote. */
-.about-sheet.is-bold { font-weight: 700; }
-.about-sheet.is-italic { font-style: italic; }
+/* WHY THIS IS NOT JUST `font-weight: 700`.
+   The sheet inherits --w-light (300) from the body, and it is set in a
+   MONOSPACE stack. A mono face carries two weights where the display
+   face carries an axis from 300 to 700 — so 300 and 400 came out
+   identical, the jump to bold was one step instead of two, and it
+   barely read as bold at all.
+
+   So the resting weight is stated rather than inherited: 400, which is
+   the regular the face actually has. Bold is then a real 400 -> 700.
+
+   The descendant selector is the other half: her words are in <p>
+   elements, and a weight set anywhere on those would quietly beat a
+   weight set on the sheet around them. */
+.about-sheet { font-weight: 400; }
+.about-sheet.is-bold,
+.about-sheet.is-bold * { font-weight: 700; }
+.about-sheet.is-italic,
+.about-sheet.is-italic * { font-style: italic; }
 
 /* SIZE, in three steps and no further. A control that can be pressed
    until the text is unreadable is not a control. */
