@@ -77,6 +77,30 @@ window, which never shows a dossier.
 affiche in *l'affiche*. The affiche is what shows before anyone presses
 play, and it never appears among the project's photographs.
 
+## icons/ — an icon that moves
+
+`icon-loop.gif` — four frames, looping forever.
+
+Drop it into a project as **`icon.gif`** and the desk animates. It is
+meant for work with nothing to show otherwise: a twenty-page dossier,
+a dense PDF. The click still opens the document — the gif is the face,
+not the thing.
+
+It reaches the browser **untouched**: an icon you name is served whole
+rather than resized, which is the only reason the animation survives.
+That also means its weight is its weight, so keep one small. Four
+frames at 280 wide is about 80 KB; the same four at 360 wide is 210 KB,
+for a picture nobody sees larger than a stamp.
+
+To make one from your own images:
+
+```
+python3 tools/gif.py mon-projet/icon.gif mon-projet/01.jpg mon-projet/02.jpg …
+```
+
+It needs **ffmpeg** (`brew install ffmpeg`) and says so plainly if it is
+missing.
+
 ## wrong/ — files that are lying about what they are
 
 These all used to be accepted, and then killed the build on
@@ -98,6 +122,11 @@ match the extension"*, it is *"can the engine use these bytes for what
 this file is for"*.
 
 ---
+
+`plays-once.gif` — a valid GIF, every frame present, and no loop
+block. It twitches once when the page loads and then sits there, which
+looks exactly like a still that failed. Converters hand this back
+without mentioning it.
 
 ## A whole bureau, in one sitting
 

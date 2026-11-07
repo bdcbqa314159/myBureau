@@ -38,6 +38,9 @@ import zlib
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 KIT = ROOT / "kit"
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import gif  # noqa: E402
+
 # A hue per file, so two files of the same shape are still telling apart
 # on a desk. (top colour, bottom colour)
 INK = {
@@ -240,6 +243,35 @@ def build(force: bool) -> None:
     # ---- a wallpaper, which is the biggest surface on the site -------
     # 1920x1080: a busy source rounds to even numbers, and a kit file
     # whose name disagrees with its pixels is worse than no kit file
+    # ---- an icon that moves -----------------------------------------
+    # A dense piece of work has nothing to show on a desk but a grey
+    # document symbol. A few of its pages looping say more, and the
+    # click still opens the document. Four frames: enough to read as
+    # motion, few enough that the file stays the size of an icon.
+    p = want("icons/icon-loop.gif")
+    if p and gif.have_ffmpeg():
+        frames = []
+        for n, hue in enumerate(("dusk", "ochre", "moss", "rose"), 1):
+            f = KIT / "icons" / "frame-{:02d}.jpg".format(n)
+            f.parent.mkdir(parents=True, exist_ok=True)
+            picture(f, 900, 600, hue)
+            frames.append(f)
+        gif.make(p, frames)
+        for f in frames:
+            f.unlink()          # the frames were scaffolding, not kit
+
+    # A GIF THAT PLAYS ONCE AND STOPS, for the wrong/ shelf. It is a
+    # valid GIF with every frame in it and no NETSCAPE2.0 block, so it
+    # twitches when the page loads and then sits there — which looks
+    # exactly like a still that failed, and is the kind of file a
+    # converter hands back without mentioning.
+    p = want("wrong/plays-once.gif")
+    if p and gif.have_ffmpeg():
+        loop = KIT / "icons" / "icon-loop.gif"
+        if loop.exists():
+            run(["ffmpeg", "-hide_banner", "-loglevel", "error",
+                 "-i", str(loop), "-loop", "-1", "-y", str(p)])
+
     p = want("wallpapers/wallpaper-busy-1920x1080.jpg")
     if p:
         picture(p, 1920, 1080, "ink", True)

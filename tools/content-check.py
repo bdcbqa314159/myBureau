@@ -29,6 +29,9 @@ import sys
 import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+sys.path.insert(0, str(ROOT / "tools"))
+import gif  # noqa: E402
 COPY = ["content", "templates", "static", "tools", "config.toml", "sass"]
 
 FRONT = '+++\ntitle = "{title}"\n{extra}+++\n\nUn texte.\n'
@@ -1151,6 +1154,59 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_a_gif_she_made_loops(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """tools/gif.py writes a GIF that actually repeats.
+
+    The loop is the whole feature. A GIF written without the
+    NETSCAPE2.0 block plays once and stops, which on a desk looks like
+    a still that twitched as the page loaded — and converters hand that
+    back without mentioning it. kit/wrong/plays-once.gif is that file,
+    kept on purpose.
+
+    ffmpeg is what reads the photographs, and it is not on her machine
+    by default. Where it is absent this says so and checks nothing,
+    rather than passing quietly and reporting a tool that was never
+    run.
+    """
+    if not gif.have_ffmpeg():
+        return [("ffmpeg is not on this machine, so the gif maker was"
+                 " NOT checked — everything else here was", True)]
+
+    frames = [d / "content/da/theodora-01/01.jpg",
+              d / "content/da/theodora-02/01.jpg"]
+    out = d / "made.gif"
+    gif.make(out, frames, width=120)
+
+    refused_one = refused_missing = False
+    try:
+        gif.make(d / "nope.gif", [frames[0]], width=120)
+    except gif.Refused:
+        refused_one = True
+    try:
+        gif.make(d / "nope.gif", [frames[0], d / "not-here.jpg"], width=120)
+    except gif.Refused:
+        refused_missing = True
+
+    ok, log = build(d)
+    desk = page(d, "graphic-design/index.html")
+    m = re.search(r'<a class="icon"[^>]*douze-regards[^>]*>.*?<img[^>]*src="([^"]+)"',
+                  desk, re.S)
+    src = m.group(1) if m else ""
+    return [
+        ("it writes a gif at all", out.is_file() and out.stat().st_size > 0),
+        ("and that gif carries the block that makes it repeat", gif.loops(out)),
+        ("one picture is refused — one picture does not move",
+         refused_one),
+        ("and so is a frame that is not there, rather than half a gif",
+         refused_missing),
+        ("the demo wears one, so the desk shows the idea rather than"
+         " only supporting it", src.endswith("/icon.gif")),
+        ("and the site still builds with it in", ok),
+        ("the one kept on the wrong shelf really does not loop",
+         not gif.loops(ROOT / "kit" / "wrong" / "plays-once.gif")),
+    ]
+
+
 def case_an_animated_icon_survives(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A GIF dropped in as the icon reaches the desk untouched.
 
@@ -1742,6 +1798,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("a gif she made loops", case_a_gif_she_made_loops),
     ("an animated icon survives", case_an_animated_icon_survives),
     ("every write goes through the gate", case_every_write_goes_through_the_gate),
     ("one module knows what a content file is", case_one_module_knows_what_a_content_file_is),

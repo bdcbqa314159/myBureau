@@ -283,6 +283,28 @@ dossier — le léopard, le croco — en mettant un `icon.png` à côté de son
 > Le fichier est copié tel quel, sans être redimensionné, donc garde-le
 > petit : quelques images, pas une vidéo déguisée.
 
+**En fabriquer un à partir de tes images.** Dans la fenêtre noire :
+
+```
+python3 tools/gif.py mon-dossier/icon.gif mon-dossier/01.jpg mon-dossier/02.jpg
+```
+
+Mets autant d'images que tu veux, dans l'ordre où elles doivent passer.
+Quatre suffisent largement.
+
+> **Ça demande ffmpeg**, qui n'est pas installé par défaut. Si la
+> commande te dit qu'il manque, colle ceci une fois pour toutes :
+>
+> ```
+> brew install ffmpeg
+> ```
+>
+> Tant que tu ne fabriques pas de GIF, tu n'en as pas besoin.
+
+Un exemple tout fait t'attend dans **`kit/icons/icon-loop.gif`** : tu
+peux le glisser dans un projet pour voir l'effet avant de faire le
+tien.
+
 
 ### Ce qui se passe quand on clique
 
