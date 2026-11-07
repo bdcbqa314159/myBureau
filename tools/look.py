@@ -20,20 +20,36 @@ import subprocess
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+sys.path.insert(0, str(ROOT / "tools"))
+import frontmatter  # noqa: E402
 CONTENT = ROOT / "content"
 STATIC = ROOT / "static"
 
-IMAGE_TYPES = {"jpg", "jpeg", "png", "webp", "avif", "gif"}
-VIDEO_TYPES = {"mp4", "webm", "mov", "m4v"}
-DOC_TYPES = {"pdf"}
+def _types(key: str) -> set:
+    """One of the three lists in config.toml, which owns them.
+
+    These used to be typed out here as well. The duplicate cost nothing
+    until the day the two disagreed — and this is the tool that prints
+    "everything in content/ will do what it says", which is the one
+    sentence in the project that must never be wrong. A format added to
+    the config and not here would make it lie.
+    """
+    text = (ROOT / "config.toml").read_text(encoding="utf-8")
+    m = re.search(r"^" + key + r"\s*=\s*\[([^\]]*)\]", text, re.M)
+    return set(re.findall(r'"([^"]+)"', m.group(1))) if m else set()
+
+
+IMAGE_TYPES = _types("image_types")
+VIDEO_TYPES = _types("video_types")
+DOC_TYPES = _types("doc_types")
 # things a design program exports that this site will not show
 LOOKS_LIKE_AN_IMAGE = {"tif", "tiff", "bmp", "heic", "heif", "psd", "ai", "svg", "raw", "dng", "cr2", "nef"}
 
 
 def front_matter(p: pathlib.Path) -> str:
     t = p.read_text(encoding="utf-8", errors="replace")
-    parts = t.split("+++")
-    return parts[1] if len(parts) >= 3 else ""
+    return frontmatter.header(t)
 
 
 def unseen_by_git() -> list:
@@ -131,7 +147,7 @@ def main() -> int:
             and f.stem.lower() not in ("icon", "poster")
             for f in folder.iterdir() if f.is_file()
         )
-        body = md.read_text(encoding="utf-8", errors="replace").split("+++")[-1].strip()
+        body = frontmatter.body(md.read_text(encoding="utf-8", errors="replace"))
         if not has_media and len(body) < 40:
             notes.append((str(md.relative_to(ROOT)), [
                 "no pictures and almost no text — this page is empty",

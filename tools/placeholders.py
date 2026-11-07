@@ -141,6 +141,7 @@ def main() -> int:
         return 0
 
     got = skipped = 0
+    failed: list = []
     total = 0
     for rel, seed, w, h in PLAN:
         p = ROOT / rel
@@ -152,9 +153,20 @@ def main() -> int:
             total += fetch(p, PICSUM.format(seed=seed, w=w, h=h))
             got += 1
         except Exception as exc:                       # noqa: BLE001
+            # KEEP GOING. This used to return on the first failure, so
+            # one timed-out download abandoned every photograph after
+            # it and the run had to be repeated by hand — twice, on a
+            # bad line. Nothing here depends on anything before it, and
+            # a second run fetches only what is still missing.
             print(f"    FAILED {rel}: {exc}", file=sys.stderr)
-            return 1
+            failed.append(rel)
     print(f"  fetched {got}, kept {skipped}, {total / 1e6:.1f} MB total")
+    if failed:
+        print(f"\n  {len(failed)} did not arrive. Run this again to"
+              " fetch what is still missing:", file=sys.stderr)
+        for rel in failed:
+            print(f"    {rel}", file=sys.stderr)
+        return 1
     return 0
 
 

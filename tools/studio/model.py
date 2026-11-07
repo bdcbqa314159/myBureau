@@ -21,6 +21,9 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+
+sys.path.insert(0, str(ROOT / "tools"))
+import frontmatter  # noqa: E402
 CONTENT = ROOT / "content"
 
 IMAGE = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"}
@@ -31,15 +34,11 @@ SPOKEN_FOR = {"icon", "poster", "wallpaper", "about"}
 
 
 def front(p: pathlib.Path) -> str:
-    t = p.read_text(encoding="utf-8", errors="replace")
-    parts = t.split("+++")
-    return parts[1] if len(parts) >= 3 else ""
+    return frontmatter.header(p.read_text(encoding="utf-8", errors="replace"))
 
 
 def body(p: pathlib.Path) -> str:
-    t = p.read_text(encoding="utf-8", errors="replace")
-    parts = t.split("+++")
-    return parts[2].strip() if len(parts) >= 3 else ""
+    return frontmatter.body(p.read_text(encoding="utf-8", errors="replace"))
 
 
 def key(fm: str, name: str) -> "str | None":
