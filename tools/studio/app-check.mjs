@@ -586,6 +586,33 @@ if (loaded) {
   // shorter coat — it broke again the moment a third thing that cannot
   // be placed was added, while what it is for was still true. What
   // matters is that the guard is CONSULTED, not what it sits beside.
+  // A WHOLE FOLDER IN ONE GESTURE. A browser cannot browse her disk,
+  // but it can take a folder — which removes the second window she had
+  // to arrange beside the panel and drag out of.
+  const html4 = readFileSync(new URL("./app.html", import.meta.url), "utf8");
+  check("there is a way to add a folder, not only a file",
+    /id="adddir"/.test(html4) && /id="pickdir"/.test(html4));
+  check("and the picker really asks for a directory",
+    /webkitdirectory/.test(html4));
+
+  // macOS writes a .DS_Store into every folder a Finder window has been
+  // opened on. The server refuses it, correctly — and she would get an
+  // error about a file she never chose, which is the same noise that
+  // used to stop her preview.
+  check("hidden files are dropped before the server ever sees them",
+    /startsWith\("\."\)/.test(src4));
+  check("and so is anything deeper than the folder she picked",
+    /parts\(f\)\.length === 2/.test(src4));
+  // `[^)]*` here could never reach the flag: it stops at the first `)`,
+  // which is inside `parts(b)`. The check failed from the moment it was
+  // written, and counting the passing lines hid it.
+  check("the photographs go in the order their names put them",
+    /localeCompare\([\s\S]{0,80}numeric: true/.test(src4));
+  check("the project is made first, and the files go into what was made",
+    /verb: "new_project"[\s\S]{0,400}into=\$\{encodeURIComponent\(made\.made\)/.test(src4));
+  check("picking the same folder twice is possible",
+    /el\("pickdir"\)\.value = ""/.test(src4));
+
   // WHAT SHE IS TYPING SURVIVES A REBUILD. The editor pane is built
   // from a string and paint() rebuilds it on every tree update — and
   // those arrive on their own, after any verb and whenever the watcher
