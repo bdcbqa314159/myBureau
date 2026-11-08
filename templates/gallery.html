@@ -96,12 +96,15 @@
     {% set shape = get_image_metadata(path=asset) %}
     {% set big = resize_image(path=asset, width=1600, op="fit_width", format="webp", quality=78) %}
     <dialog class="win win-preview win-shot" id="shot-{{ loop.index }}-{{ file | slugify }}">
-      <div class="win-bar">
-        <span>{{ file }}</span>
-        <div class="win-controls">
-          <form method="dialog"><button aria-label="{{ trans(key='window_close', lang=lang) }}">&#x2715;</button></form>
-        </div>
-      </div>
+      {#- NO CLOSE BOX. It was the third way out of a window that
+          already had two: Escape, which a modal dialog does for
+          itself, and a tap anywhere off the picture, which desk.ts
+          wires for every `.win-preview` — and this dialog is one.
+
+          The bar and the file's name stay for now, to be looked at
+          rather than argued about. If they go too, this becomes the
+          same frameless picture the desks already open. -#}
+      <div class="win-bar"><span>{{ file }}</span></div>
       <div class="win-body preview-body">
         <img src="{{ big.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
              alt="{{ alt }}" loading="lazy" decoding="async">
