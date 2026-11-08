@@ -1154,6 +1154,53 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_a_picture_fits_the_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """An opened photograph is bounded by the screen, not by itself.
+
+    On a phone a picture opened from a desk ran off the side. The cause
+    was two rules agreeing with each other and both being wrong:
+
+      the dialog was a grid with an AUTO track, which grows to its
+      content — and the content is a photograph 1800 pixels wide, so
+      the track blew out past the screen
+
+      the body inside it was `width: max-content`, so it sized to the
+      picture too
+
+    Every percentage inside then resolved against 1800 rather than
+    against the phone. The height was bounded in viewport units and was
+    fine; the width was bounded against a box the picture had sized
+    itself, which is no bound at all.
+
+    So the picture is measured against the VIEWPORT in both directions.
+    A rule that measures one axis against the screen and the other
+    against its own parent will fit on the machine it was written on
+    and nowhere else.
+    """
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    rules = {}
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        rules.setdefault(sel.strip(), []).append(body)
+
+    img = " ".join(rules.get(".preview-body img", []))
+    body = " ".join(rules.get(".preview-body", []))
+    dialog = " ".join(rules.get(".win-preview[open]", []))
+
+    return [
+        ("the picture's width is measured against the screen",
+         "max-width" in img and "100vw" in img),
+        ("and so is its height, the same way",
+         "max-height" in img and "100dvh" in img),
+        ("nothing sizes the box to the picture it holds",
+         "max-content" not in body),
+        ("and the track it sits in cannot grow past the screen",
+         "minmax(0" in dialog),
+        ("the picture is still free to keep its shape",
+         "width: auto" in img and "height: auto" in img),
+    ]
+
+
 def case_the_road_survives_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A phone compresses her arrangement; it does not delete it.
 
@@ -2016,6 +2063,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("a picture fits the screen", case_a_picture_fits_the_screen),
     ("the road survives a phone", case_the_road_survives_a_phone),
     ("the phone agrees with the desk", case_the_phone_agrees_with_the_desk),
     ("a phone desk is not a file list", case_a_phone_desk_is_not_a_file_list),
