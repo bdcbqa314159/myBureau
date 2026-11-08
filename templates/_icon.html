@@ -150,7 +150,16 @@
 {%- set parts = ic_href | split(pat=config.base_url) | length -%}
 {%- set away = (scheme == "https" or scheme == "http") and parts == 1 -%}
 <a class="icon" href="{{ ic_href }}"{% if away %} target="_blank" rel="noopener noreferrer"{% endif %}
-   style="--x:{{ ic_x | default(value=ac) }}%; --y:{{ ic_y | default(value=ar) }}%; view-transition-name:vt-{{ ic_path | slugify }}"
+   {#- `order` is what makes the phone agree with the desk. On a wide
+       screen it does nothing — the icons are placed by --x/--y and a
+       grid property is ignored. On a phone the desk IS a grid, and
+       without this it lists folders first and then files, alphabetically:
+       on DA that put the thing she placed at the bottom first and the
+       thing she placed at the top fifth.
+
+       y first, x second, so it reads the way the desk reads — down,
+       then across. She arranges once and both agree. -#}
+   style="--x:{{ ic_x | default(value=ac) }}%; --y:{{ ic_y | default(value=ar) }}%; order:{{ (ic_y | default(value=ar)) * 100 + (ic_x | default(value=ac)) }}; view-transition-name:vt-{{ ic_path | slugify }}"
    data-vt="{{ ic_path | slugify }}"
    {%- if ic_kind == "folder" %} data-folder{% endif -%}
    {%- if ic_window %} data-window="{{ ic_window }}"{% endif %}>

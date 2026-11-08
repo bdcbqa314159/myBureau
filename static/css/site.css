@@ -271,7 +271,7 @@ a { color: inherit; }
        middle of cells twice the size of the picture in them. A minimum
        of 6.5rem keeps three on a phone and gives five near the top of
        the band, which is what the room is actually for. */
-    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr));
     align-content: start;
     gap: 1.4rem .4rem;
     /* THE BANDEAU'S REAL HEIGHT, published by the script, because the
@@ -300,10 +300,29 @@ a { color: inherit; }
   }
   .desk .icon { position: static; width: 100%; }
 
+  /* NOT ROWS. A grid of evenly spaced icons with labels under them is
+     a file manager, and that is what this looked like. A desk is not
+     tidy. Three things take the rigidity out without giving up the
+     predictability of a grid:
+
+       every other one sits a little lower
+       the pictures lean, by about a degree
+       the icons are smaller, so the labels and the wallpaper have room
+
+     The lean is on the PICTURE and never on the icon box. arrange()
+     measures each icon to pin it in place, and the measured box of a
+     rotated element is its bounding box — larger, and wrong. Rotating
+     only the image inside leaves every measurement honest. */
+  .desk .icon:nth-child(even) { margin-top: 1.15rem; }
+  .desk .icon:nth-child(4n+3) { margin-top: .5rem; }
+  .desk .icon:nth-child(3n+1) img { rotate: -1.4deg; }
+  .desk .icon:nth-child(3n+2) img { rotate: 1.1deg; }
+  .desk .icon:nth-child(5n)   img { rotate: 2deg; }
+
   .desk.arranged { display: block; padding: 0; }
   .desk.arranged .icon { position: absolute; }
 
-  :root { --icon-w: 6.4rem; }
+  :root { --icon-w: 5rem; }
 
   .win-film { width: 94vw; }
   .credit { font-size: .64rem; }

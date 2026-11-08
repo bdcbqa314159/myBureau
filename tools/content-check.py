@@ -1154,6 +1154,85 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_the_phone_agrees_with_the_desk(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """What she arranges on a desk is the order a phone shows.
+
+    A phone has no room for a surface, so the desk becomes a grid. It
+    used to be the filesystem's order — folders first, then files,
+    alphabetically — which on DA put the thing she placed at the BOTTOM
+    first and the thing she placed at the TOP fifth. She arranged a
+    desk and the phone ignored her.
+
+    `order` fixes it with nothing new to learn: y first and x second, so
+    the grid reads the way the desk reads, down and then across. On a
+    wide screen the property does nothing at all, because the icons are
+    placed by --x/--y and are not grid items.
+    """
+    ok, log = build(d)
+    desk = page(d, "da/index.html")
+    main = re.search(r'<main class="desk".*?</main>', desk, re.S)
+    seen = []
+    for a in re.findall(r'<a class="icon"[^>]*>', main.group(0) if main else ""):
+        vt = re.search(r'data-vt="([^"]+)"', a)
+        o = re.search(r"order:(-?[0-9]+)(;| )", a)
+        y = re.search(r"--y:([0-9.]+)%", a)
+        if vt and o and y:
+            seen.append((int(o.group(1)), float(y.group(1)), vt.group(1)))
+
+    by_order = [n for _, _, n in sorted(seen)]
+    by_place = [n for _, _, n in sorted(seen, key=lambda r: r[1])]
+
+    return [
+        ("builds", ok),
+        ("every icon carries an order", len(seen) == 6),
+        ("the order is a whole number, which is all CSS accepts",
+         all(isinstance(o, int) for o, _, _ in seen)),
+        ("reading the phone's order gives her arrangement, top to bottom",
+         by_order == by_place),
+        ("the thing she put at the top comes first, not fifth",
+         by_order and by_order[0] == "da-theodora-01"),
+        ("and the folder she put at the bottom is last, not first",
+         by_order and by_order[-1] == "da-maison-cosette"),
+    ]
+
+
+def case_a_phone_desk_is_not_a_file_list(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """The grid is softened, and the lean never touches a measured box.
+
+    Evenly spaced icons in rows with labels underneath is a file
+    manager. A desk is not tidy. The icons are smaller, every other one
+    sits lower, and the pictures lean about a degree.
+
+    THE LEAN IS ON THE PICTURE, NEVER THE ICON. arrange() measures each
+    icon with getBoundingClientRect to pin it in place, and the measured
+    box of a rotated element is its bounding box — bigger than the
+    element, and wrong. Rotating the icon itself would put a quiet error
+    into every position on a phone.
+    """
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    rules = {}
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        rules.setdefault(sel.strip(), []).append(body)
+
+    leaning = {s: b for s, b in rules.items()
+               if ".desk .icon" in s and any("rotate" in x for x in b)}
+    on_the_box = [s for s in leaning if not s.rstrip().endswith("img")]
+    staggered = [s for s, b in rules.items()
+                 if ".desk .icon" in s and any("margin-top" in x for x in b)]
+    narrow = [b for b in rules.get(".desk", []) if "grid-template-columns" in b]
+
+    return [
+        ("the pictures lean", leaning != {}),
+        ("and the lean is on the picture, never on the box that is measured",
+         on_the_box == []),
+        ("every other icon sits lower, so they are not in rows",
+         staggered != []),
+        ("the icons are smaller than a column of the old grid",
+         any("minmax(5.2rem" in b for b in narrow)),
+    ]
+
+
 def case_a_phone_desk_can_grow(d: pathlib.Path) -> list[tuple[str, bool]]:
     """With no JavaScript, a phone desk must not hide its own icons.
 
@@ -1888,6 +1967,8 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("the phone agrees with the desk", case_the_phone_agrees_with_the_desk),
+    ("a phone desk is not a file list", case_a_phone_desk_is_not_a_file_list),
     ("a phone desk can grow", case_a_phone_desk_can_grow),
     ("a stylesheet with one set of breakpoints", case_one_set_of_breakpoints),
     ("a gif she made loops", case_a_gif_she_made_loops),
