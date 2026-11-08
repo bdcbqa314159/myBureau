@@ -586,6 +586,27 @@ if (loaded) {
   // shorter coat — it broke again the moment a third thing that cannot
   // be placed was added, while what it is for was still true. What
   // matters is that the guard is CONSULTED, not what it sits beside.
+  // WHAT SHE IS TYPING SURVIVES A REBUILD. The editor pane is built
+  // from a string and paint() rebuilds it on every tree update — and
+  // those arrive on their own, after any verb and whenever the watcher
+  // sees zola finish. Everything saves on `change`, which fires on
+  // blur, so unsaved text lives in the DOM: exactly the thing being
+  // replaced.
+  //
+  // Four separate things, because three of them can each be right while
+  // the whole is useless.
+  check("a rebuild is refused while she is in a field",
+    /function inspect\(o\) \{\s*if \(typing\(\)\)/.test(src4));
+  check("and `typing` means a field in THIS pane, not anywhere",
+    /look\.contains\(a\)/.test(src4)
+    && /TEXTAREA|INPUT/.test(src4));
+  check("leaving the pane rebuilds what was deferred",
+    /focusout/.test(src4) && /if \(!stale\) return/.test(src4));
+  check("but moving between its own fields does not",
+    /relatedTarget && look\.contains\(e\.relatedTarget\)\) return/.test(src4));
+  check("and the rebuild uses what is chosen NOW, not what was captured",
+    /setTimeout\(\(\) => \{ if \(chosen\) inspect\(find\(chosen\)\); \}/.test(src4));
+
   // EVERY REQUEST IS BOUNDED. `fetch` waits forever by default, and the
   // lamp is the panel's only signal that something is happening — a
   // server that HANGS used to leave it lit for the rest of the session

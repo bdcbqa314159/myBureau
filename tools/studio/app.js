@@ -461,7 +461,44 @@ function inspectAbout(o) {
   wire(o);
 }
 
+/* NEVER PULL A FIELD OUT FROM UNDER HER.
+ *
+ * This pane is rebuilt from a string — `look.innerHTML = ...` — and the
+ * last line of paint() rebuilds it on every tree update. Tree updates
+ * arrive on their own: after any verb, and whenever the watcher sees
+ * zola rebuild.
+ *
+ * Everything here saves on `change`, which fires on blur. That is the
+ * right choice, and it is exactly what made this dangerous: text she
+ * has typed and not yet left lives in the DOM, and the DOM is what got
+ * replaced. She drops a photograph, starts writing the description
+ * while the rebuild finishes, the stream fires — and the words are
+ * gone, with nothing saved and nothing said.
+ *
+ * So a rebuild while she is in a field is deferred, not done. It
+ * happens when she leaves the pane, by which time `change` has saved
+ * what she wrote. */
+let stale = false;
+
+function typing() {
+  const a = document.activeElement;
+  return !!a && look.contains(a)
+      && (a.tagName === "TEXTAREA" || a.tagName === "INPUT");
+}
+
+look.addEventListener("focusout", (e) => {
+  // moving from one field to the next is not leaving the pane
+  if (e.relatedTarget && look.contains(e.relatedTarget)) return;
+  if (!stale) return;
+  stale = false;
+  // after the change handler, so the save goes first — and against
+  // whatever is chosen NOW, because she may have left by clicking
+  // something else in the tree
+  setTimeout(() => { if (chosen) inspect(find(chosen)); }, 0);
+});
+
 function inspect(o) {
+  if (typing()) { stale = true; return; }
   if (!o) { look.innerHTML = "<p class='what'>Choisis quelque chose à gauche.</p>"; return; }
   if (o.kind === "about") return inspectAbout(o);
   const langs = o.languages.length ? o.languages : ["fr"];
