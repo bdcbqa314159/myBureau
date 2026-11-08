@@ -1154,6 +1154,55 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_the_road_survives_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A phone compresses her arrangement; it does not delete it.
+
+    The rule here used to set every stop to full width, no offset and
+    no lean below 52rem, which turned a fridge door into one column of
+    photographs — the whole idea of the page gone on the device most
+    people read it on.
+
+    The reasoning was half right: a picture at 24 per cent of a phone
+    IS a stamp. The answer to values too extreme is smaller values, not
+    none.
+
+    THE THREE NUMBERS ARE UNITLESS so this is possible at all. A
+    percentage cannot be scaled by CSS; a number can. If anyone puts
+    the `%` back in the template, the phone silently stops compressing
+    — `calc(55 + 52% * 0.6)` is not a length — and the road flattens
+    again with nothing to show for it.
+    """
+    ok, log = build(d)
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    rules = {}
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        rules.setdefault(sel.strip(), []).append(body)
+
+    stop = " ".join(rules.get(".stop", []))
+    rhythm = " ".join(one for sel, bodies in rules.items()
+                      if sel.startswith(".stop:nth-child")
+                      for one in bodies)
+    road = page(d, "travail-selectionne/index.html")
+    pins = re.findall(r'<a class="stop"[^>]*style="([^"]*)"', road)
+
+    return [
+        ("builds", ok),
+        ("the stop puts the units on itself, so the numbers can be scaled",
+         "calc(var(--w" in stop and "* 1%" in stop),
+        ("the rhythm is numbers, not percentages",
+         rhythm != "" and "%" not in rhythm and "deg" not in rhythm),
+        ("a phone narrows the range rather than erasing it",
+         any("calc((55 + var(--w" in b for b in rules.get(".stop", []))),
+        ("and nothing resets a stop to full width any more",
+         "--w: 100%" not in css),
+        ("the demo road really is pinned, so the idea can be seen",
+         len(pins) >= 5),
+        ("and what it writes is unitless, which is what the maths needs",
+         pins != [] and all("%" not in s and "deg" not in s for s in pins)),
+    ]
+
+
 def case_the_phone_agrees_with_the_desk(d: pathlib.Path) -> list[tuple[str, bool]]:
     """What she arranges on a desk is the order a phone shows.
 
@@ -1924,9 +1973,9 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("EVERY photograph is a stop, not one face for the whole thing",
          len(re.findall(r'<a class="stop"[^>]*href="[^"]*une-photo/"', inside)) == 3),
         ("a photograph pinned by hand carries its own width and place",
-         '--w:37%;--x:-18%;' in inside),
+         '--w:37;--x:-18;' in inside),
         ("an angle can be given on its own, without a width or a place",
-         '--r:5deg;' in inside and '--w:37%;--x:-18%;--r:5deg;' not in inside),
+         '--r:5;' in inside and '--w:37;--x:-18;--r:5;' not in inside),
         ("and one nobody pinned carries no style at all, so the rhythm places it",
          len(re.findall(r'<a class="stop" href="[^"]*une-photo/">', inside)) == 1),
         ("the route runs DOWN the page — a grid, not a sideways scroller",
@@ -1967,6 +2016,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("the road survives a phone", case_the_road_survives_a_phone),
     ("the phone agrees with the desk", case_the_phone_agrees_with_the_desk),
     ("a phone desk is not a file list", case_a_phone_desk_is_not_a_file_list),
     ("a phone desk can grow", case_a_phone_desk_can_grow),

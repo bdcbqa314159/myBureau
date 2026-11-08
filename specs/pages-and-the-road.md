@@ -39,7 +39,7 @@ file** in the front matter of the folder holding it, in the shape
 
 ```toml
 [extra.width]
-"02.jpg" = 72        # per cent of the page
+"02.jpg" = 72        # per cent of the page, as a NUMBER — no %
 [extra.offset]
 "02.jpg" = 8         # per cent off the centre line, + is right
 [extra.angle]
