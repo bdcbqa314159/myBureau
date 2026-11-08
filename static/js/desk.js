@@ -536,6 +536,13 @@ function arrange() {
     // Without this the icons are correct on first paint and then fill the
     // screen as soon as this pass runs.
     if (narrowScreen()) {
+        // PIN THE HEIGHT THE GRID ASKED FOR. `.arranged` makes the desk a
+        // block whose children are all absolute, so it has no content left
+        // to be tall for and collapses back to one screen — taking the
+        // room the grid had just claimed, and with it any icon that needed
+        // it. `frame` was measured a moment ago, in grid layout, with the
+        // desk already grown.
+        desk.style.height = `${frame.height}px`;
         desk.classList.add("arranged");
         icons.forEach((el, i) => {
             const b = base[i];
@@ -543,6 +550,8 @@ function arrange() {
                 el.style.width = `${b.w}px`;
         });
     }
+    if (!narrowScreen())
+        desk.style.height = ""; // a wide desk is one screen
     // --- 2 and 3. the visitor's choice, then the clamp -----------------
     const ceiling = barCeiling();
     const taken = [];

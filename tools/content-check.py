@@ -1154,6 +1154,48 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_a_phone_desk_can_grow(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """With no JavaScript, a phone desk must not hide its own icons.
+
+    The script is what turns the grid into objects you can pick up.
+    Without it the grid is all there is — and a grid of fifteen icons
+    inside a box pinned to one screen, with no `overflow`, simply ends.
+    The icons below the fold are built, laid out, and unreachable, with
+    nothing on screen saying so.
+
+    `min-height` is the whole fix: the desk is still one screen when
+    one screen is enough, and grows when it is not. The brief asks for
+    a page "de la taille d'un écran qui ne s'étend pas" and that still
+    holds on a laptop, which is where it was asked for.
+
+    The desk-check covers the half this cannot see — that the script
+    pins the grown height before making the icons absolute.
+    """
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    rules = {}
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        rules.setdefault(sel.strip(), []).append(body)
+
+    # the narrow .desk is the one inside the 40rem band; a brace-naive
+    # parse reaches it because @media bodies are never innermost
+    narrow = [b for b in rules.get(".desk", []) if "grid-template-columns" in b]
+    wide = [b for b in rules.get(".desk", []) if "grid-template-columns" not in b]
+
+    def pins_height(bodies: list) -> bool:
+        return any(re.search(r"(^|[;\s])height\s*:", b) for b in bodies)
+
+    return [
+        ("the narrow desk rule was found at all", narrow != []),
+        ("a phone desk may grow past one screen",
+         any("min-height" in b for b in narrow)),
+        ("and it does not pin a height, which is what hid the icons",
+         not pins_height(narrow)),
+        ("a wide desk is still exactly one screen, as the brief asks",
+         wide != [] and pins_height(wide)),
+    ]
+
+
 def case_one_set_of_breakpoints(d: pathlib.Path) -> list[tuple[str, bool]]:
     """Every breakpoint in the stylesheet is one of the four named ones.
 
@@ -1839,6 +1881,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("a phone desk can grow", case_a_phone_desk_can_grow),
     ("a stylesheet with one set of breakpoints", case_one_set_of_breakpoints),
     ("a gif she made loops", case_a_gif_she_made_loops),
     ("an animated icon survives", case_an_animated_icon_survives),

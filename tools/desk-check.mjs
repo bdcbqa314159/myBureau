@@ -189,5 +189,106 @@ for (const [what, blob] of [
         survived && whole);
 }
 
+
+// --- a phone desk with more work on it than screen -------------------
+// The failure this guards is quiet. `.desk` is one screen tall, which
+// the brief asks for — "une page de la taille d'un écran qui ne
+// s'étend pas" — and on a laptop that holds. On a phone the icons go
+// into a three-column grid, and past about fifteen the grid is taller
+// than the screen.
+//
+// Then: `.arranged` turns the desk into a block whose children are all
+// absolute, so it has nothing left to be tall for and collapses back
+// to one screen. arrange() clamps every icon into whatever it
+// measures, so the bottom rows get crushed into the top of the screen
+// and the collision walk stacks them.
+//
+// Nine icons in a grid 1200 tall on a 844 screen is that case.
+function fakeStyle() {
+  const v = {};
+  return {
+    setProperty(k, x) { v[k] = x; },
+    getPropertyValue: (k) => v[k] ?? "",
+    removeProperty(k) { delete v[k]; },
+    get left() { return v.left ?? ""; }, set left(x) { v.left = x; },
+    get top() { return v.top ?? ""; }, set top(x) { v.top = x; },
+    get width() { return v.width ?? ""; }, set width(x) { v.width = x; },
+    get height() { return v.height ?? ""; }, set height(x) { v.height = x; },
+  };
+}
+function fakeIcon(left, top, w, h) {
+  return {
+    style: fakeStyle(), dataset: {},
+    classList: { add() {}, remove() {}, contains: () => false },
+    addEventListener() {},
+    getBoundingClientRect: () => ({ left, top, width: w, height: h }),
+  };
+}
+
+const GRID_H = 1200, SCREEN_H = 844;
+const icons = [];
+for (let row = 0; row < 3; row += 1) {
+  for (let col = 0; col < 3; col += 1) {
+    icons.push(fakeIcon(10 + col * 126, 104 + row * 365, 110, 140));
+  }
+}
+// THE STUB HAS TO COLLAPSE THE WAY A BROWSER DOES, or it cannot fail.
+// `.arranged` makes every child absolute, so the desk has no content
+// left to be tall for: a browser drops it back to the one screen the
+// stylesheet gives it, unless a height was pinned. A stub that always
+// reported the grid height would keep passing with the fix removed —
+// which is exactly what it did on the first attempt at this check.
+let arranged = false;
+const deskEl = {
+  style: fakeStyle(),
+  classList: {
+    add(c) { if (c === "arranged") arranged = true; },
+    remove(c) { if (c === "arranged") arranged = false; },
+    contains: (c) => c === "arranged" && arranged,
+  },
+  addEventListener() {},
+  querySelectorAll: () => icons,
+  getBoundingClientRect: () => ({
+    left: 0, top: 0, width: 390,
+    height: arranged
+      ? (parseFloat(deskEl.style.height) || SCREEN_H)
+      : GRID_H,
+  }),
+};
+const narrowCtx = {
+  ...sandbox,
+  document: {
+    ...sandbox.document,
+    querySelector: (sel) =>
+      sel === ".desk" ? deskEl
+      : sel === ".bar" ? { getBoundingClientRect: () => ({ height: 80 }) }
+      : null,
+    querySelectorAll: () => nothing,
+  },
+  window: { ...sandbox.window, matchMedia: () => ({ matches: true, addEventListener() {} }) },
+};
+narrowCtx.globalThis = narrowCtx;
+const pctx = vm.createContext(narrowCtx);
+vm.runInContext(readFileSync("static/js/desk.js", "utf8"), pctx);
+pctx.arrange();
+
+console.log("\n  a phone desk holding more work than screen:");
+check("the desk keeps the room the grid asked for",
+      deskEl.style.height === `${GRID_H}px`, deskEl.style.height || "(none)");
+const tops = icons.map((i) => parseFloat(i.style.top));
+const lowest = Math.max(...tops) + 140;          // + the icon's own height
+// THE INVARIANT: a desk is never shorter than what is on it. That is
+// the whole of the fix, and it is the assertion that fails when the
+// pin goes — the desk reports one screen while holding icons below it.
+check("the desk is never shorter than the icons on it",
+      parseFloat(deskEl.style.height || "0") >= lowest,
+      `${deskEl.style.height || "(none)"} vs ${Math.round(lowest)}px of icons`);
+// Descriptive, not a guard: arrange() takes .arranged OFF before it
+// measures, so it always reads the grown grid and always clamps into
+// it. This passes with the fix removed too, and is here to say that
+// the clamp is doing its job rather than to catch its absence.
+check("and every icon landed inside what was measured",
+      tops.every((y) => y >= 0 && y <= GRID_H - 140));
+
 console.log(failed === 0 ? "\n  everything holds\n" : `\n  ${failed} FAILED\n`);
 process.exit(failed === 0 ? 0 : 1);

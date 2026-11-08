@@ -1,6 +1,6 @@
 # The phone
 
-**Status:** phase 1 built. Phases 2–5 not started.
+**Status:** phases 1 and 2 built. Phases 3–5 not started.
 **Date:** 2026-11-08
 
 The desktop version is the one that has had the attention. This records
@@ -46,7 +46,7 @@ subfolder page.
 | # | what | status |
 |---|---|---|
 | 1 | **One set of breakpoints.** Name the bands, collapse the strays, write down what each means. No visual change. | **built** |
-| 2 | **A desk must never hide an icon.** Reach or reflow when they do not fit, and a check that asserts every icon is reachable at 390×844 and 844×390. | not started |
+| 2 | **A desk must never hide an icon.** `min-height` on the narrow desk so the grid can grow; `arrange()` pins that grown height before the icons become absolute. | **built** |
 | 3 | **The desks, one at a time** — home, DA, graphic design. What the phone layout should actually BE, including whether the metaphor survives. | not started |
 | 4 | **The pages** — a subfolder's column, travail sélectionné's road, a project's pairs, pellicules' grid. | not started |
 | 5 | **The windows** — the about sheet and its four buttons, contact, film, preview. A 1995 window with a bevelled toolbar at 390px is where this kind of design usually breaks. | not started |
@@ -54,6 +54,22 @@ subfolder page.
 Phase 2 before 3, because a silent failure with a growing trigger beats
 tidiness. Phase 1 first anyway, because the other four are unreadable
 without it.
+
+## Phase 2, as built, and what it corrected about the audit
+
+The audit said icons below the fold were "positioned outside the desk
+and unreachable". That was wrong about the half of it that has a
+script: `arrange()` CLAMPS every icon into the rect it measures, so
+nothing is ever placed outside. The two real failures were:
+
+- **with no script**, the grid overflows a box pinned to one screen
+  with no `overflow` — those icons genuinely cannot be reached
+- **with one**, `.arranged` makes every child absolute, so the desk has
+  nothing left to be tall for and drops back to one screen while
+  holding icons below it
+
+`min-height` fixes the first. `arrange()` pinning the measured grid
+height before adding `.arranged` fixes the second.
 
 ## Phase 1, as built
 

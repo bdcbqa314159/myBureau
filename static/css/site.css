@@ -270,7 +270,19 @@ a { color: inherit; }
     align-content: start;
     gap: 1.4rem .4rem;
     padding: 6.5rem .6rem 1.5rem;
-    height: 100dvh;
+    /* MIN-height, not height. The brief asks for a desk the size of a
+       screen "qui ne s'étend pas", and on a laptop that holds. On a
+       phone the same rule means the sixteenth icon has nowhere to be:
+       without a script the grid overflows a box with no overflow and
+       those icons cannot be reached at all; with one, arrange() clamps
+       every icon into the one screen and the collision walk piles them
+       on top of each other.
+
+       Letting the desk grow fixes both, because arrange() measures the
+       desk and clamps into whatever it measures. A desk one screen
+       tall still does not scroll — it only stops being a ceiling when
+       there is genuinely more work than screen. */
+    min-height: 100dvh;
   }
   .desk .icon { position: static; width: 100%; }
 
