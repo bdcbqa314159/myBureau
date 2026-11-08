@@ -1154,6 +1154,102 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_only_the_opener_is_urgent(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """One photograph is fetched first. The rest wait their turn.
+
+    The opener branch carries `loading="eager" fetchpriority="high"`
+    because it was written for ONE picture: the first on the page,
+    worth having before anything else. When a subfolder page became one
+    column, every photograph started taking that branch — nine of them
+    arrived marked `high`, which tells a browser nothing is urgent
+    because everything is. That page was 544 KB on arrival, the
+    heaviest on the site, on the device this work is about.
+    """
+    folder = d / "content" / "da" / "une-serie"
+    folder.mkdir()
+    (folder / "_index.md").write_text(FRONT.format(
+        title="une série", extra='template = "page.html"\n'), encoding="utf-8")
+    for n in ("01.jpg", "02.jpg", "03.jpg", "04.jpg"):
+        shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", folder / n)
+    ok, log = build(d)
+    html = page(d, "da/une-serie/index.html")
+    # ONLY THE WORK. The dock's social marks are images too, and
+    # counting them made "the rest wait" assert a number that had
+    # nothing to do with her photographs.
+    work = re.search(r'<main class="proj".*?</main>', html, re.S)
+    tags = re.findall(r"<img[^>]*>", work.group(0) if work else "")
+    eager = [x for x in tags if 'loading="lazy"' not in x]
+    return [
+        ("builds", ok),
+        ("all four photographs are on the page", html.count("proj-open") == 4),
+        ("exactly one of them is fetched eagerly", len(eager) == 1),
+        ("and only that one is called urgent",
+         sum('fetchpriority="high"' in x for x in tags) == 1),
+        ("the rest wait", sum('loading="lazy"' in x for x in tags) == 3),
+    ]
+
+
+def case_one_list_of_what_is_not_her_work(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """`icon`, `poster`, `wallpaper` are named once, not five times.
+
+    This was written out in five templates with THREE different
+    answers: a preview did not skip `wallpaper`, the gallery did not
+    skip `poster`. So a folder's wallpaper could appear inside a
+    preview of her work, and a film's still inside the gallery.
+
+    `_icon.html` is the one deliberate exception and it is checked for
+    separately: it is choosing a FACE rather than listing her work, and
+    a film's poster is exactly the right face. Excluding it there would
+    send every film back to a drawn symbol.
+    """
+    conf = (d / "config.toml").read_text(encoding="utf-8")
+    tpl = {f.name: f.read_text(encoding="utf-8")
+           for f in (d / "templates").glob("*.html")}
+    listing = ("page.html", "_place.html", "_preview.html", "gallery.html")
+    hardcoded = [n for n, s in tpl.items()
+                 if n != "_icon.html"
+                 and re.search(r'!=\s*"(poster|wallpaper)"', s)]
+    ok, log = build(d)
+    desk = page(d, "da/index.html")
+    return [
+        ("builds", ok),
+        ("the list exists where the other file types already live",
+         "not_photographs" in conf),
+        ("every template that lists her work reads it",
+         all("not_photographs" in tpl[n] for n in listing)),
+        ("and none of them still names the files by hand", hardcoded == []),
+        ("the icon chooser is the exception, and says why",
+         "_icon.html" in tpl and "not_photographs" in tpl["_icon.html"]),
+        ("so a film still wears its own poster on the desk",
+         bool(re.search(r'<a class="icon"[^>]*junes-cry[^>]*>.*?<img', desk, re.S))),
+    ]
+
+
+def case_about_has_a_face(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """`about me.txt` shows a portrait, as the prototype does.
+
+    The template looked for `about.*`, the stylesheet styled the
+    polaroid, and no such file existed — so a built feature was
+    invisible and the window was prose alone.
+
+    It is DRAWN rather than fetched. Every other placeholder here comes
+    from a random seed, and the one thing a portrait slot would draw is
+    a stranger's face: exactly what the hand-picked seeds in
+    placeholders.py exist to keep off a client's demo.
+    """
+    ok, log = build(d)
+    home = page(d, "index.html")
+    win = re.search(r'<dialog class="win win-about".*?</dialog>', home, re.S)
+    inside = win.group(0) if win else ""
+    return [
+        ("builds", ok),
+        ("the about window has a portrait in it", "about-face" in inside),
+        ("it went through the resizer like every other picture",
+         bool(re.search(r'class="about-face"><img src="[^"]*processed_images', inside))),
+        ("and her words are still under it", "<p>" in inside),
+    ]
+
+
 def case_a_photograph_has_no_close_box(d: pathlib.Path) -> list[tuple[str, bool]]:
     """The gallery's photograph lost its cross and is still dismissible.
 
@@ -2100,6 +2196,9 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("only the opener is urgent", case_only_the_opener_is_urgent),
+    ("one list of what is not her work", case_one_list_of_what_is_not_her_work),
+    ("about me.txt has a face", case_about_has_a_face),
     ("a photograph has no close box", case_a_photograph_has_no_close_box),
     ("a picture fits the screen", case_a_picture_fits_the_screen),
     ("the road survives a phone", case_the_road_survives_a_phone),

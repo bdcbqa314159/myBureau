@@ -24,6 +24,17 @@ studio = "deLapatadaSoftware"
 
 image_types = ["jpg", "jpeg", "png", "webp", "avif", "gif"]
 
+# Names that are never one of HER photographs, whatever their
+# extension: the face on a desk, a film's still, the ground a desk
+# stands on. This was written out in five templates with three
+# different answers — a wallpaper could turn up inside a preview and a
+# poster inside the gallery — so it lives here now.
+#
+# _icon.html deliberately does not use this list. It is choosing a FACE
+# for a desk, and a film's poster is exactly the right face; excluding
+# it would send every film back to a drawn symbol.
+not_photographs = ["icon", "poster", "wallpaper"]
+
 # A project folder containing one of these opens as a window on the
 # bureau instead of navigating to a page: the film beside the text that
 # explains it. Drop a video in, and that is what it becomes.

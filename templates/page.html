@@ -124,7 +124,7 @@
         _index.md. Without this it is rendered as one of her
         photographs — full width, first on the page. -#}
     {% set stem = file | split(pat=".") | first %}
-    {% if file | split(pat=".") | last | lower in config.extra.image_types and stem != "icon" and stem != "poster" and stem != "wallpaper" %}
+    {% if file | split(pat=".") | last | lower in config.extra.image_types and not (stem in config.extra.not_photographs) %}
       {# the first picture is the page; everything below it can arrive later.
          Resized at build time, with the original proportions declared so
          nothing shifts as each one lands. #}
@@ -148,7 +148,15 @@
           srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
           sizes="100vw"
           width="{{ shape.width }}" height="{{ shape.height }}" alt="{{ alt }}"
-          decoding="async" loading="eager" fetchpriority="high"></figure>
+          decoding="async"
+          {#- ONLY THE FIRST ONE IS URGENT. This branch was written for
+              the opener — one photograph, at the top, worth fetching
+              before anything else. A subfolder page sends EVERY
+              photograph through it, so nine of them arrived marked
+              `high`, which tells the browser nothing is urgent because
+              everything is. That page was 544 KB on arrival, the
+              heaviest on the site, on the device we have been fixing. -#}
+          {% if shown == 0 %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}></figure>
       {%- else -%}
         {%- if not paired %}<div class="proj-pairs">{% set_global paired = true %}{% endif -%}
         {#- half the page from here, so the browser stops fetching the
