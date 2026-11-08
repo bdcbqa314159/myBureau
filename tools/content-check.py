@@ -1154,6 +1154,47 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_one_set_of_breakpoints(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Every breakpoint in the stylesheet is one of the four named ones.
+
+    CSS has no variables in a media query, so the numbers are typed out
+    wherever they are used — which is how four of them became four
+    accidents, none named, each an independent decision. One of them
+    sat at 46rem for no reason anybody had written down.
+
+    This does not stop a fifth band. It stops a fifth being added
+    WITHOUT SAYING WHAT IT MEANS: the header at the top of site.css is
+    the list, and a number missing from it fails here until somebody
+    writes the line explaining it.
+
+    Only width and height bands are counted. `prefers-reduced-motion`,
+    `prefers-reduced-transparency` and `hover` are not screen sizes and
+    are nobody's accident.
+    """
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    named = {"56rem", "52rem", "40rem"}
+    tall = {"30rem"}
+
+    widths = set(re.findall(r"@media\s*\(\s*max-width:\s*([0-9.]+rem)\s*\)", css))
+    heights = set(re.findall(r"@media\s*\(\s*max-height:\s*([0-9.]+rem)\s*\)", css))
+    # a band is only named if the header actually explains it
+    header = css[:css.index("last resort on narrow laptops")] if \
+        "last resort on narrow laptops" in css else ""
+    explained = {b for b in named | tall if b.replace("rem", "") in header}
+
+    # pixels are the other way to smuggle one in
+    pixels = re.findall(r"@media[^{]*\b(?:max|min)-(?:width|height):\s*[0-9.]+px", css)
+
+    return [
+        ("every width band is one of the named ones", widths <= named),
+        ("and every height band is too", heights <= tall),
+        ("each one is explained where they are listed",
+         explained == named | tall),
+        ("nothing smuggles a band in as pixels", pixels == []),
+        ("the stray at 46rem is gone", "46rem" not in widths),
+    ]
+
+
 def case_a_gif_she_made_loops(d: pathlib.Path) -> list[tuple[str, bool]]:
     """tools/gif.py writes a GIF that actually repeats.
 
@@ -1798,6 +1839,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("a stylesheet with one set of breakpoints", case_one_set_of_breakpoints),
     ("a gif she made loops", case_a_gif_she_made_loops),
     ("an animated icon survives", case_an_animated_icon_survives),
     ("every write goes through the gate", case_every_write_goes_through_the_gate),

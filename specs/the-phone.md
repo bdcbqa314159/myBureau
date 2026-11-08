@@ -1,0 +1,87 @@
+# The phone
+
+**Status:** phase 1 built. Phases 2–5 not started.
+**Date:** 2026-11-08
+
+The desktop version is the one that has had the attention. This records
+what a narrow screen actually does today, what is wrong with it, and
+the order the five pieces get fixed in — one pull request at a time,
+never two at once.
+
+## What was found
+
+**Four breakpoints, no system.** `56rem`, `52rem`, `46rem`, `40rem`,
+plus a `max-height: 30rem` guard for a phone lying down. None of them
+named, none shared, each the result of an independent decision.
+
+**A dead band at 640–832px** — every tablet and every landscape phone.
+A *desk* is already in desktop mode there while every *page* is still
+in two-column mode. Nobody chose that; it fell out of the four.
+
+**`.desk` declares `height: 100dvh` and never declares `overflow`** —
+at any width. Below `40rem` it becomes a three-column grid, which fits
+roughly fifteen icons on a tall phone. Today's desks hold five or six.
+The first icon that does not fit is simply unreachable, with nothing on
+screen saying so, and it arrives by her adding work rather than by
+anyone changing code.
+
+**The metaphor is absent on a phone.** Below `40rem` her authored
+positions are discarded and the desk becomes a tidy grid. The code is
+honest about it — *"tidy because there is no room to be untidy"* — but
+the thing the site IS does not exist on the device most visitors use.
+That is a decision to take deliberately, not to inherit.
+
+**Nothing checks any of it.** `desk-check.mjs` exercises five screens
+including both phone orientations, but what it checks is GEOMETRY: that
+a position written at one size means the same at another. Nothing
+asserts an icon lands inside the desk, that nothing overflows, or that
+a layout is usable.
+
+**Surfaces with no narrow rule at all:** `about me.txt`'s sheet and its
+four buttons, the contact dialog, and the full-width photographs on a
+subfolder page.
+
+## The five phases
+
+| # | what | status |
+|---|---|---|
+| 1 | **One set of breakpoints.** Name the bands, collapse the strays, write down what each means. No visual change. | **built** |
+| 2 | **A desk must never hide an icon.** Reach or reflow when they do not fit, and a check that asserts every icon is reachable at 390×844 and 844×390. | not started |
+| 3 | **The desks, one at a time** — home, DA, graphic design. What the phone layout should actually BE, including whether the metaphor survives. | not started |
+| 4 | **The pages** — a subfolder's column, travail sélectionné's road, a project's pairs, pellicules' grid. | not started |
+| 5 | **The windows** — the about sheet and its four buttons, contact, film, preview. A 1995 window with a bevelled toolbar at 390px is where this kind of design usually breaks. | not started |
+
+Phase 2 before 3, because a silent failure with a growing trigger beats
+tidiness. Phase 1 first anyway, because the other four are unreadable
+without it.
+
+## Phase 1, as built
+
+Three width bands and one height band. Each is named, each has a reason
+written beside it, and `a stylesheet with one set of breakpoints` in
+content-check refuses a fifth.
+
+| band | means |
+|---|---|
+| `56rem` | the top bar runs out of room for its secondary wordmark |
+| `52rem` | **two columns become one** — pairs, the film's spread, the gallery, the road's pinning |
+| `40rem` | **the desk stops being a surface** and becomes a list |
+| `30rem` **height** | a phone lying down: the icons shrink |
+
+The road's straightening moved from `46rem` to `52rem` — it is a
+"two columns become one" decision wearing a different number, and it
+was the only rule at that width.
+
+`56rem` was NOT collapsed into `52rem`. It exists to stop a collision
+in the top bar that I cannot see, and moving it would let the secondary
+wordmark reappear in a band where it previously hid. Keeping a band
+whose reason is known beats tidying one whose consequence is not.
+
+## What would change this
+
+- **The dead band gets a decision.** 640–832px is a desk in desktop
+  mode beside pages in narrow mode. Phase 3 either picks a side or
+  gives that band its own answer; this file only records that nobody
+  has.
+- **Phase 3 keeps the metaphor on a phone.** Then `40rem` stops meaning
+  "becomes a list" and the whole table above is rewritten.
