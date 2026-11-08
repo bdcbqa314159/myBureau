@@ -183,6 +183,31 @@ a { color: inherit; }
 }
 .bar-nav a:hover::after, .bar-nav a:focus-visible::after { scale: 1 1; }
 
+/* ====================================================================
+   THE BANDS — every breakpoint in this file is one of these four
+   --------------------------------------------------------------------
+   CSS has no variables in a media query, so the values are typed out
+   wherever they are used. That is exactly how four of them became four
+   accidents: 56, 52, 46 and 40rem, none named, each the result of an
+   independent decision. Writing them down is the whole of the fix.
+
+     56rem   the top bar runs out of room for its secondary wordmark
+     52rem   TWO COLUMNS BECOME ONE — a project's pairs, the film's
+             spread, the gallery, and the road's pinning
+     40rem   THE DESK STOPS BEING A SURFACE and becomes a list; the
+             bandeau stacks, the wallpaper swaps, the dock tightens
+     30rem   HEIGHT, not width: a phone lying down, icons shrink
+
+   A fifth is a decision, not a convenience: `a stylesheet with one set
+   of breakpoints` in tools/content-check.py refuses one, so adding a
+   band means saying here what it means.
+
+   KNOWN AND NOT YET DECIDED: between 40rem and 52rem — every tablet
+   and every landscape phone — a DESK is already in desktop mode while
+   every PAGE is still in two-column mode. Nobody chose that. See
+   specs/the-phone.md, phase 3.
+   ==================================================================== */
+
 /* last resort on narrow laptops: the secondary wordmark yields first */
 @media (max-width: 56rem) { .bar-left.is-secondary { display: none; } }
 
@@ -929,9 +954,11 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 /* ON A PHONE THE ROUTE STRAIGHTENS. There is no room to be off-centre:
    a picture at 28% of a phone is a stamp, and one pushed 21% sideways
    has a third of itself off the screen. So the pinning is a wide-screen
-   idea, and the narrow one is simply the photographs, one after
-   another. */
-@media (max-width: 46rem) {
+   idea. */
+/* 52rem — two columns become one, and pinning is a two-column idea:
+   below this the road is simply the photographs, one after another.
+   It lived at 46rem for no reason anybody wrote down. */
+@media (max-width: 52rem) {
   .stop, .stop:nth-child(5n+1), .stop:nth-child(5n+2), .stop:nth-child(5n+3),
   .stop:nth-child(5n+4), .stop:nth-child(5n+5) {
     --w: 100%; --x: 0%; --r: 0deg;
