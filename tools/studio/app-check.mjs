@@ -577,12 +577,34 @@ if (loaded) {
     /deskOf\(\{ path: movingPath \}\) === targetPath/.test(src4));
   check("the folder she is aiming at is lit up in the page",
     /studio-aim/.test(src4));
-  // By the clause, not by the whole line: this pinned the line verbatim
-  // and broke the moment a second thing that cannot be placed was added
-  // to it, while what it is actually for was still true.
+  // BY THE CLAUSE, NOT BY THE CONDITION. This said so and then pinned
+  // `if (!moved || !onDesk)` anyway, which is the whole condition in a
+  // shorter coat — it broke again the moment a third thing that cannot
+  // be placed was added, while what it is for was still true. What
+  // matters is that the guard is CONSULTED, not what it sits beside.
   check("only an icon on the desk itself is given a position",
     /const onDesk = desk\.contains\(icon\)/.test(src4)
-    && /if \(!moved \|\| !onDesk\)/.test(src4));
+    && /if \([^)]*!onDesk[^)]*\)/.test(src4));
+
+  // THE PHONE VIEW IS FOR LOOKING. A position is read back out of the
+  // page after the site has placed the icon; in a 390px frame that
+  // reads a grid cell, so a drag there would rewrite her DESKTOP
+  // layout with numbers that mean nothing. Both halves are asserted
+  // because gating the drop while still aiming would light folders she
+  // cannot file into.
+  // BOTH CLAUSES, IN THE SAME CONDITION. The first version of this
+  // asked only for an `if` mentioning narrowView — and there is
+  // another one, on the aiming — so it passed with the drop gate
+  // removed. Lookaheads, so the order of the clauses is free but the
+  // pairing is not.
+  check("a drag in the phone view cannot place anything",
+    /let narrowView = false/.test(src4)
+    && /if \((?=[^)]*!onDesk)(?=[^)]*narrowView)[^)]*\)/.test(src4));
+  check("and it does not aim at folders either while looking",
+    /if \(!from \|\| narrowView\) return;/.test(src4));
+  check("the two widths are a toggle, like the two modes beside them",
+    /aswide/.test(src4) && /asphone/.test(src4)
+    && /setAttribute\("aria-pressed"/.test(src4));
 
   const css = readFileSync(new URL("./app.css", import.meta.url), "utf8");
   // FLATTENED FIRST. The rule-splitting below keys on braces, and an

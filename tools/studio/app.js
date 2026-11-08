@@ -41,6 +41,16 @@ let model = null;
 let chosen = null;          // content path of the thing being inspected
 let bySlug = new Map();     // data-vt in the page -> content path
 
+/* Is the frame showing the phone? It is a LOOKING mode, and the drag
+ * below consults it.
+ *
+ * On a phone the desk is a grid, and a position is read back out of
+ * the page after the site's own script has placed the icon. Read from
+ * a 390px frame that is a grid cell, not her arrangement — so a drag
+ * in here would quietly rewrite her DESKTOP layout with numbers that
+ * mean nothing. A tap still chooses a thing; a drag does nothing. */
+let narrowView = false;
+
 const tell = (m) => { says.textContent = m; };
 
 async function ask(path, opts) {
@@ -846,7 +856,7 @@ function hook() {
     icon.addEventListener("pointerdown", (e) => { from = { x: e.clientX, y: e.clientY }; }, true);
     if (onDesk) {
       icon.addEventListener("pointermove", (e) => {
-        if (!from) return;
+        if (!from || narrowView) return;
         aimAt(doc, under(doc, e, icon));
       }, true);
     }
@@ -855,7 +865,8 @@ function hook() {
       if (!was) return;
       const moved = Math.abs(e.clientX - was.x) > 3 || Math.abs(e.clientY - was.y) > 3;
       const o = find(path);
-      if (!moved || !onDesk) {
+      // Looking, not arranging. See narrowView above.
+      if (!moved || !onDesk || narrowView) {
         aimAt(doc, null);
         if (o) { select(o); mark(doc, icon); }
         return;
@@ -942,6 +953,18 @@ const setMode = (m) => {
   const o = find(chosen);
   if (o) select(o);
 };
+function setWidth(phone) {
+  narrowView = phone;
+  el("asphone").closest(".stage").classList.toggle("is-phone", phone);
+  el("aswide").setAttribute("aria-pressed", String(!phone));
+  el("asphone").setAttribute("aria-pressed", String(phone));
+  tell(phone
+    ? "Le téléphone, tel quel. Ici on regarde : pour déplacer, repasse en écran."
+    : "Attrape une icône dans la page et pose-la.");
+}
+el("aswide").addEventListener("click", () => setWidth(false));
+el("asphone").addEventListener("click", () => setWidth(true));
+
 el("asdesk").addEventListener("click", () => setMode("desk"));
 el("aspage").addEventListener("click", () => setMode("page"));
 

@@ -94,6 +94,20 @@ button:disabled { color: #9a9aa2; cursor: default; }
 
 .stage { position: relative; display: flex; flex-direction: column; min-width: 0; }
 #view { flex: 1; width: 100%; border: 0; background: #fff; }
+
+/* THE PHONE, at the width a phone actually is. The iframe carries its
+   own viewport, so the site's own rules below 40rem fire in here —
+   the grid, the bandeau stacking, the road compressing. Nothing is
+   mimicked.
+
+   The ground either side is darker than the page so the edges of the
+   phone are visible; without it the site simply looks narrow. */
+.stage.is-phone { background: #c9c9d2; }
+.stage.is-phone #view {
+  width: 390px; max-width: 100%;
+  margin-inline: auto;
+  box-shadow: 0 0 0 1px #9a9aa6;
+}
 .tip {
   margin: 0; padding: .35rem .75rem; font-size: 12px; color: #6b6b74;
   background: #fff; border-top: 1px solid #dcdce2;
