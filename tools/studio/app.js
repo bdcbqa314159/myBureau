@@ -976,6 +976,65 @@ stream.onerror = () => { lamp.className = "lamp bad"; tell("connexion perdue —
 el("kind").addEventListener("change", sayWillBe);
 el("into").addEventListener("change", sayWillBe);
 
+/* A WHOLE FOLDER, IN ONE GESTURE.
+ *
+ * She picks a folder in the native dialog and the browser hands over
+ * every file inside it. The panel makes the project, named after the
+ * folder, and puts the photographs in — in the order their names put
+ * them. One gesture instead of: open the Finder, size two windows so
+ * neither covers the other, drag.
+ *
+ * TWO THINGS ARE FILTERED OUT HERE rather than left to the server.
+ *
+ * Hidden files, because macOS writes a `.DS_Store` into every folder a
+ * Finder window has been opened on. The server would refuse it,
+ * correctly, and she would get an error about a file she never chose —
+ * which is the same noise that used to stop her preview.
+ *
+ * And anything deeper than the folder itself. `webkitRelativePath` is
+ * "Dossier/01.jpg" for a file in it and "Dossier/vieux/01.jpg" for one
+ * below — a project is one folder of photographs, so the second is not
+ * hers to flatten without asking.
+ */
+el("adddir").addEventListener("click", () => el("pickdir").click());
+
+el("pickdir").addEventListener("change", async () => {
+  const picked = [...el("pickdir").files];
+  el("pickdir").value = "";                 // so the same folder can be picked twice
+  if (!picked.length) return;
+
+  const parts = (f) => (f.webkitRelativePath || f.name).split("/");
+  const folder = parts(picked[0])[0];
+  const mine = picked
+    .filter((f) => parts(f).length === 2)
+    .filter((f) => !parts(f)[1].startsWith("."))
+    .sort((a, b) => parts(a)[1].localeCompare(parts(b)[1], "fr", { numeric: true }));
+
+  if (!mine.length) {
+    tell(`${folder} : rien à mettre dedans — que des fichiers cachés ou des sous-dossiers.`);
+    return;
+  }
+
+  const into = el("into").value;
+  const kind = el("kind").value;
+  const made = await act({ verb: "new_project", into, name: folder, kind });
+  if (!made || !made.made) return;          // act() has already said why
+
+  let put = 0;
+  for (const f of mine) {
+    const out = await ask(
+      `/api/upload?into=${encodeURIComponent(made.made)}`
+      + `&name=${encodeURIComponent(parts(f)[1])}`,
+      { method: "POST", body: await f.arrayBuffer() });
+    if (out) put += 1;
+  }
+  const o = find(made.made);
+  if (o) select(o);
+  tell(put === mine.length
+    ? `${folder} : ${put} image(s) en place.`
+    : `${folder} : ${put} sur ${mine.length} — le reste a été refusé.`);
+});
+
 el("make").addEventListener("click", async () => {
   const name = el("newname").value.trim();
   if (!name) { tell("donne-lui un nom"); return; }

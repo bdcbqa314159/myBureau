@@ -32,6 +32,13 @@
       </select>
       <input type="text" id="newname" placeholder="nom" aria-label="nom">
       <button id="make">Créer</button>
+      <!-- A browser cannot browse her disk, and no panel will change
+           that. It CAN take a whole folder in one gesture, which is the
+           thing she actually wants: no second window to arrange beside
+           this one, no dragging between them. -->
+      <button id="adddir">Ajouter un dossier…</button>
+      <input type="file" id="pickdir" webkitdirectory directory multiple
+             hidden aria-hidden="true" tabindex="-1">
       <!-- what it will do THERE. A folder's job depends on where it is,
            so the destination is not a detail to be inferred. -->
       <p class="willbe" id="willbe"></p>
