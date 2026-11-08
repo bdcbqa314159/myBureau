@@ -580,17 +580,34 @@ img.will-fade.is-in { opacity: 1; }
    specificity, because author styles win over the user agent's.
    Writing `display: grid` here put every preview on the desk at once,
    full-screen and stacked, with the desk unreachable underneath. */
-.win-preview[open] { display: grid; place-items: center; }
+/* `minmax(0, 1fr)`, NOT the default `auto`. An auto-sized grid track
+   grows to its content, and the content here is a photograph 1800
+   pixels wide: the track blew out past the screen, and every
+   percentage inside it then resolved against 1800 rather than against
+   the phone. The picture ran off the side. */
+.win-preview[open] {
+  display: grid; place-items: center;
+  grid-template-columns: minmax(0, 1fr);
+}
 .win-preview::backdrop { background: rgb(0 0 0 / .62); }
 
 .preview-body {
   display: grid; gap: .7rem; justify-items: center;
-  width: max-content; max-width: 100%; max-height: 100%;
+  /* `max-content` was the other half of the same bug: it sized this to
+     the picture rather than to the room, so `max-width: 100%` on the
+     image below meant "100% of the photograph". */
+  max-width: 100%; max-height: 100%;
   overflow-y: auto;
 }
+/* BOUNDED BY THE SCREEN, in both directions and in viewport units.
+   The height was already measured against the viewport and the width
+   against the parent — so one axis was right and the other was at the
+   mercy of whatever sized the box around it. Measuring both the same
+   way is what makes a picture fit a phone whatever shape it is. */
 .preview-body img {
   display: block;
-  max-width: 100%; max-height: calc(100dvh - 2 * var(--pad));
+  max-width: calc(100vw - 2 * var(--pad));
+  max-height: calc(100dvh - 2 * var(--pad));
   width: auto; height: auto;
 }
 
