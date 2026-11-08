@@ -1154,6 +1154,43 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     return out
 
 
+def case_a_photograph_has_no_close_box(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """The gallery's photograph lost its cross and is still dismissible.
+
+    Taking a close box off a window is only safe because something else
+    closes it. Two things do: Escape, which a modal dialog handles
+    itself, and a tap anywhere off the picture, which desk.ts wires for
+    every `.win-preview` — and this dialog carries that class.
+
+    So this asserts the pair. A change that removed the cross AND the
+    class, or the cross AND the handler, would leave a visitor on a
+    phone holding a photograph with no way out and no keyboard to press
+    Escape with. That is a trap, not a window.
+
+    The bar and the file's name stay on purpose, to be looked at.
+    """
+    ok, log = build(d)
+    html = page(d, "pellicules/index.html")
+    shot = re.search(r'<dialog class="win win-preview win-shot".*?</dialog>',
+                     html, re.S)
+    inside = shot.group(0) if shot else ""
+    desk_js = (ROOT / "src" / "desk.ts").read_text(encoding="utf-8")
+
+    return [
+        ("builds", ok),
+        ("the gallery still opens a photograph in a window", bool(shot)),
+        ("there is no close box on it",
+         inside != "" and "<button" not in inside),
+        ("the bar and the file's name are still there",
+         "<div class=\"win-bar\">" in inside
+         and bool(re.search(r"<span>[^<]+\.\w+</span>", inside))),
+        ("it is a preview, which is the class that closes on a tap off it",
+         'class="win win-preview win-shot"' in inside),
+        ("and that handler really exists, so the class means something",
+         '.win-preview' in desk_js and "win.close()" in desk_js),
+    ]
+
+
 def case_a_picture_fits_the_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     """An opened photograph is bounded by the screen, not by itself.
 
@@ -2063,6 +2100,7 @@ CASES = [
     ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
+    ("a photograph has no close box", case_a_photograph_has_no_close_box),
     ("a picture fits the screen", case_a_picture_fits_the_screen),
     ("the road survives a phone", case_the_road_survives_a_phone),
     ("the phone agrees with the desk", case_the_phone_agrees_with_the_desk),

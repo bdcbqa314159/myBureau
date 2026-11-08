@@ -183,6 +183,14 @@ a { color: inherit; }
 }
 .bar-nav a:hover::after, .bar-nav a:focus-visible::after { scale: 1 1; }
 
+/* NO TAP HALO. A touch browser paints its own translucent block over
+   whatever link you press — on a photograph opened full screen that is
+   a blue rectangle across her work. Every focus style on this site is
+   already `:focus-visible`, which a tap does not trigger, so taking
+   this off costs a keyboard visitor nothing: they still get the white
+   outline, because they are the ones it was drawn for. */
+a, button, summary { -webkit-tap-highlight-color: transparent; }
+
 /* ====================================================================
    THE BANDS — every breakpoint in this file is one of these four
    --------------------------------------------------------------------
