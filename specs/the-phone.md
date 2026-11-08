@@ -1,6 +1,6 @@
 # The phone
 
-**Status:** phases 1 and 2 built. Phases 3–5 not started.
+**Status:** phases 1–3 built. Phases 4 and 5 not started.
 **Date:** 2026-11-08
 
 The desktop version is the one that has had the attention. This records
@@ -47,13 +47,38 @@ subfolder page.
 |---|---|---|
 | 1 | **One set of breakpoints.** Name the bands, collapse the strays, write down what each means. No visual change. | **built** |
 | 2 | **A desk must never hide an icon.** `min-height` on the narrow desk so the grid can grow; `arrange()` pins that grown height before the icons become absolute. | **built** |
-| 3 | **The desks, one at a time** — home, DA, graphic design. What the phone layout should actually BE, including whether the metaphor survives. | not started |
+| 3 | **The desks.** Decided: the grid stays, and is made good. One stylesheet serves all three desks, so there was no per-desk work to do. | **built** |
 | 4 | **The pages** — a subfolder's column, travail sélectionné's road, a project's pairs, pellicules' grid. | not started |
 | 5 | **The windows** — the about sheet and its four buttons, contact, film, preview. A 1995 window with a bevelled toolbar at 390px is where this kind of design usually breaks. | not started |
 
 Phase 2 before 3, because a silent failure with a growing trigger beats
 tidiness. Phase 1 first anyway, because the other four are unreadable
 without it.
+
+## Phase 3, as built — and the decision behind it
+
+**The metaphor does not survive on a phone, and that is chosen rather
+than inherited.** Below 40rem her authored positions stay discarded and
+the icons flow into a grid. Bernardo took that call on 2026-11-08: tidy
+and predictable beats a desk nobody can arrange on a 390px screen.
+Phase 3 therefore means making the grid good, not replacing it.
+
+Two things were wrong with it:
+
+**The bandeau's height was guessed.** `.bar` is `position: fixed`, so
+the grid needs padding to clear it, and the stylesheet carried
+`6.5rem` — a number from before the nav held five words and a language
+switch. At 390px that nav wraps, and the script three files away was
+already MEASURING the bar in `barCeiling()`. Two answers to one
+question, and the guess was the one that could not know. The script now
+publishes `--bar-h` and the stylesheet reads it; the fallback, for a
+visitor with no script, is deliberately generous because a gap is a
+blemish and being under the bar is work nobody can reach.
+
+**The grid was always three columns.** Right at 390px, sparse at 639 —
+the same band, icons stranded in cells twice the size of the picture
+in them. `auto-fill` with a 6.5rem minimum keeps three on a phone and
+gives five near the top of the band.
 
 ## Phase 2, as built, and what it corrected about the audit
 

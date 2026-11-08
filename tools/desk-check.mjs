@@ -255,10 +255,14 @@ const deskEl = {
       : GRID_H,
   }),
 };
+const rootStyle = fakeStyle();
 const narrowCtx = {
   ...sandbox,
   document: {
     ...sandbox.document,
+    // a documentElement that remembers: the stub's discards every
+    // setProperty, which would make the assertion below unable to fail
+    documentElement: { ...el, style: rootStyle },
     querySelector: (sel) =>
       sel === ".desk" ? deskEl
       : sel === ".bar" ? { getBoundingClientRect: () => ({ height: 80 }) }
@@ -289,6 +293,13 @@ check("the desk is never shorter than the icons on it",
 // the clamp is doing its job rather than to catch its absence.
 check("and every icon landed inside what was measured",
       tops.every((y) => y >= 0 && y <= GRID_H - 140));
+// The stylesheet keeps a phone's first row clear of the bandeau, and it
+// needs the bar's REAL height to do it — the bar is fixed and its nav
+// wraps. This is the script handing over the number it already
+// measured, so the two cannot hold different answers.
+check("the bar's measured height is published for the stylesheet",
+      rootStyle.getPropertyValue("--bar-h") === "88px",
+      rootStyle.getPropertyValue("--bar-h") || "(none)");
 
 console.log(failed === 0 ? "\n  everything holds\n" : `\n  ${failed} FAILED\n`);
 process.exit(failed === 0 ? 0 : 1);

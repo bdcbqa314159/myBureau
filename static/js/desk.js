@@ -554,6 +554,12 @@ function arrange() {
         desk.style.height = ""; // a wide desk is one screen
     // --- 2 and 3. the visitor's choice, then the clamp -----------------
     const ceiling = barCeiling();
+    // PUBLISH IT. The stylesheet needs the same number to keep the first
+    // row of a phone grid clear of the bandeau, and it had its own: a
+    // hardcoded 6.5rem beside this measurement. Two answers to "how tall
+    // is the bar" is one too many, and the hardcoded one is the one that
+    // cannot know the nav wrapped to a third line.
+    document.documentElement.style.setProperty("--bar-h", `${ceiling}px`);
     const taken = [];
     icons.forEach((el, i) => {
         const b = base[i];
