@@ -152,5 +152,42 @@ const t = get(tiny, ICON, { fx: 1, fy: 1 });
 check("stays a number", Number.isFinite(t.left) && Number.isFinite(t.top),
       `${t.left}, ${t.top}`);
 
+
+// --- a translation blob that does not parse --------------------------
+// The strings are read at MODULE SCOPE, so a blob that throws takes the
+// whole file with it: no drag, no windows, every control dead and
+// nothing on screen saying why. From outside that is indistinguishable
+// from a dead button, which is the hardest kind of bug to report.
+//
+// The blob is assembled by string concatenation in base.html — values
+// go through json_encode, keys do not — so this is reachable rather
+// than theoretical. What is asserted is that the file still LOADS and
+// still finishes: an empty string table is survivable, a dead script
+// is not.
+console.log("\n  a translation blob that does not parse:");
+for (const [what, blob] of [
+  ["torn off halfway", '{"window_min":"Réd'],
+  ["not json at all", "<!doctype html>"],
+  ["an array, not an object", "[1,2,3]"],
+  ["empty", ""],
+]) {
+  const bad = { ...sandbox, document: { ...sandbox.document, body: { dataset: { i18n: blob } } } };
+  bad.globalThis = bad;
+  let survived = true;
+  try {
+    vm.runInContext(readFileSync("static/js/desk.js", "utf8"), vm.createContext(bad));
+  } catch {
+    survived = false;
+  }
+  // Reaching the geometry functions proves it ran to the END. Catching
+  // the throw alone would pass for a file that died on its first line,
+  // which is the thing being guarded against.
+  const whole = typeof bad.field === "function"
+             && typeof bad.asFraction === "function"
+             && typeof bad.asPixels === "function";
+  check(`the desk still loads, whole, when the blob is ${what}`,
+        survived && whole);
+}
+
 console.log(failed === 0 ? "\n  everything holds\n" : `\n  ${failed} FAILED\n`);
 process.exit(failed === 0 ? 0 : 1);

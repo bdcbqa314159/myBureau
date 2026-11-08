@@ -71,9 +71,48 @@ if (clean(dirty) !== "ab\nc\td") {
   console.log("  ok    clean() strips control chars, keeps newline and tab");
 }
 
+// --- a translation blob that does not parse --------------------------
+// contact.ts reads its strings at MODULE SCOPE, so a blob that throws
+// takes the validators with it: the form would stop refusing anything
+// because nothing got wired, which is worse than a dead button.
+//
+// The static import at the top of this file runs with no `document` at
+// all, so it takes the early return and NEVER REACHES the parse. That
+// is why the guard needs exercising here, with a document given to it
+// and the module imported again — otherwise this file would report a
+// parse it has never once run.
+let extra = 0;
+for (const [what, bad] of [
+  ["torn off halfway", '{"form_sent":"Env'],
+  ["not json at all", "<!doctype html>"],
+  ["empty", ""],
+]) {
+  // The module wires every .contact-form at load, so the stub needs
+  // that too — a stub thinner than the code it loads reports a failure
+  // that belongs to the stub.
+  globalThis.document = {
+    body: { dataset: { i18n: bad } },
+    querySelectorAll: () => [],
+  };
+  let held = true;
+  try {
+    const again = await import(`../static/js/contact.js?blob=${encodeURIComponent(what)}`);
+    // say() falling back to the key is what makes an empty table
+    // survivable, so that is the thing asserted — not merely that the
+    // import resolved.
+    held = typeof again.say === "function" && again.say("form_sent") === "form_sent";
+  } catch {
+    held = false;
+  }
+  extra += 1;
+  if (!held) failed += 1;
+  console.log(`  ${held ? "ok  " : "FAIL"}  the form still loads when the blob is ${what}`);
+}
+delete globalThis.document;
+
 console.log(
   failed === 0
-    ? `\n  all ${cases.length + 1} checks passed\n`
+    ? `\n  all ${cases.length + 1 + extra} checks passed\n`
     : `\n  ${failed} FAILED\n`,
 );
 process.exit(failed === 0 ? 0 : 1);

@@ -2,8 +2,30 @@
 // Desktop behaviour: move things freely, refuse to nest them, open windows.
 // ponytail: pointer events and the Web Animations API. No drag library.
 /** The active language's strings, written onto <body> by base.html.
- *  An unknown key shows as the key — visible, and never a blank. */
-const STRINGS = JSON.parse(document.body.dataset.i18n ?? "{}");
+ *  An unknown key shows as the key — visible, and never a blank.
+ *
+ *  GUARDED, AND THE GUARD IS THE POINT. This runs at module scope, so a
+ *  blob that does not parse throws here and takes the whole file with
+ *  it: no drag, no windows, every control dead, and nothing on screen
+ *  saying why. That failure is indistinguishable from a dead button,
+ *  which is the hardest kind to report and the hardest to find.
+ *
+ *  It is not beyond reach either. The blob is assembled by string
+ *  concatenation in base.html — the values go through `json_encode`,
+ *  the KEYS do not.
+ *
+ *  Falling back to an empty table costs almost nothing: say() returns
+ *  the key when it finds no string, so the site keeps working and the
+ *  few places that show one show `window_min` instead of `Réduire`.
+ *  Ugly, visible, and reportable — which is the whole trade. */
+const STRINGS = (() => {
+    try {
+        return JSON.parse(document.body.dataset.i18n ?? "{}");
+    }
+    catch {
+        return {};
+    }
+})();
 const say = (key) => STRINGS[key] ?? key;
 const clamp = (v, lo, hi) => Math.min(Math.max(v, lo), hi);
 const calm = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;

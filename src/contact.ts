@@ -103,11 +103,30 @@ export const TOO_FAST_MS = 2500;
 // ---------------------------------------------------------------------
 
 /** The active language's strings, written onto <body> by base.html.
- *  An unknown key shows as the key — visible, and never a blank. */
-const STRINGS: Record<string, string> =
-  typeof document === "undefined"
-    ? {}
-    : (JSON.parse(document.body.dataset.i18n ?? "{}") as Record<string, string>);
+ *  An unknown key shows as the key — visible, and never a blank.
+ *
+ *  GUARDED, AND THE GUARD IS THE POINT. This runs at module scope, so a
+ *  blob that does not parse throws here and takes the whole file with
+ *  it: no drag, no windows, every control dead, and nothing on screen
+ *  saying why. That failure is indistinguishable from a dead button,
+ *  which is the hardest kind to report and the hardest to find.
+ *
+ *  It is not beyond reach either. The blob is assembled by string
+ *  concatenation in base.html — the values go through `json_encode`,
+ *  the KEYS do not.
+ *
+ *  Falling back to an empty table costs almost nothing: say() returns
+ *  the key when it finds no string, so the site keeps working and the
+ *  few places that show one show `window_min` instead of `Réduire`.
+ *  Ugly, visible, and reportable — which is the whole trade. */
+const STRINGS: Record<string, string> = ((): Record<string, string> => {
+  if (typeof document === "undefined") return {};   // the checks, in node
+  try {
+    return JSON.parse(document.body.dataset.i18n ?? "{}") as Record<string, string>;
+  } catch {
+    return {};
+  }
+})();
 
 export const say = (key: string): string => STRINGS[key] ?? key;
 
