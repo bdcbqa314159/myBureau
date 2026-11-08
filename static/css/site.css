@@ -682,8 +682,17 @@ img.will-fade.is-in { opacity: 1; }
    before first paint, so this never flashes a row of dead controls
    at a visitor with no JavaScript. */
 .sheet-tools { display: none; }
+/* LEFT, like everything else in this window. The portrait sits on the
+   left margin and the sheet is a left-aligned document with a 54ch
+   measure — the buttons were the only thing centred, which made the
+   three disagree.
+
+   Left is also what the window IS. It is `about me.txt` read in a
+   plain-text editor: text begins at the margin and the toolbar sits
+   above it at the same margin. Centred, a monospace document reads
+   like a poem. */
 .js .sheet-tools {
-  display: flex; align-items: center; justify-content: center;
+  display: flex; align-items: center; justify-content: flex-start;
   gap: .35rem;
   margin-bottom: .55rem;
 }
