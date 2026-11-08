@@ -55,7 +55,7 @@
   {%- set leaf = a | split(pat="/") | last -%}
   {%- set stem = leaf | split(pat=".") | first -%}
   {%- set ext = leaf | split(pat=".") | last | lower -%}
-  {%- if ext in config.extra.image_types and stem != "poster" and stem != "wallpaper" and stem != "icon" -%}
+  {%- if ext in config.extra.image_types and not (stem in config.extra.not_photographs) -%}
     {%- set src = pl_here ~ leaf -%}
     {%- set shape = get_image_metadata(path=src) -%}
     {%- set small = resize_image(path=src, width=900, op="fit_width", format="webp", quality=78) -%}

@@ -105,6 +105,10 @@
 {#- the first photograph in the folder, for a project that has one. A
     folder keeps its folder: a folder that looks like a photograph stops
     reading as somewhere you can go in. -#}
+{#- NOT `not_photographs`, on purpose. That list is "things that are
+    not her work"; this is choosing a FACE, and a film's `poster.*` is
+    exactly the right face for a film. Only `icon.*` is skipped here,
+    because it is handled below and would otherwise be picked twice. -#}
 {%- if ic_kind != "folder" -%}
   {%- set_global ic_first = "" -%}
   {%- for a in ic_assets -%}
