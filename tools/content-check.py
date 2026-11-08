@@ -1686,6 +1686,47 @@ def case_every_write_goes_through_the_gate(d: pathlib.Path) -> list[tuple[str, b
     ]
 
 
+def case_the_form_can_be_filled_on_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Tapping a field must not zoom the page.
+
+    iOS enlarges the whole document when a field smaller than 16px
+    takes focus, and leaves the visitor to pinch back out. The form
+    inherits `--f-2`, which is about 13px on a phone, through
+    `font: inherit` — so tapping "mail" zoomed her contact form on
+    every iPhone.
+
+    This is the one surface on the site that takes typed input, and the
+    one place where a visitor giving up costs her an enquiry rather
+    than a second click. The keyboard matters too: `type="email"` is
+    what puts the @ on it.
+    """
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    rules = {}
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        rules.setdefault(sel.strip(), []).append(body)
+    fields = " ".join(rules.get(".contact-form input, .contact-form textarea", []))
+    ok, log = build(d)
+    html = page(d, "index.html")
+    form = re.search(r"<form[^>]*contact-form.*?</form>", html, re.S)
+    inside = form.group(0) if form else ""
+
+    return [
+        ("builds", ok),
+        ("a field is never smaller than the size that makes iOS zoom",
+         "max(16px" in fields),
+        ("and it is set after `font: inherit`, which would undo it",
+         fields.find("font: inherit") < fields.find("max(16px")),
+        ("the address field asks for the keyboard with an @ on it",
+         'type="email"' in inside),
+        ("and offers the address the phone already knows",
+         'autocomplete="email"' in inside),
+        ("on a phone the fields are tall enough to hit with a thumb",
+         any(".contact-form input" in sel and "padding: .55rem" in " ".join(b)
+             for sel, b in rules.items())),
+    ]
+
+
 def case_one_reader_for_the_file_types(d: pathlib.Path) -> list[tuple[str, bool]]:
     """Which files are photographs is answered in one place.
 
@@ -2256,6 +2297,7 @@ CASES = [
     ("a gif she made loops", case_a_gif_she_made_loops),
     ("an animated icon survives", case_an_animated_icon_survives),
     ("every write goes through the gate", case_every_write_goes_through_the_gate),
+    ("the form can be filled on a phone", case_the_form_can_be_filled_on_a_phone),
     ("one reader for the file types", case_one_reader_for_the_file_types),
     ("one module knows what a content file is", case_one_module_knows_what_a_content_file_is),
     ("a subfolder page is one column", case_a_subfolder_page_is_one_column),

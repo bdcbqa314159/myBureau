@@ -822,6 +822,16 @@ img.will-fade.is-in { opacity: 1; }
   width: 100%; padding: .3rem .4rem; font: inherit; color: #000;
   background: #fff; border: 1px solid var(--dim);
   box-shadow: inset 1px 1px 0 rgb(0 0 0 / .35);
+  /* SIXTEEN PIXELS, OR SAFARI ZOOMS THE PAGE. iOS enlarges the whole
+     document when a field smaller than that takes focus, and leaves
+     the visitor to pinch back out. `--f-2` is about 13px on a phone,
+     and `font: inherit` above hands that straight to the field — so
+     tapping "mail" zoomed her contact form on every iPhone.
+
+     max(), not a media query: the type keeps growing on a wide screen,
+     where --f-2 passes 16px on its own and this does nothing. It must
+     come AFTER `font: inherit`, which resets the size. */
+  font-size: max(16px, var(--f-2));
 }
 .contact-form textarea { resize: vertical; }
 
@@ -1205,6 +1215,13 @@ body:not(.project) .dock::before {
    give before it reaches the clear space Spotify asks for. */
 @media (max-width: 40rem) {
   .dock { gap: .72rem; }
+
+  /* ROOM FOR A THUMB. These were about 26px tall — fine for a pointer
+     that lands where it is aimed, mean for a thumb. The form is the
+     one place on this site where a miss costs her an enquiry rather
+     than a second click. */
+  .contact-form input, .contact-form textarea { padding: .55rem .5rem; }
+  .contact-form button, .win-buttons button { min-height: 2.75rem; }
 }
 
 /* ====================================================================
