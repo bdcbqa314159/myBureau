@@ -136,6 +136,10 @@ const sandbox = {
   console,
   // a browser has these; a vm context does not inherit them
   setTimeout, clearTimeout, setInterval, clearInterval, Promise, Date,
+  // ask() bounds every request with one of these. Without it in the
+  // sandbox the call throws before any fetch happens, and the checks
+  // below report no requests rather than a broken request.
+  AbortController,
   document: {
     getElementById: (id) => {
       if (byId.has(id)) return byId.get(id);
@@ -582,6 +586,20 @@ if (loaded) {
   // shorter coat — it broke again the moment a third thing that cannot
   // be placed was added, while what it is for was still true. What
   // matters is that the guard is CONSULTED, not what it sits beside.
+  // EVERY REQUEST IS BOUNDED. `fetch` waits forever by default, and the
+  // lamp is the panel's only signal that something is happening — a
+  // server that HANGS used to leave it lit for the rest of the session
+  // with nothing to tell her. Three separate things, because having the
+  // controller and never passing its signal would abort nothing.
+  check("a request cannot wait forever",
+    /new AbortController\(\)/.test(src4) && /PATIENCE/.test(src4));
+  check("and the signal actually reaches the request",
+    /fetch\(q\(path\), \{[^}]*signal: stop\.signal/.test(src4));
+  check("giving up is told apart from losing the server",
+    /AbortError/.test(src4));
+  check("and the timer is cleared whichever way it ends",
+    /finally \{\s*clearTimeout\(giveUp\)/.test(src4));
+
   check("only an icon on the desk itself is given a position",
     /const onDesk = desk\.contains\(icon\)/.test(src4)
     && /if \([^)]*!onDesk[^)]*\)/.test(src4));

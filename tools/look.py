@@ -22,27 +22,17 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 sys.path.insert(0, str(ROOT / "tools"))
+import filetypes  # noqa: E402
 import frontmatter  # noqa: E402
 CONTENT = ROOT / "content"
 STATIC = ROOT / "static"
 
-def _types(key: str) -> set:
-    """One of the three lists in config.toml, which owns them.
-
-    These used to be typed out here as well. The duplicate cost nothing
-    until the day the two disagreed — and this is the tool that prints
-    "everything in content/ will do what it says", which is the one
-    sentence in the project that must never be wrong. A format added to
-    the config and not here would make it lie.
-    """
-    text = (ROOT / "config.toml").read_text(encoding="utf-8")
-    m = re.search(r"^" + key + r"\s*=\s*\[([^\]]*)\]", text, re.M)
-    return set(re.findall(r'"([^"]+)"', m.group(1))) if m else set()
-
-
-IMAGE_TYPES = _types("image_types")
-VIDEO_TYPES = _types("video_types")
-DOC_TYPES = _types("doc_types")
+# config.toml owns these, and tools/filetypes.py is the one reader.
+# look.py prints "everything in content/ will do what it says",
+# so it must not hold its own idea of what a photograph is.
+IMAGE_TYPES = filetypes.IMAGE_TYPES
+VIDEO_TYPES = filetypes.VIDEO_TYPES
+DOC_TYPES = filetypes.DOC_TYPES
 # things a design program exports that this site will not show
 LOOKS_LIKE_AN_IMAGE = {"tif", "tiff", "bmp", "heic", "heif", "psd", "ai", "svg", "raw", "dng", "cr2", "nef"}
 

@@ -23,12 +23,12 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 
 sys.path.insert(0, str(ROOT / "tools"))
+import filetypes  # noqa: E402
 import frontmatter  # noqa: E402
 CONTENT = ROOT / "content"
 
-IMAGE = {".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif"}
-VIDEO = {".mp4", ".webm", ".mov", ".m4v"}
-DOC = {".pdf"}
+# config.toml owns these. See tools/filetypes.py.
+IMAGE, VIDEO, DOC = filetypes.IMAGE, filetypes.VIDEO, filetypes.DOC
 # a file the engine gives a job to, so it is never one of the photographs
 SPOKEN_FOR = {"icon", "poster", "wallpaper", "about"}
 

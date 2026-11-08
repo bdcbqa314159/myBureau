@@ -31,6 +31,7 @@ import tempfile
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 sys.path.insert(0, str(ROOT / "tools"))
+import filetypes  # noqa: E402
 import gif  # noqa: E402
 COPY = ["content", "templates", "static", "tools", "config.toml", "sass"]
 
@@ -691,9 +692,7 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
                        capture_output=True, text=True)
     after = {p for p in pub.rglob("*") if p.is_file()}
 
-    MEDIA = {".pdf",
-             ".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif",
-             ".mp4", ".webm", ".mov", ".m4v"}
+    MEDIA = filetypes.MEDIA
     on_disk = {str(p.relative_to(pub)) for p in after}
     broken = []
     for p in list(pub.rglob("*.html")) + list(pub.rglob("*.css")):
@@ -1126,15 +1125,11 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     The gallery never reaches here: its photographs sit in the section
     itself and there is no index.md to find.
     """
-    # The three lists live in config.toml and nowhere else, so a format
-    # added there is covered here without this being edited.
-    conf = (root / "config.toml").read_text(encoding="utf-8")
-
-    def kinds(key: str) -> set[str]:
-        m = re.search(r"^" + key + r"\s*=\s*\[([^\]]*)\]", conf, re.M)
-        return set(re.findall(r'"([^"]+)"', m.group(1))) if m else set()
-
-    images, videos, docs = kinds("image_types"), kinds("video_types"), kinds("doc_types")
+    # Read from the FIXTURE's config, not this repository's — the
+    # difference between testing the scratch copy and testing the
+    # machine the test runs on.
+    kinds = filetypes.read(root)
+    images, videos, docs = kinds["image"], kinds["video"], kinds["doc"]
 
     out = []
     for md in sorted((root / "content").rglob("index.md")):
@@ -1691,6 +1686,53 @@ def case_every_write_goes_through_the_gate(d: pathlib.Path) -> list[tuple[str, b
     ]
 
 
+def case_one_reader_for_the_file_types(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Which files are photographs is answered in one place.
+
+    `config.toml` owns it — the templates read it from there, and it is
+    what somebody edits to add a format. It was also written out in
+    four more: hardcoded sets in `model.py` and `verbs.py`, and a
+    reader each in `look.py` and this file.
+
+    They agreed on the day it was found, which is the whole danger: add
+    `heic` to config.toml and the site would render it while the panel
+    refused the file, with nothing saying why. The panel is the thing
+    she uses.
+
+    tools/filetypes.py is the one reader now. This is what stops a
+    sixth copy.
+    """
+    owner = ROOT / "tools" / "filetypes.py"
+    here = sorted(list((ROOT / "tools").glob("*.py"))
+                  + list((ROOT / "tools" / "studio").glob("*.py")))
+    # BY THE NAME, NOT BY THE CONTENTS. A first version matched any set
+    # holding an extension, which caught `SHOWS_AS_IMAGE` in verbs.py —
+    # and that one must stay. It answers a different question: what a
+    # browser can decode from SNIFFED BYTES. It holds `svg`, which the
+    # site does not list, and omits `jpg`, because the sniffed subtype
+    # of a JPEG is "jpeg". Merging it into this would be the DRY rule
+    # applied to characters rather than to knowledge.
+    #
+    # So this names the four that really were copies of one answer.
+    pattern = re.compile(r"^\s*(IMAGE|VIDEO|DOC|MEDIA)\s*=\s*\{", re.M)
+    copies = [str(f.relative_to(ROOT)) for f in here
+              if f != owner and pattern.search(f.read_text(encoding="utf-8"))]
+    conf = filetypes.read(d)
+    return [
+        ("the one reader exists", owner.is_file()),
+        ("and nothing else spells that answer out", copies == []),
+        ("the byte-sniffing sets are left alone, being a different question",
+         "SHOWS_AS_IMAGE" in (ROOT / "tools" / "studio" / "verbs.py").read_text(encoding="utf-8")),
+        ("it reads the config it is pointed at, not this repository's",
+         conf["image"] == filetypes.read(d)["image"]),
+        ("the panel's two modules take their answer from it",
+         all("filetypes." in (ROOT / m).read_text(encoding="utf-8")
+             for m in ("tools/studio/model.py", "tools/studio/verbs.py"))),
+        ("and so does the tool that tells her the site is sound",
+         "filetypes." in (ROOT / "tools" / "look.py").read_text(encoding="utf-8")),
+    ]
+
+
 def case_one_module_knows_what_a_content_file_is(d: pathlib.Path) -> list[tuple[str, bool]]:
     """Nobody splits on the fence by hand any more.
 
@@ -2214,6 +2256,7 @@ CASES = [
     ("a gif she made loops", case_a_gif_she_made_loops),
     ("an animated icon survives", case_an_animated_icon_survives),
     ("every write goes through the gate", case_every_write_goes_through_the_gate),
+    ("one reader for the file types", case_one_reader_for_the_file_types),
     ("one module knows what a content file is", case_one_module_knows_what_a_content_file_is),
     ("a subfolder page is one column", case_a_subfolder_page_is_one_column),
     ("the sheet has buttons that cannot edit", case_the_sheet_has_buttons),
