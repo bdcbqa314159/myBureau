@@ -1815,9 +1815,14 @@ def case_the_sheet_has_buttons(d: pathlib.Path) -> list[tuple[str, bool]]:
          any("font-weight" in b for b in rules.get(".about-sheet", []))),
         ("bold reaches the paragraphs too, which is where her words are",
          any(".about-sheet.is-bold *" in sel for sel in rules)),
-        ("the strip is centred over the sheet",
-         any("justify-content: center" in b
+        ("the buttons line up with the portrait and the text, on the left",
+         any("justify-content: flex-start" in b
              for b in rules.get(".js .sheet-tools", []))),
+        ("and nothing in that window is centred against the rest",
+         not any("justify-content: center" in b
+                 for b in rules.get(".js .sheet-tools", []))
+         and not any("text-align: center" in b
+                     for b in rules.get(".about-sheet", []) + rules.get(".about-body", []))),
         ("and each button's face does what the button does",
          '.sheet-tools button[data-style="bold"]' in rules
          and '.sheet-tools button[data-style="italic"]' in rules),
