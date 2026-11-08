@@ -1193,6 +1193,13 @@ def case_a_phone_desk_can_grow(d: pathlib.Path) -> list[tuple[str, bool]]:
          not pins_height(narrow)),
         ("a wide desk is still exactly one screen, as the brief asks",
          wide != [] and pins_height(wide)),
+        ("a phone's first row clears the bandeau by its MEASURED height,"
+         " not by a number somebody guessed",
+         any("var(--bar-h" in b for b in narrow)),
+        ("and there is still an answer for a visitor with no script",
+         any(re.search(r"var\(--bar-h,\s*[0-9.]+rem\)", b) for b in narrow)),
+        ("the grid adapts across the band rather than always being three",
+         any("auto-fill" in b for b in narrow)),
     ]
 
 

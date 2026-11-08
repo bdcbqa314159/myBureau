@@ -266,10 +266,24 @@ a { color: inherit; }
      untidy, not because things are nailed down. */
   .desk {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    /* AUTO-FILL, not three. Three columns is right at 390px and sparse
+       at 639 — the same band, the same rule, icons stranded in the
+       middle of cells twice the size of the picture in them. A minimum
+       of 6.5rem keeps three on a phone and gives five near the top of
+       the band, which is what the room is actually for. */
+    grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
     align-content: start;
     gap: 1.4rem .4rem;
-    padding: 6.5rem .6rem 1.5rem;
+    /* THE BANDEAU'S REAL HEIGHT, published by the script, because the
+       bar is fixed and the first row has to clear it. This was 6.5rem
+       — a guess, made before the nav held five words and a language
+       switch. At 390px that nav wraps, and a guess that is short puts
+       her first row of work underneath the navigation.
+
+       The fallback is for a visitor with no script, and it is
+       deliberately generous: a gap is a blemish, and being under the
+       bar is work nobody can reach. */
+    padding: var(--bar-h, 8.5rem) .6rem 1.5rem;
     /* MIN-height, not height. The brief asks for a desk the size of a
        screen "qui ne s'étend pas", and on a laptop that holds. On a
        phone the same rule means the sixteenth icon has nowhere to be:
