@@ -32,14 +32,15 @@ import re
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+
+sys.path.insert(0, str(ROOT / "tools"))
+import filetypes  # noqa: E402
 OUT = ROOT / "public"
 
 # Only ever media. Never html, css, js, fonts, robots.txt — those are the
 # site itself, and a matcher that misses one of those breaks the page
 # rather than wasting a few kilobytes.
-MEDIA = {".pdf",
-         ".jpg", ".jpeg", ".png", ".webp", ".avif", ".gif",
-         ".mp4", ".webm", ".mov", ".m4v"}
+MEDIA = filetypes.MEDIA        # config.toml owns the list
 
 
 def asked_for(out: pathlib.Path) -> set[str]:

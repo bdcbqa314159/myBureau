@@ -53,10 +53,24 @@ let narrowView = false;
 
 const tell = (m) => { says.textContent = m; };
 
+/* A REQUEST THAT NEVER ANSWERS. `fetch` waits forever by default, and
+ * the lamp above is the panel's only signal that anything is
+ * happening. A server that REFUSES is handled below; a server that
+ * HANGS left the lamp lit for the rest of the session with nothing to
+ * tell her, which is worse than an error because it looks like work in
+ * progress.
+ *
+ * Twenty seconds is far longer than anything here takes — this is
+ * localhost, and the largest thing that travels is a photograph. It is
+ * a bound, not a deadline. */
+const PATIENCE = 20000;
+
 async function ask(path, opts) {
   lamp.className = "lamp busy";
+  const stop = new AbortController();
+  const giveUp = setTimeout(() => stop.abort(), PATIENCE);
   try {
-    const r = await fetch(q(path), opts);
+    const r = await fetch(q(path), { ...opts, signal: stop.signal });
     const out = await r.json();
     if (!r.ok) { lamp.className = "lamp bad"; tell(out.error || "refusé"); return null; }
     lamp.className = "lamp";
@@ -64,7 +78,14 @@ async function ask(path, opts) {
     if (out.tree) { model = out.tree; paint(); }
     return out;
   } catch (e) {
-    lamp.className = "lamp bad"; tell("le panneau a perdu le serveur"); return null;
+    lamp.className = "lamp bad";
+    // Two different things, and she can act on exactly one of them.
+    tell(e.name === "AbortError"
+      ? "le serveur n'a pas répondu. Vérifie la fenêtre noire, puis réessaie."
+      : "le panneau a perdu le serveur");
+    return null;
+  } finally {
+    clearTimeout(giveUp);
   }
 }
 async function act(body) {
