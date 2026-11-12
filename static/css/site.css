@@ -445,13 +445,20 @@ img.will-fade.is-in { opacity: 1; }
 
    The white edge is the polaroid in her prototype, and it is what keeps
    a dark photograph from dissolving into a dark wallpaper. */
+/* NO WHITE EDGE. A photograph on a desk is the work, not a print of
+   it: the white ground and the 3px of padding around it made every
+   picture wear a little mount.
+
+   THE SHADOW STAYS, and it is not decoration. A desk sits on one of
+   her photographs, and a picture laid directly on another picture has
+   nothing to tell the eye where one ends — the same problem the
+   bandeau solves with a text shadow. It is the separation, and the
+   white was the frame. */
 .icon img.is-photo {
   width: auto; max-width: 100%;
   max-height: var(--icon-w);
   margin-inline: auto;
-  background: #fff;
-  padding: 3px;
-  box-shadow: 0 1px 2px rgb(0 0 0 / .26);
+  box-shadow: 0 1px 3px rgb(0 0 0 / .34);
 }
 /* The shadow lives on the ANCHOR, not on the image inside it.
    A filtered element is rasterised to a bitmap at its own size. With the

@@ -129,14 +129,40 @@
 {%- endif -%}
 {#- Both of these are her saying so, and both win over the picture we
     picked — including over the first photograph. -#}
+{#- A PHOTOGRAPH IS A PHOTOGRAPH WHEREVER IT CAME FROM.
+
+    These two branches used to say `ic_photo = false` and mean it: a
+    declared icon was treated as artwork, one of our drawn symbols. But
+    a file SHE DROPPED is her work — her portrait on `about me.txt`, a
+    cover she put on a project — and it was rendered with none of the
+    treatment a photograph gets, at a SQUARE 160×160 whatever shape it
+    actually was.
+
+    So: a drawn `.svg` is artwork; anything else she dropped is a
+    photograph, and is measured rather than assumed.
+
+    `ic_from_assets` is the guard. A path typed into front matter —
+    `icon = "img/icons/folder-rust.svg"` — lives in static/ and
+    `get_image_metadata` cannot read it from there; a colocated file
+    can be measured. section.html sets the flag when it hands over a
+    file it found beside the content. -#}
 {%- if ic_declared -%}
   {%- set_global ic_pic = get_url(path=ic_declared) -%}
   {%- set_global ic_photo = false -%}
+  {%- if ic_from_assets and ic_declared | split(pat=".") | last | lower != "svg" -%}
+    {%- set_global ic_photo = true -%}
+    {%- set_global ic_shape = get_image_metadata(path=ic_declared) -%}
+  {%- endif -%}
 {%- endif -%}
 {%- for a in ic_assets -%}
   {%- if a | split(pat="/") | last | split(pat=".") | first == "icon" -%}
     {%- set_global ic_pic = get_url(path=a) -%}
-    {%- set_global ic_photo = false -%}
+    {%- if a | split(pat=".") | last | lower == "svg" -%}
+      {%- set_global ic_photo = false -%}
+    {%- else -%}
+      {%- set_global ic_photo = true -%}
+      {%- set_global ic_shape = get_image_metadata(path=a) -%}
+    {%- endif -%}
   {%- endif -%}
 {%- endfor -%}
 {%- set ac = 12 + (ic_slot % 4) * 25 -%}
