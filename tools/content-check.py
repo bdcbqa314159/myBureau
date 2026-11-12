@@ -1296,6 +1296,13 @@ def case_a_photograph_has_no_close_box(d: pathlib.Path) -> list[tuple[str, bool]
                      html, re.S)
     inside = shot.group(0) if shot else ""
     desk_js = (ROOT / "src" / "desk.ts").read_text(encoding="utf-8")
+    css = re.sub(r"/\*.*?\*/", " ",
+                 (d / "static" / "css" / "site.css").read_text(encoding="utf-8"),
+                 flags=re.S)
+    rules = {}
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        rules.setdefault(sel.strip(), []).append(body)
+    shot_body = rules.get(".win-shot .preview-body", [])
 
     return [
         ("builds", ok),
@@ -1309,6 +1316,18 @@ def case_a_photograph_has_no_close_box(d: pathlib.Path) -> list[tuple[str, bool]
          'class="win win-preview win-shot"' in inside),
         ("and that handler really exists, so the class means something",
          '.win-preview' in desk_js and "win.close()" in desk_js),
+        # NO BLACK FRAME. Two things drew one: a dark ground behind the
+        # picture and `.win-body`'s padding holding it off its own
+        # edges. The blue band stays — she asked for it by name.
+        ("the picture sits on nothing, not on a dark mount",
+         not any(re.search(r"background:\s*#0", b) for b in shot_body)),
+        ("and nothing holds it away from its own edges",
+         any("padding: 0" in b for b in shot_body)),
+        ("the band takes its share and the picture takes the rest",
+         any("minmax(0, 1fr)" in b for b in rules.get(".win-shot", []))),
+        ("so a tall photograph cannot push the band off the screen",
+         any("max-height: 100%" in b
+             for b in rules.get(".win-shot .preview-body img", []))),
     ]
 
 

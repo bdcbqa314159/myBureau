@@ -1103,7 +1103,25 @@ body.gallery { background: #0d0b0a; }
 
 /* A photograph on its own has no page to open and no text under it —
    just the picture and a way out. */
-.win-shot .preview-body { background: #0d0b0a; }
+/* THE BLACK FRAME IS GONE. Two things drew it: a dark ground behind
+   the picture, and `.win-body`'s padding holding the picture away from
+   its own edges. Together they read as a mount around her photograph.
+
+   What stays is what she liked: the blue band with the file's name,
+   and the picture directly under it.
+
+   THE ROWS MATTER. `.win-preview[open]` is a grid, and this dialog —
+   unlike the frameless one on a desk — has TWO children: the bar and
+   the body. With automatic rows both are sized to their content, so a
+   tall photograph pushes past the bottom of the screen and takes the
+   bar with it. `auto` for the band, the rest for the picture. */
+.win-shot { grid-template-rows: auto minmax(0, 1fr); }
+.win-shot .preview-body {
+  padding: 0; background: none; min-height: 0;
+}
+/* Bounded by the room LEFT, not by the whole screen: the band above has
+   already taken its share. */
+.win-shot .preview-body img { max-height: 100%; }
 
 /* ====================================================================
    author credit — licence §4, do not remove
