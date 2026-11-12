@@ -133,8 +133,20 @@ setTimeout(function(){d.classList.remove("booting")},6000)})(document.documentEl
      stay declared in config.toml. #}
   <nav class="bar-nav">
     {% set root = get_section(path="_index.md") %}
+    {#- ON THE DESK BUT NOT IN THE BAND. Every first-class folder used
+        to appear here, which is how `travail sélectionné` arrived — it
+        is not in her brief's nav, which reads DA / graphic design /
+        pellicules / contact. It came from her own portfolio, where it
+        is a page rather than a heading.
+
+        `band = false` in a folder's front matter keeps it off. It is
+        still on the desk, still has its page, still reachable — a
+        folder's place in the band is now a decision rather than a
+        consequence of existing. -#}
     {% for path in root.subsections %}{% set s = get_section(path=path) %}
-    <a href="{{ s.permalink }}">{{ s.title }}</a>{% endfor %}
+    {%- if s.extra.band is not defined or s.extra.band -%}
+    <a href="{{ s.permalink }}">{{ s.title }}</a>
+    {%- endif -%}{% endfor %}
     {% for item in config.extra.nav_extra %}<a href="{{ item.url }}">{% if item.key %}{{ trans(key=item.key, lang=lang) }}{% else %}{{ item.name }}{% endif %}</a>{% endfor %}
     {# One link per other language, generated from the language list. The
        same page when it has been translated, that language's desktop when
