@@ -756,7 +756,18 @@ document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]').forEach((link) => {
 // with no keyboard in reach is stuck looking at a picture.
 document.querySelectorAll<HTMLDialogElement>(".win-preview").forEach((win) => {
   win.addEventListener("click", (e: Event): void => {
-    if (e.target === win) win.close();
+    // ANYWHERE THAT IS NOT THE PICTURE. It used to be the dialog alone,
+    // which meant the strip above and below it closed and the strips
+    // left and right did not — those belong to the box holding the
+    // photograph, not to the dialog, and they look identical.
+    //
+    // The band keeps its clicks: it carries the file's name and is the
+    // handle the window is dragged by.
+    const t = e.target;
+    if (t === win) return win.close();
+    if (t instanceof Element && t.closest("img, .win-bar, a, button") === null) {
+      win.close();
+    }
   });
 });
 

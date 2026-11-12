@@ -1346,12 +1346,25 @@ def case_a_photograph_has_no_close_box(d: pathlib.Path) -> list[tuple[str, bool]
          any("align-self: stretch" in b for b in shot_body)),
         ("it never scrolls — a picture is not a document",
          any("overflow: hidden" in b for b in shot_body)),
-        ("the picture is told to fit the room, not the other way round",
-         any("object-fit: contain" in b
+        ("the picture is bounded by the room, in both directions",
+         any("max-width: 100%" in b and "max-height: 100%" in b
              for b in rules.get(".win-shot .preview-body img", []))),
-        ("and it is given the whole room to fit in",
-         any("width: 100%" in b and "height: 100%" in b
+        # THE ELEMENT IS THE PICTURE, NOT THE BOX. With `object-fit`
+        # and a full-size element the empty space BESIDE the photograph
+        # was inside the image — so a click there landed on the
+        # photograph and nothing happened, while a click above or below
+        # it closed. Two strips that look identical, behaving
+        # differently.
+        ("and the element is the picture itself, so what is beside it is not",
+         any("width: auto" in b and "height: auto" in b
              for b in rules.get(".win-shot .preview-body img", []))),
+        ("which means the box has to centre it",
+         any("justify-content: center" in b and "align-items: center" in b
+             for b in shot_body)),
+        ("a click anywhere that is not the picture closes it",
+         'closest("img, .win-bar, a, button")' in desk_js),
+        ("but the band keeps its clicks — it is the handle and the name",
+         '.win-bar' in desk_js),
     ]
 
 
