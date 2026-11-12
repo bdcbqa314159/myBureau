@@ -1402,10 +1402,18 @@ def case_a_picture_fits_the_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     dialog = " ".join(rules.get(".win-preview[open]", []))
 
     return [
-        ("the picture's width is measured against the screen",
-         "max-width" in img and "100vw" in img),
-        ("and so is its height, the same way",
-         "max-height" in img and "100dvh" in img),
+        # MEASURED BY THE BOX, NOT GUESSED FROM THE VIEWPORT. The
+        # viewport units were right when nothing else could be trusted
+        # to have a size. The box is stretched to the dialog now, so it
+        # has one — and `100%` of the room the picture actually has is
+        # more honest than `100dvh` minus a padding this rule has to
+        # remember.
+        ("the picture is bounded by the room it has, both ways",
+         "max-width: 100%" in img and "max-height: 100%" in img),
+        ("and the box has a size of its own to be that percentage of",
+         any("align-self: stretch" in b for b in rules.get(".preview-body", []))),
+        ("it never scrolls — one click should show the whole picture",
+         any("overflow: hidden" in b for b in rules.get(".preview-body", []))),
         ("nothing sizes the box to the picture it holds",
          "max-content" not in body),
         ("and the track it sits in cannot grow past the screen",
@@ -2333,9 +2341,18 @@ def case_a_picture_opens_plain(d: pathlib.Path) -> list[tuple[str, bool]]:
                    and "<button" not in pic.group(0)),
         ("but it still says what it is, for a screen reader",
          bool(pic) and 'aria-label="une photo.jpg"' in pic.group(0)),
-        ("and the picture itself is the way to its page",
-         bool(pic) and re.search(r'<a class="preview-body" href="[^"]*da/une-photo/"',
-                                 pic.group(0)) is not None),
+        # REVERSED, DELIBERATELY. The picture WAS a link to the
+        # project's page — the second step kept when the frame came off
+        # in #94, and flagged then as the one judgement call in it.
+        # For a photograph lying on a desk there is no second step to
+        # want: the page behind it is the same picture with a line of
+        # text, and arriving there by clicking the thing you just
+        # opened reads as a mistake. One click opens, a click outside
+        # closes, the picture does nothing.
+        ("the picture is not a link, so clicking it goes nowhere",
+         bool(pic) and "<a " not in pic.group(0)),
+        ("its page is still reachable without a script, from the icon",
+         bool(re.search(r'<a class="icon"[^>]*href="[^"]*da/une-photo/"', h))),
         ("the film is the control, and keeps its frame",
          bool(film) and "win-bar" in film.group(0)),
         ("nothing on the desk points at a window that is not there",

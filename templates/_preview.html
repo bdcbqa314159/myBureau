@@ -56,8 +56,17 @@
 -#}
 <dialog class="win win-preview" id="preview-{{ fp.path | slugify }}"
         aria-label="{{ fp.title }}">
-  <a class="preview-body" href="{{ fp.permalink }}"
-     aria-label="{{ trans(key='window_page', lang=lang) }}">
+  {#- NOT A LINK. It was one — the deliberate second step to the
+      project's page, kept when the frame came off in #94. For a
+      photograph lying on a desk there is no second step to want: the
+      page behind it is the same picture with a line of text, and
+      arriving there by clicking the thing you just opened reads as a
+      mistake.
+
+      One click opens it, a click outside closes it, and the picture
+      itself does nothing. The page is still reachable without
+      JavaScript, where the icon is a plain link and no preview opens. -#}
+  <div class="preview-body">
     {% for asset in fp.assets %}
       {% set file = asset | split(pat="/") | last %}
       {% if file | split(pat=".") | last | lower in config.extra.image_types and not (file | split(pat=".") | first in config.extra.not_photographs) %}
@@ -71,6 +80,6 @@
              alt="{{ alt }}" loading="lazy" decoding="async">
       {% endif %}
     {% endfor %}
-  </a>
+  </div>
 </dialog>
 {% endif %}
