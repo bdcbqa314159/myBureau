@@ -2416,11 +2416,19 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     # passes by finding nothing.
     (r / "index.md").write_text(
         '+++\ntitle = "une photo.jpg"\n\n[extra.width]\n"02.jpg" = 37\n\n'
+        # offset and angle are DECLARED and must be IGNORED. She asked
+        # for no lean and no way to add one, and "no way to add one" is
+        # only true if writing the old keys by hand does nothing — the
+        # files still exist in her folders and in older copies.
         '[extra.offset]\n"02.jpg" = -18\n\n'
-        # an angle on a DIFFERENT file, and no width or offset with it,
-        # because the three have to be independent: she may want one
-        # photograph hung crooked and nothing else about it changed.
-        '[extra.angle]\n"01.jpg" = 5\n+++\n\nUn texte.\n', encoding="utf-8")
+        '[extra.angle]\n"01.jpg" = 5\n\n'
+        # WHAT THE PHOTOGRAPH SHOWS. With no links and no names, this
+        # is the only thing on the route a screen reader can reach: the
+        # page is otherwise a title, a paragraph and silence. The route
+        # hardcoded alt="" until the names came off, so nothing had
+        # ever carried this value from front matter to the img.
+        '[extra.alt]\n"03.jpg" = "une main sur une table"\n'
+        '+++\n\nUn texte.\n', encoding="utf-8")
     # and one with nothing to show at all, which is where a broken
     # picture would appear if the partial assumed there was always one
     s = d / "content" / "da" / "maison-cosette" / "rien"
@@ -2466,6 +2474,11 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
          '--r:' not in inside),
         ("and one nobody pinned carries no style at all, so the rhythm sizes it",
          '<figure class="stop">' in inside),
+        ("what a photograph shows reaches the route, which is all a"
+         " screen reader has left",
+         'alt="une main sur une table"' in inside),
+        ("and one nobody described says nothing rather than something"
+         " wrong", inside.count('alt=""') == 2),
         ("the route runs DOWN the page — a grid, not a sideways scroller",
          any("display: grid" in b for b in rules.get(".proj-route", []))
          and not any("overflow-x" in b for b in rules.get(".proj-route", []))),

@@ -24,7 +24,6 @@
     in specs/pages-and-the-road.md.
 
     `icon.*`, `poster.*` and `wallpaper.*` are not her photographs. -#}
-{%- set_global pl_shown = 0 -%}
 {%- for a in pl_assets -%}
   {%- set leaf = a | split(pat="/") | last -%}
   {%- set stem = leaf | split(pat=".") | first -%}
@@ -41,6 +40,5 @@
       <img src="{{ small.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
            alt="{{ pl_alt[leaf] | default(value="") }}" loading="lazy" decoding="async">
     </figure>
-    {%- set_global pl_shown = pl_shown + 1 -%}
   {%- endif -%}
 {%- endfor -%}
