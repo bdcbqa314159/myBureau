@@ -1,55 +1,29 @@
-{#- ONE THING INSIDE A FOLDER, laid along the route.
+{#- ONE PHOTOGRAPH ON THE ROUTE.
 
     Expects, set with set_global before the include:
 
-      pl_title   what she called it
-      pl_href    where it goes
-      pl_here    its colocated_path — the folder it sits in, which is a
-                 real path for a section and for a page alike. `assets`
-                 is not: a section spells them as urls with the language
-                 in front, and `/en/…/01.jpg` is not a file anybody can
-                 resize.
-      pl_assets  its files, for the names only
-      pl_extra   its [extra], for the pinning below
+      pl_here    its colocated_path — a real path for a section and a
+                 page alike, where `assets` is not: a section spells
+                 them as urls with the language in front.
+      pl_assets  its files
+      pl_extra   its [extra], for the width below
+      pl_alt     its [extra.alt], so a photograph can still be described
 
-    PINNED, LIKE A FRIDGE. Each photograph takes its own width and its
-    own place left or right of the line, declared per FILE in the
-    folder's front matter — the same shape `[extra.alt]` already uses,
-    so there is one convention to learn rather than two:
+    A PLACE TO LOOK, AND NOTHING ELSE. These were links carrying the
+    file's name, and both are gone by her ask: `travail sélectionné` is
+    somewhere a visitor arrives, scrolls, and enjoys. Clicking does
+    nothing, no name appears, nothing opens.
 
-        [extra.width]
-        "01.jpg" = 48        # per cent of the page (a number, no %)
+    `pl_title` and `pl_href` are no longer read. A stop is a
+    <figure>, not an <a>, so there is nothing to click rather than a
+    click that is ignored — the difference a keyboard notices.
 
-        [extra.offset]
-        "01.jpg" = -12       # per cent off the centre, + is right
+    A THING WITH NO PHOTOGRAPH CONTRIBUTES NOTHING. It used to arrive
+    as a named placeholder so it stayed reachable; with no links here
+    at all, reachability is not this page's job any more. See the note
+    in specs/pages-and-the-road.md.
 
-        [extra.angle]
-        "01.jpg" = -2        # degrees, how it hangs
-
-    All three optional, and independent: an angle may be declared
-    without a width. Declare none and the stylesheet gives the
-    photograph a place from a repeating rhythm, so a folder nobody has
-    arranged still looks pinned rather than stacked in a column.
-
-    EVERY PICTURE IT HOLDS, rather than one face for the whole thing.
-    A folder of four photographs arrived as a single cropped thumbnail
-    with its name underneath: that said a folder existed and nothing
-    about the work inside it. Each photograph is its own stop now, and
-    all of a thing's stops lead to the same place.
-
-    It is also the honest way to put more pictures on the page. These
-    are photographs already in the site and already looked at; drawing
-    new ones means new random draws, and a draw comes back with
-    whatever it comes back with — which is why placeholders.py carries
-    a map of seeds chosen by hand.
-
-    NOT her photographs, and never a stop: `icon.*` is the face on the
-    desk, `poster.*` is a film's still, `wallpaper.*` is the ground a
-    desk used to stand on.
-
-    A thing with no picture at all is real — an empty folder, a project
-    holding only a document — and it must stay reachable, so it arrives
-    as a stop wearing nothing but its name. -#}
+    `icon.*`, `poster.*` and `wallpaper.*` are not her photographs. -#}
 {%- set_global pl_shown = 0 -%}
 {%- for a in pl_assets -%}
   {%- set leaf = a | split(pat="/") | last -%}
@@ -61,22 +35,12 @@
     {%- set small = resize_image(path=src, width=900, op="fit_width", format="webp", quality=78) -%}
     {%- set_global pin = "" -%}
     {%- if pl_extra.width and pl_extra.width[leaf] -%}
-      {%- set_global pin = pin ~ "--w:" ~ pl_extra.width[leaf] ~ ";" -%}
+      {%- set_global pin = "--w:" ~ pl_extra.width[leaf] ~ ";" -%}
     {%- endif -%}
-    {%- if pl_extra.offset and pl_extra.offset[leaf] -%}
-      {%- set_global pin = pin ~ "--x:" ~ pl_extra.offset[leaf] ~ ";" -%}
-    {%- endif -%}
-    {%- if pl_extra.angle and pl_extra.angle[leaf] -%}
-      {%- set_global pin = pin ~ "--r:" ~ pl_extra.angle[leaf] ~ ";" -%}
-    {%- endif -%}
-    <a class="stop" href="{{ pl_href }}"{% if pin %} style="{{ pin }}"{% endif %}>
+    <figure class="stop"{% if pin %} style="{{ pin }}"{% endif %}>
       <img src="{{ small.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
-           alt="" loading="lazy" decoding="async">
-      <span>{{ pl_title }}</span>
-    </a>
+           alt="{{ pl_alt[leaf] | default(value="") }}" loading="lazy" decoding="async">
+    </figure>
     {%- set_global pl_shown = pl_shown + 1 -%}
   {%- endif -%}
 {%- endfor -%}
-{%- if pl_shown == 0 -%}
-  <a class="stop is-bare" href="{{ pl_href }}"><span>{{ pl_title }}</span></a>
-{%- endif -%}

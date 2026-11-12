@@ -396,6 +396,9 @@ def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]
         title="nue", extra='template = "section.html"\n'))
     ok, log = build(d)
 
+    wall_route = re.search(r'<div class="proj-route".*?</div>',
+                           page(d, "affiche/index.html"), re.S)
+
     def wall(rel: str) -> str:
         m = re.search(r"--wallpaper:url\('([^']*)", page(d, rel))
         return m.group(1).split("/")[-1] if m else "none"
@@ -430,9 +433,18 @@ def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]
         ("a wallpaper left beside a page is not rendered as one of her"
          " photographs, which is what it would be without the rule",
          page(d, "affiche/index.html").count("<figure") == 1),
-        ("nor does it put a folder on the route wearing a wallpaper",
-         bool(re.search(r'<a class="stop is-bare" href="[^"]*dedans/">',
-                        page(d, "affiche/index.html")))),
+        # A folder holding nothing but a wallpaper now contributes
+        # NOTHING to a route. It used to arrive as a named placeholder
+        # so it stayed reachable; the route carries no links at all
+        # since she asked for a place to look rather than to navigate,
+        # so there is nothing for a nameless folder to be.
+        # The route must EXIST for this to say anything — `affiche` has
+        # a child, so it does — and then hold no stop of any kind. Not
+        # `class="stop"` with its closing quote: a stop may carry a
+        # second class, and the first spelling of this check passed
+        # happily against `class="stop is-bare"`.
+        ("nor does it put anything on the route wearing a wallpaper",
+         bool(wall_route) and 'class="stop' not in wall_route.group(0)),
         ("no front matter in the whole site still types a wallpaper path",
          not any("wallpaper =" in f.read_text(encoding="utf-8")
                  for f in (d / "content").rglob("_index*.md"))),
@@ -1426,16 +1438,20 @@ def case_a_picture_fits_the_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
 def case_the_road_survives_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A phone compresses her arrangement; it does not delete it.
 
-    The rule here used to set every stop to full width, no offset and
-    no lean below 52rem, which turned a fridge door into one column of
-    photographs — the whole idea of the page gone on the device most
+    The rule here used to set every stop to full width below 52rem,
+    which turned a page of varied photographs into one column of
+    identical ones — nothing of the composition left on the device most
     people read it on.
+
+    THE OFFSETS AND THE LEAN ARE GONE, by her ask, on every screen: she
+    did not want the fridge. What survives is the width, and a phone
+    narrows the range of widths rather than erasing it.
 
     The reasoning was half right: a picture at 24 per cent of a phone
     IS a stamp. The answer to values too extreme is smaller values, not
     none.
 
-    THE THREE NUMBERS ARE UNITLESS so this is possible at all. A
+    THE NUMBER IS UNITLESS so this is possible at all. A
     percentage cannot be scaled by CSS; a number can. If anyone puts
     the `%` back in the template, the phone silently stops compressing
     — `calc(55 + 52% * 0.6)` is not a length — and the road flattens
@@ -1453,7 +1469,7 @@ def case_the_road_survives_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
                       if sel.startswith(".stop:nth-child")
                       for one in bodies)
     road = page(d, "travail-selectionne/index.html")
-    pins = re.findall(r'<a class="stop"[^>]*style="([^"]*)"', road)
+    pins = re.findall(r'<figure class="stop"[^>]*style="([^"]*)"', road)
 
     return [
         ("builds", ok),
@@ -1469,6 +1485,11 @@ def case_the_road_survives_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
          len(pins) >= 5),
         ("and what it writes is unitless, which is what the maths needs",
          pins != [] and all("%" not in s and "deg" not in s for s in pins)),
+        # WIDTH ONLY. The offsets and the lean are gone by her ask —
+        # the fridge was not what she wanted, here or on a phone — so a
+        # pin carries the one number that is left.
+        ("and it is a width, not a place or an angle",
+         pins != [] and all("--x" not in s and "--r" not in s for s in pins)),
     ]
 
 
@@ -2001,9 +2022,9 @@ def case_a_subfolder_page_is_one_column(d: pathlib.Path) -> list[tuple[str, bool
     asserted, because a change that collapsed everything to one column
     would satisfy the first and quietly ruin the second.
 
-    And no pinning here. The fridge is travail sélectionné's and
-    nowhere else's, so a subfolder's photographs carry no width, no
-    offset and no angle of their own.
+    And no pinning here. Varying widths are travail sélectionné's and
+    nowhere else's, so a subfolder's photographs carry no width of
+    their own.
     """
     folder = d / "content" / "da" / "une-serie"
     folder.mkdir()
@@ -2388,8 +2409,8 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     # a third that nothing declares anything about, so the rhythm case
     # has a photograph of its own to be true about
     shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", r / "03.jpg")
-    # and it PINS one of them by hand, which is the whole point of the
-    # route being a fridge rather than a column. Nothing in the real
+    # and it SIZES one of them by hand, which is the whole point of
+    # the route being more than a column. Nothing in the real
     # content had to declare this when the code was written, so without
     # a fixture that does, the path is never executed and the check
     # passes by finding nothing.
@@ -2414,36 +2435,52 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     rules = {}
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
         rules.setdefault(sel.strip(), []).append(body)
-    route = re.search(r'<nav class="proj-route".*?</nav>', folder, re.S)
+    # The route is a plain div now rather than a nav: with nothing on
+    # it to click, it is not navigation. It holds only figures, so the
+    # first </div> after it is its own.
+    route = re.search(r'<div class="proj-route".*?</div>', folder, re.S)
     inside = route.group(0) if route else ""
-    empty = re.search(r'<a class="stop is-bare" href="[^"]*rien/">.*?</a>',
-                      inside, re.S)
+
 
     return [
         ("builds", ok),
         ("the folder is a page, with no window on the DA desk",
          "win-folder" not in page(d, "da/index.html")),
-        ("what is inside is on the route",
-         bool(route) and "un film.mov" in inside),
-        ("a thing with a photograph wears it, at its own proportion",
-         bool(re.search(r'<a class="stop"[^>]*href="[^"]*une-photo/"[^>]*>\s*<img', inside))),
-        ("a thing with nothing to show is a stop wearing only its name",
-         bool(empty) and "<img" not in empty.group(0)),
-        ("a film is not represented by its poster, which is not a photograph",
-         bool(re.search(r'<a class="stop is-bare" href="[^"]*un-film/">', inside))),
+        # A PLACE TO LOOK, AND NOTHING ELSE. These asserted links, file
+        # names and named placeholders — all three are gone by her ask:
+        # `travail sélectionné` is somewhere a visitor arrives, scrolls
+        # and enjoys. Nothing opens and nothing is labelled.
+        ("the photographs inside are on the route",
+         bool(route) and '<figure class="stop"' in inside),
+        ("nothing on it is a link, so clicking does nothing",
+         bool(route) and "<a " not in inside),
+        ("and nothing carries a file's name",
+         bool(route) and "<span" not in inside),
+        ("a film contributes nothing, because a poster is not a photograph",
+         "un-film" not in inside),
         ("EVERY photograph is a stop, not one face for the whole thing",
-         len(re.findall(r'<a class="stop"[^>]*href="[^"]*une-photo/"', inside)) == 3),
-        ("a photograph pinned by hand carries its own width and place",
-         '--w:37;--x:-18;' in inside),
-        ("an angle can be given on its own, without a width or a place",
-         '--r:5;' in inside and '--w:37;--x:-18;--r:5;' not in inside),
-        ("and one nobody pinned carries no style at all, so the rhythm places it",
-         len(re.findall(r'<a class="stop" href="[^"]*une-photo/">', inside)) == 1),
+         inside.count('<figure class="stop"') == 3),
+        ("a photograph pinned by hand carries its own width",
+         '--w:37;' in inside),
+        ("and an angle cannot be given at all any more",
+         '--r:' not in inside),
+        ("and one nobody pinned carries no style at all, so the rhythm sizes it",
+         '<figure class="stop">' in inside),
         ("the route runs DOWN the page — a grid, not a sideways scroller",
          any("display: grid" in b for b in rules.get(".proj-route", []))
          and not any("overflow-x" in b for b in rules.get(".proj-route", []))),
-        ("and the link goes where the project was really built",
-         "da/maison-cosette/un-film/" in folder and own != ""),
+        # THE HOLE THIS LEAVES, NAMED RATHER THAN HIDDEN. The route was
+        # the only thing linking a child project, so with no links a
+        # child that shows no photograph is built and reached from
+        # nowhere — `un film.mov` here is exactly that. Nothing in the
+        # real content is in that position today: the only film sits on
+        # the DA desk as its own icon. If one ever is, this expectation
+        # is what has to change, and what has to change with it is the
+        # page — a film could play inline on the route without being a
+        # link, which keeps her "only look and scroll".
+        ("a child that shows no photograph is reached from nowhere,"
+         " but is still built, so the work is not lost",
+         "da/maison-cosette/un-film/" not in inside and own != ""),
         ("the film itself is on its own page", "<video" in own),
         ("no page has a dangling window reference",
          all(dangling(f.read_text(encoding="utf-8")) == []
