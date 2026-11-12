@@ -1118,20 +1118,31 @@ body.gallery { background: #0d0b0a; }
 .win-shot { grid-template-rows: auto minmax(0, 1fr); }
 .win-shot .preview-body {
   padding: 0; background: none; min-height: 0;
-  /* TAKE THE ROW, DO NOT BE SIZED BY WHAT IS IN IT.
-     `.win-preview[open]` centres its items, and a centred grid item is
-     sized to its content rather than stretched. So this box had no
-     height of its own — and `max-height: 100%` on the picture below
-     resolved against nothing and bounded nothing. A tall photograph
-     was held by its width alone and ran off the bottom.
-     Stretching gives the row's definite height somewhere to land. */
+  /* TAKE THE ROW, DO NOT BE SIZED BY WHAT IS IN IT. `.win-preview[open]`
+     centres its items, and a centred grid item is sized to its content
+     rather than stretched — so this box had no height of its own. */
   align-self: stretch; justify-self: stretch;
-  align-content: center;        /* and the picture sits in the middle of it */
+
+  /* A BLOCK, NOT A GRID, AND IT NEVER SCROLLS.
+     Two earlier attempts bounded the picture with percentages and both
+     failed for the same reason: inside a grid whose rows are sized by
+     their content, `max-height: 100%` asks the box how tall it is and
+     the box answers "as tall as the picture". The picture stayed its
+     own size and `overflow-y: auto` turned that into a scrollbar —
+     which is not what clicking a photograph should give you.
+
+     One box, one picture, and the picture is told to fit it. */
+  display: block;
+  overflow: hidden;
 }
-/* Bounded by the room LEFT, in BOTH directions: the band above has
-   already taken its share, and `100%` now means something because the
-   box above has a size. */
-.win-shot .preview-body img { max-width: 100%; max-height: 100%; }
+/* FIT, DO NOT CROP. `contain` is the whole answer: the picture is as
+   large as it can be inside the room it has and keeps its proportions,
+   whatever shape it is and whatever size the screen is. A phone gets
+   the same behaviour for free, because the room is the screen. */
+.win-shot .preview-body img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+}
 
 /* ====================================================================
    author credit — licence §4, do not remove

@@ -1325,18 +1325,23 @@ def case_a_photograph_has_no_close_box(d: pathlib.Path) -> list[tuple[str, bool]
          any("padding: 0" in b for b in shot_body)),
         ("the band takes its share and the picture takes the rest",
          any("minmax(0, 1fr)" in b for b in rules.get(".win-shot", []))),
-        # A PERCENTAGE NEEDS SOMETHING TO BE A PERCENTAGE OF. The
-        # dialog centres its items, and a centred grid item is sized to
-        # its content rather than stretched — so the box holding the
-        # picture had no height, `max-height: 100%` resolved against
-        # nothing, and a tall photograph was held by its width alone.
+        # CLICKING A PHOTOGRAPH GIVES YOU THE PHOTOGRAPH, NOT A
+        # SCROLLBAR. Two earlier attempts bounded it with percentages
+        # and both failed the same way: inside a grid whose rows are
+        # sized by their content, `max-height: 100%` asks the box how
+        # tall it is and the box answers "as tall as the picture". The
+        # picture kept its size and `overflow-y: auto` turned that into
+        # a scrollbar.
         ("the box takes the row it was given rather than its contents",
          any("align-self: stretch" in b for b in shot_body)),
-        ("so the picture is bounded in both directions",
-         any("max-height: 100%" in b and "max-width: 100%" in b
+        ("it never scrolls — a picture is not a document",
+         any("overflow: hidden" in b for b in shot_body)),
+        ("the picture is told to fit the room, not the other way round",
+         any("object-fit: contain" in b
              for b in rules.get(".win-shot .preview-body img", []))),
-        ("and sits in the middle of the room it has",
-         any("align-content: center" in b for b in shot_body)),
+        ("and it is given the whole room to fit in",
+         any("width: 100%" in b and "height: 100%" in b
+             for b in rules.get(".win-shot .preview-body img", []))),
     ]
 
 
