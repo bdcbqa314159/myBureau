@@ -1290,19 +1290,16 @@ a, button, summary, [role="button"] {
 input, textarea { cursor: text; }
 
 /* ---- language switcher ------------------------------------------- */
-/* Two letters, the same weight as the rest of the bandeau. It sits at
-   the end of the nav because it is a setting, not a place. */
-.bar-lang {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.82em;
-  opacity: 0.75;
-}
-.bar-lang:hover,
-.bar-lang:focus-visible { opacity: 1; }
-/* Changing opacity is not a focus indicator — nothing about .75 -> 1
-   tells a keyboard user this is the thing that will activate. It gets
-   the same underline the rest of the bandeau has. */
+/* THE SAME WORD AS THE OTHERS. It sits at the end of the nav because
+   it is a setting, not a place — but it was also uppercased, shrunk
+   and faded, which is three ways of saying "this one is different" in
+   a band whose other words are none of those things. It reads `en`,
+   beside `contact` and `pellicules`, at their size and their weight.
+
+   The rules that brought it back to full opacity on hover went with
+   the fade: there is nothing left to restore. The underline below is
+   what marks it, the same one the rest of the bandeau has — changing
+   opacity was never a focus indicator anyway. */
 .bar-lang::after {
   content: ""; position: absolute; left: 0; right: 0; bottom: -.15em;
   height: 1px; background: currentColor;

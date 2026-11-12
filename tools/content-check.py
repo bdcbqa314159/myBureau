@@ -1735,6 +1735,58 @@ def case_every_write_goes_through_the_gate(d: pathlib.Path) -> list[tuple[str, b
     ]
 
 
+def case_the_band_says_what_she_asked_for(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """The bandeau holds her brief's words, and nothing it collected.
+
+    Her brief names four: *"DA / Graphic Design / pellicules /
+    contact"*. The band was built from every first-class folder, so
+    `travail sélectionné` arrived in it by existing — it comes from her
+    own portfolio, where it is a page rather than a heading.
+
+    `band = false` keeps a folder out of it. **Out of the band is not
+    out of the site**: it is still on the desk, still has its page,
+    still reachable — which is what the second half of this asserts,
+    because "removed from the band" would otherwise be satisfied by
+    deleting the folder.
+
+    The language link is the fifth word and is now the same word as the
+    others: it was uppercased, shrunk and faded, three ways of saying
+    "this one is different" in a band whose other words are none of
+    those things.
+    """
+    ok, log = build(d)
+    home = page(d, "index.html")
+    nav = re.search(r'<nav class="bar-nav">.*?</nav>', home, re.S)
+    words = [w.strip() for w in re.findall(r"<a[^>]*>([^<]*)</a>",
+                                           nav.group(0) if nav else "")]
+    css = re.sub(r"/\*.*?\*/", " ",
+                 (d / "static" / "css" / "site.css").read_text(encoding="utf-8"),
+                 flags=re.S)
+    rules = {}
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        rules.setdefault(sel.strip(), []).append(body)
+    lang = " ".join(rules.get(".bar-lang", []))
+    desk = re.search(r'<main class="desk".*?</main>', home, re.S)
+
+    return [
+        ("builds", ok),
+        ("the band is her four words, and the language",
+         words == ["DA", "graphic design", "pellicules", "contact", "en"]),
+        ("travail sélectionné is not among them",
+         not any("travail" in w for w in words)),
+        # out of the band, not out of the site
+        ("but it is still on the desk",
+         bool(desk) and "travail-selectionne" in desk.group(0)),
+        ("and its page is still built",
+         'class="proj-route"' in page(d, "travail-selectionne/index.html")),
+        ("the language link is not shouted, shrunk or faded",
+         "uppercase" not in lang and "font-size" not in lang
+         and "opacity" not in lang),
+        ("and the band's own words are untouched by that",
+         "graphic design" in words and "contact" in words),
+    ]
+
+
 def case_the_form_can_be_filled_on_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
     """Tapping a field must not zoom the page.
 
@@ -2346,6 +2398,7 @@ CASES = [
     ("a gif she made loops", case_a_gif_she_made_loops),
     ("an animated icon survives", case_an_animated_icon_survives),
     ("every write goes through the gate", case_every_write_goes_through_the_gate),
+    ("the band says what she asked for", case_the_band_says_what_she_asked_for),
     ("the form can be filled on a phone", case_the_form_can_be_filled_on_a_phone),
     ("one reader for the file types", case_one_reader_for_the_file_types),
     ("one module knows what a content file is", case_one_module_knows_what_a_content_file_is),
