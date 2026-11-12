@@ -793,6 +793,25 @@ def case_about_is_a_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     win = re.search(r'<dialog class="win win-about" id="about">.*?</dialog>', h, re.S)
     en = re.search(r'<dialog class="win win-about" id="about">.*?</dialog>',
                    page(d, "en/index.html"), re.S)
+
+    # Captured BEFORE the photograph is taken away below — a page()
+    # call inside an expectation reads the tree as it is at return
+    # time, which is the bare state, not this one.
+    en_home = page(d, "en/index.html")
+
+    # AND THE STATE BEFORE SHE HAS GIVEN ONE. Take the photograph away
+    # and build again: the desk falls back to the drawn icon, and the
+    # window — which never held it — is unchanged.
+    (d / "content" / "about.jpg").unlink()
+    build(d)
+    bare = page(d, "index.html")
+    m = re.search(r'<a class="icon"[^>]*data-vt="about-me-txt"[^>]*>.*?'
+                  r'<img[^>]*src="([^"]+)"', bare, re.S)
+    gone_icon = m.group(1) if m else ""
+    gone_win = re.search(r'<dialog class="win win-about" id="about">.*?</dialog>',
+                         bare, re.S)
+    gone_sheet = bool(gone_win) and "about-sheet" in gone_win.group(0)
+
     return [
         ("builds", ok),
         ("it opens as a screen rather than a dialog box", bool(win)),
@@ -803,19 +822,25 @@ def case_about_is_a_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
          bool(win) and "MARQUEUR-ABOUT" in win.group(0)),
         ("the English desk has its own, with the English text",
          bool(en) and "MARQUEUR-ABOUT" not in en.group(0)),
-        ("her portrait is in the window", bool(win) and "about-face" in win.group(0)),
-        ("and ABOVE the words, not after them",
-         bool(win) and win.group(0).index("about-face")
-                     < win.group(0).index("MARQUEUR-ABOUT")),
-        ("it went through the image pipeline rather than at full size",
-         bool(win) and "processed_images" in re.search(
-             r'about-face.*?</figure>', win.group(0), re.S).group(0)),
-        ("the English window shows the same portrait",
-         bool(en) and "about-face" in en.group(0)),
+        # REVERSED, DELIBERATELY. This used to assert the portrait was
+        # IN the window and emphatically NOT on the desk. It is the
+        # other way round now: `about me.txt` is a .txt, so the window
+        # is her words and the four buttons, and the photograph is what
+        # the desk wears. The old expectations are rewritten rather than
+        # deleted, so the reversal is visible to whoever reads this next.
+        ("the window shows no picture", bool(win) and "<img" not in win.group(0)),
+        ("it is her words and the buttons",
+         bool(win) and "about-sheet" in win.group(0)
+                   and "sheet-tools" in win.group(0)),
+        ("the desk wears her photograph",
+         bool(re.search(r'<a class="icon"[^>]*data-vt="about-me-txt"[^>]*>'
+                        r'.*?<img[^>]*src="[^"]*about\.', h, re.S))),
+        ("the English desk wears it too",
+         bool(re.search(r'<a class="icon"[^>]*data-vt="about-me-txt"[^>]*>'
+                        r'.*?<img[^>]*src="[^"]*about\.',
+                        en_home, re.S))),
         ("and does not reach for it under /en/, where it is not",
-         "/en/about." not in page(d, "en/index.html")),
-        ("it is not also sitting on the desk as an icon",
-         'about.jpg' not in re.sub(r'<dialog.*?</dialog>', '', h, flags=re.S)),
+         "/en/about." not in en_home),
     ]
 
 
@@ -1238,10 +1263,15 @@ def case_about_has_a_face(d: pathlib.Path) -> list[tuple[str, bool]]:
     inside = win.group(0) if win else ""
     return [
         ("builds", ok),
-        ("the about window has a portrait in it", "about-face" in inside),
-        ("it went through the resizer like every other picture",
-         bool(re.search(r'class="about-face"><img src="[^"]*processed_images', inside))),
-        ("and her words are still under it", "<p>" in inside),
+        # THE PHOTOGRAPH IS THE ICON, NOT THE WINDOW. `about me.txt` is
+        # a .txt and a .txt is words: the window shows her text and the
+        # four buttons, and her portrait is what the desk wears.
+        ("the window shows no picture at all", "<img" not in inside),
+        ("her words are in it", "<p>" in inside),
+        ("and the buttons above them", "sheet-tools" in inside),
+        ("the desk wears her photograph instead",
+         bool(re.search(r'<a class="icon"[^>]*data-vt="about-me-txt"[^>]*>'
+                        r'.*?<img[^>]*src="[^"]*about\.', home, re.S))),
     ]
 
 
