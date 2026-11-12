@@ -29,8 +29,9 @@
       A SUBFOLDER — maison cosette, Atelier Mirabelle, Logofolio — is a
       blank page: its name, its text, and then its work in ONE COLUMN,
       every photograph taking the whole width. Each picture gets all the
-      space there is, and you keep going down. No pairs, and no pinning:
-      the fridge belongs to travail sélectionné and nowhere else.
+      space there is, and you keep going down. No pairs, and no width
+      of its own: varying widths belong to travail sélectionné and
+      nowhere else.
 
       A PROJECT keeps the rhythm from the prototype: the first photograph
       opens it at full width, and everything after it sits in pairs with
@@ -174,38 +175,39 @@
 
   {#- WHAT IS INSIDE, when this page is a folder.
 
-      A folder can hold projects of its own, and a page showing only its
-      own photographs would leave them built and linked from nowhere —
-      reachable by typing the url and by nothing else. That is the
-      silent kind of broken.
-
-      They were a row of words, then a grid of cropped thumbnails with
-      the names underneath. Both said where things were and little about
-      what they are.
+      A folder can hold projects of its own, and every photograph in
+      them belongs on this page: it is one body of work, not a menu of
+      folders. It was a row of words, then a grid of cropped
+      thumbnails with the names underneath — both said where things
+      were and little about what they are.
 
       So: a ROUTE, and it runs DOWN. Every photograph inside this
-      folder pinned to a tall surface at its own width and its own
-      place left or right of the line — a fridge door, not a column
-      and not a grid. Nothing is cropped, no name sits under anything,
-      and the page scrolls the way a page scrolls.
+      folder, each at its own width, centred on one line. Nothing is
+      cropped, no name sits under anything, nothing can be clicked,
+      and the page scrolls the way a page scrolls. It leant left and
+      right at varying angles until she said it should not — see
+      specs/pages-and-the-road.md.
+
+      THE COST, which is deliberate: a child holding no photograph is
+      now linked from nowhere. Nothing in the content is in that
+      position; content-check names it so it is noticed if one is.
 
       A project has no children and never reaches this. -#}
   {% if section is defined and (section.pages | length > 0 or section.subsections | length > 0) %}
-    <nav class="proj-route" aria-label="{{ section.title }}">
+    {#- A <div>, not a <nav>: there is nothing to navigate to. -#}
+    <div class="proj-route">
       {% for sub in section.pages %}
-        {% set_global pl_title = sub.title %}{% set_global pl_href = sub.permalink %}
         {% set_global pl_here = sub.colocated_path %}{% set_global pl_assets = sub.assets %}
-        {% set_global pl_extra = sub.extra %}
+        {% set_global pl_extra = sub.extra %}{% set_global pl_alt = sub.extra.alt | default(value={}) %}
         {% include "_place.html" %}
       {% endfor %}
       {% for q in section.subsections %}
         {% set one = get_section(path=q) %}
-        {% set_global pl_title = one.title %}{% set_global pl_href = one.permalink %}
         {% set_global pl_here = one.colocated_path %}{% set_global pl_assets = one.assets %}
-        {% set_global pl_extra = one.extra %}
+        {% set_global pl_extra = one.extra %}{% set_global pl_alt = one.extra.alt | default(value={}) %}
         {% include "_place.html" %}
       {% endfor %}
-    </nav>
+    </div>
   {% endif %}
 
   {# ancestors gives a FILE PATH — get_section turns it into a URL.
