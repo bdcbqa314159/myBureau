@@ -999,12 +999,11 @@ body.project .bar { color: var(--ink); text-shadow: none; }
    leant it. She asked for both gone — see the note further down and
    specs/pages-and-the-road.md.
 
-   THE RHYTHM exists so a folder nobody has arranged still reads as
-   pinned. Five steps, because four falls into an obvious alternation
-   and the repeat is then easy to see. The small rotations are what say
-   "put here by a hand" rather than "laid out by a machine" — they are
-   under a degree and a half, which reads as placed rather than
-   crooked. */
+   THE RHYTHM exists so a folder nobody has sized still reads as
+   composed. Five steps, because four falls into an obvious
+   alternation and the repeat is then easy to see. Widths only: what
+   says "put here by a hand" is the change of scale, the rotations
+   that used to say it having been asked for and withdrawn. */
 .proj-route {
   display: grid; justify-items: center;
   gap: clamp(2.2rem, 6vh, 5rem);
@@ -1023,7 +1022,8 @@ body.project .bar { color: var(--ink); text-shadow: none; }
    A stop is a <figure> now, not a link, so there is no colour or
    underline to inherit and nothing to click. */
 .stop {
-  position: relative;
+  /* margin, because a <figure> has one from the UA and this is a grid
+     item centred by the track, not by its own box. */
   width: calc(var(--w, 46) * 1%);
   margin: 0;
 }
@@ -1039,16 +1039,11 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 
 /* NO NAME ON A PHOTOGRAPH. The plate that carried the file's name on
    hover is gone with the links: this is somewhere to look, and a file
-   name is not something a visitor came for. */
+   name is not something a visitor came for. Nothing replaces it —
+   what a photograph shows belongs in [extra.alt], where a screen
+   reader can reach it and the eye is not asked to read a filename. */
 
-
-
-/* ON A PHONE THE ROUTE STRAIGHTENS. There is no room to be off-centre:
-   a picture at 28% of a phone is a stamp, and one pushed 21% sideways
-   has a third of itself off the screen. So the pinning is a wide-screen
-   idea. */
-/* 52rem — two columns become one, and pinning is a two-column idea:
-   below this the road is simply the photographs, one after another.
+/* 52rem — two columns become one, so the widths come together too.
    It lived at 46rem for no reason anybody wrote down. */
 /* 52rem — the road is COMPRESSED, not flattened.
    This used to set every stop to full width, which turned a page of
