@@ -1074,7 +1074,17 @@ def case_icon_is_the_work(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("it carries the real proportions, so nothing reflows",
          bool(re.search(r'width="\d+" height="\d+"', first))
          and 'width="160" height="160"' not in first),
-        ("an icon.* in the folder wins over it", "icon" in chosen and "is-photo" not in chosen),
+        ("an icon.* in the folder wins over it", "icon" in chosen),
+        # REVERSED, DELIBERATELY. This asserted that a dropped icon is
+        # NOT a photograph — it was treated as one of our drawn
+        # symbols, so it got none of a photograph's treatment and was
+        # rendered at a square 160×160 whatever shape it really was.
+        # A file SHE dropped is her work. Only a drawn `.svg` is a
+        # symbol now.
+        ("and it is her work, so it is treated as a photograph",
+         "is-photo" in chosen),
+        ("measured rather than assumed to be square",
+         'width="160" height="160"' not in chosen),
         ("that icon is not also shown among the project's photographs",
          "icon.png" not in page(d, "da/choisie/index.html")),
         ("a project with no images falls back to a drawn icon",
@@ -1502,6 +1512,8 @@ def case_a_phone_desk_is_not_a_file_list(d: pathlib.Path) -> list[tuple[str, boo
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
         rules.setdefault(sel.strip(), []).append(body)
 
+    # the page assertions below need a built site, not only a stylesheet
+    ok, log = build(d)
     leaning = {s: b for s, b in rules.items()
                if ".desk .icon" in s and any("rotate" in x for x in b)}
     on_the_box = [s for s in leaning if not s.rstrip().endswith("img")]
@@ -1510,6 +1522,7 @@ def case_a_phone_desk_is_not_a_file_list(d: pathlib.Path) -> list[tuple[str, boo
     narrow = [b for b in rules.get(".desk", []) if "grid-template-columns" in b]
 
     return [
+        ("builds", ok),
         ("the pictures lean", leaning != {}),
         ("and the lean is on the picture, never on the box that is measured",
          on_the_box == []),
@@ -1527,6 +1540,31 @@ def case_a_phone_desk_is_not_a_file_list(d: pathlib.Path) -> list[tuple[str, boo
         # is itself one of her photographs
         ("and is still separated from the wallpaper under it",
          any("box-shadow" in b for b in rules.get(".icon img.is-photo", []))),
+        # EVERY image she drops onto ANY desk, not just the one the
+        # rule was written for. A first photograph, a cover she put on
+        # a project, her portrait on about me.txt — all her work, all
+        # treated the same. Only a drawn `.svg` is one of our symbols.
+        ("every photograph on every desk is one of them",
+         all(len(re.findall(r'<img class="is-photo"',
+                            re.search(r'<main class="desk".*?</main>',
+                                      page(d, pg), re.S).group(0))) == n
+             for pg, n in (("index.html", 1),
+                           ("da/index.html", 5),
+                           ("graphic-design/index.html", 3)))),
+        ("her portrait among them, at its own shape and not a square",
+         bool(re.search(r'data-vt="about-me-txt"[^>]*>\s*<img class="is-photo"'
+                        r'[^>]*about\.[^>]*width="(?!160")',
+                        page(d, "index.html"), re.S))),
+        # and the symbols are still symbols: the home desk has more
+        # icons than photographs on it, which is only true while the
+        # drawn ones are left alone
+        ("a drawn symbol is still a symbol",
+         len(re.findall(r'<a class="icon"',
+                        re.search(r'<main class="desk".*?</main>',
+                                  page(d, "index.html"), re.S).group(0)))
+         > len(re.findall(r'<img class="is-photo"',
+                          re.search(r'<main class="desk".*?</main>',
+                                    page(d, "index.html"), re.S).group(0)))),
     ]
 
 

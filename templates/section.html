@@ -113,7 +113,7 @@
     {% set sub = get_section(path=p) %}
     {% set_global ic_title = sub.title %}{% set_global ic_href = sub.permalink %}
     {% set_global ic_path = sub.path %}{% set_global ic_assets = sub.assets %}
-    {% set_global ic_declared = sub.extra.icon %}{% set_global ic_x = sub.extra.x %}{% set_global ic_y = sub.extra.y %}
+    {% set_global ic_declared = sub.extra.icon %}{% set_global ic_from_assets = false %}{% set_global ic_x = sub.extra.x %}{% set_global ic_y = sub.extra.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "folder" %}
     {% set_global ic_opens = "" %}
     {% set_global ic_window = "" %}
@@ -128,7 +128,7 @@
   {% for p in section.pages %}
     {% set_global ic_title = p.title %}{% set_global ic_href = p.permalink %}
     {% set_global ic_path = p.path %}{% set_global ic_assets = p.assets %}
-    {% set_global ic_declared = p.extra.icon %}{% set_global ic_x = p.extra.x %}{% set_global ic_y = p.extra.y %}
+    {% set_global ic_declared = p.extra.icon %}{% set_global ic_from_assets = false %}{% set_global ic_x = p.extra.x %}{% set_global ic_y = p.extra.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}
     {% set_global ic_window = "" %}
     {% set_global ic_opens = p.extra.opens | default(value="") %}
@@ -155,12 +155,14 @@
         front, and `/en/…/about.jpg` is not a file anybody can resize —
         so the prefix comes off, exactly as the wallpaper does. -#}
     {%- set_global ic_declared = item.icon -%}
+    {%- set_global ic_from_assets = false -%}
     {%- if item.window == "about" -%}
       {%- for a in section.assets -%}
         {%- if a | split(pat="/") | last | split(pat=".") | first == "about" -%}
           {%- if lang != config.default_language -%}
             {%- set_global ic_declared = a | replace(from="/" ~ lang ~ "/", to="/") -%}
           {%- else -%}{%- set_global ic_declared = a -%}{%- endif -%}
+          {%- set_global ic_from_assets = true -%}
         {%- endif -%}
       {%- endfor -%}
     {%- endif -%}
