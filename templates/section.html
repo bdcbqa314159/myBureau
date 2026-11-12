@@ -140,7 +140,31 @@
   {% for item in section.extra.items | default(value=[]) %}
     {% set_global ic_title = item.name %}{% set_global ic_href = item.url | default(value="#") %}
     {% set_global ic_path = item.name %}{% set_global ic_assets = [] %}
-    {% set_global ic_declared = item.icon %}{% set_global ic_x = item.x %}{% set_global ic_y = item.y %}
+    {#- HER PHOTOGRAPH IS THE ICON. `about me.txt` is a window, so it
+        has no folder of its own to take a face from — it used to wear a
+        drawn one while her portrait sat inside the window. The portrait
+        is the better icon and the window is better without it: it is a
+        .txt, and a .txt is words.
+
+        A file called `about.*` beside this `_index.md`, which is the
+        same convention as `icon.*` and `wallpaper.*`. Nothing to
+        declare, and the drawn icon stays as the answer when there is
+        no photograph yet.
+
+        A translated section reports its assets with the language in
+        front, and `/en/…/about.jpg` is not a file anybody can resize —
+        so the prefix comes off, exactly as the wallpaper does. -#}
+    {%- set_global ic_declared = item.icon -%}
+    {%- if item.window == "about" -%}
+      {%- for a in section.assets -%}
+        {%- if a | split(pat="/") | last | split(pat=".") | first == "about" -%}
+          {%- if lang != config.default_language -%}
+            {%- set_global ic_declared = a | replace(from="/" ~ lang ~ "/", to="/") -%}
+          {%- else -%}{%- set_global ic_declared = a -%}{%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+    {%- endif -%}
+    {% set_global ic_x = item.x %}{% set_global ic_y = item.y %}
     {% set_global ic_slot = slot %}{% set_global ic_kind = "file" %}
     {% set_global ic_window = item.window | default(value="") %}
     {% set_global ic_opens = "" %}

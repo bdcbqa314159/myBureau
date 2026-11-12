@@ -446,7 +446,7 @@ function inspectAbout(o) {
   look.innerHTML = `
     <h2>about me.txt</h2>
     <p class="what">présentation · la fenêtre de la page d'accueil</p>
-    <label>ta photo
+    <label>ta photo — c'est elle, l'icône sur le bureau
       <div class="face wide" data-drop="about">${o.about
         ? `<img src="${q("/media/" + o.path + "/" + o.about)}" alt="">`
         : `<span>aucune photo pour l'instant</span>`}</div>
@@ -456,8 +456,8 @@ function inspectAbout(o) {
       <label>ton texte (${l})
         <textarea data-body="${l}">${esc(o.bodies[l] || "")}</textarea>
       </label>`).join("")}
-    <p class="hintline">La photo s'affiche en haut de la fenêtre, le texte
-       juste en dessous.</p>`;
+    <p class="hintline">La photo est l'icône de <em>about me.txt</em> sur
+       le bureau. La fenêtre, elle, ne montre que ton texte.</p>`;
   wire(o);
 }
 
