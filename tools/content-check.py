@@ -1517,6 +1517,16 @@ def case_a_phone_desk_is_not_a_file_list(d: pathlib.Path) -> list[tuple[str, boo
          staggered != []),
         ("the icons are smaller than a column of the old grid",
          any("minmax(5.2rem" in b for b in narrow)),
+        # A PHOTOGRAPH ON A DESK IS THE WORK, NOT A PRINT OF IT. The
+        # white ground and the padding around it made every picture
+        # wear a little mount.
+        ("a photograph on a desk wears no white mount",
+         not any("background: #fff" in b or "padding: 3px" in b
+                 for b in rules.get(".icon img.is-photo", []))),
+        # but it still has to be told apart from the wallpaper, which
+        # is itself one of her photographs
+        ("and is still separated from the wallpaper under it",
+         any("box-shadow" in b for b in rules.get(".icon img.is-photo", []))),
     ]
 
 
