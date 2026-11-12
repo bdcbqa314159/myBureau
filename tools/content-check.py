@@ -1325,9 +1325,18 @@ def case_a_photograph_has_no_close_box(d: pathlib.Path) -> list[tuple[str, bool]
          any("padding: 0" in b for b in shot_body)),
         ("the band takes its share and the picture takes the rest",
          any("minmax(0, 1fr)" in b for b in rules.get(".win-shot", []))),
-        ("so a tall photograph cannot push the band off the screen",
-         any("max-height: 100%" in b
+        # A PERCENTAGE NEEDS SOMETHING TO BE A PERCENTAGE OF. The
+        # dialog centres its items, and a centred grid item is sized to
+        # its content rather than stretched — so the box holding the
+        # picture had no height, `max-height: 100%` resolved against
+        # nothing, and a tall photograph was held by its width alone.
+        ("the box takes the row it was given rather than its contents",
+         any("align-self: stretch" in b for b in shot_body)),
+        ("so the picture is bounded in both directions",
+         any("max-height: 100%" in b and "max-width: 100%" in b
              for b in rules.get(".win-shot .preview-body img", []))),
+        ("and sits in the middle of the room it has",
+         any("align-content: center" in b for b in shot_body)),
     ]
 
 
