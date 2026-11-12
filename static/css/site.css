@@ -606,13 +606,22 @@ img.will-fade.is-in { opacity: 1; }
 }
 .win-preview::backdrop { background: rgb(0 0 0 / .62); }
 
+/* THE SAME BOX THE GALLERY USES, and for the same reasons. Stretched
+   to the dialog so it has a size of its own, flex so the picture is
+   centred and is exactly itself, and it never scrolls.
+
+   Clicking a photograph should show you the photograph — all of it, at
+   once. It used to open and still need scrolling, which is a strange
+   thing to ask of someone who has just asked to see something.
+
+   ONE PICTURE IS ALL THAT REACHES HERE. A thing on a desk that opens
+   as a photograph holds exactly one — `a picture on a desk is one
+   picture` asserts it — so there is nothing to stack and nothing to
+   scroll past. */
 .preview-body {
-  display: grid; gap: .7rem; justify-items: center;
-  /* `max-content` was the other half of the same bug: it sized this to
-     the picture rather than to the room, so `max-width: 100%` on the
-     image below meant "100% of the photograph". */
-  max-width: 100%; max-height: 100%;
-  overflow-y: auto;
+  align-self: stretch; justify-self: stretch;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
 }
 /* BOUNDED BY THE SCREEN, in both directions and in viewport units.
    The height was already measured against the viewport and the width
@@ -621,8 +630,9 @@ img.will-fade.is-in { opacity: 1; }
    way is what makes a picture fit a phone whatever shape it is. */
 .preview-body img {
   display: block;
-  max-width: calc(100vw - 2 * var(--pad));
-  max-height: calc(100dvh - 2 * var(--pad));
+  /* the room it has, which is the dialog minus its padding — measured
+     by the box above rather than guessed from the viewport */
+  max-width: 100%; max-height: 100%;
   width: auto; height: auto;
 }
 
