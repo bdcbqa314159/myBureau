@@ -1118,10 +1118,20 @@ body.gallery { background: #0d0b0a; }
 .win-shot { grid-template-rows: auto minmax(0, 1fr); }
 .win-shot .preview-body {
   padding: 0; background: none; min-height: 0;
+  /* TAKE THE ROW, DO NOT BE SIZED BY WHAT IS IN IT.
+     `.win-preview[open]` centres its items, and a centred grid item is
+     sized to its content rather than stretched. So this box had no
+     height of its own — and `max-height: 100%` on the picture below
+     resolved against nothing and bounded nothing. A tall photograph
+     was held by its width alone and ran off the bottom.
+     Stretching gives the row's definite height somewhere to land. */
+  align-self: stretch; justify-self: stretch;
+  align-content: center;        /* and the picture sits in the middle of it */
 }
-/* Bounded by the room LEFT, not by the whole screen: the band above has
-   already taken its share. */
-.win-shot .preview-body img { max-height: 100%; }
+/* Bounded by the room LEFT, in BOTH directions: the band above has
+   already taken its share, and `100%` now means something because the
+   box above has a size. */
+.win-shot .preview-body img { max-width: 100%; max-height: 100%; }
 
 /* ====================================================================
    author credit — licence §4, do not remove
