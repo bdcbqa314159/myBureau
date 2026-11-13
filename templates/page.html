@@ -24,37 +24,31 @@
   <h1 class="sr-only">{{ w.title }}</h1>
   <div class="proj-intro">{{ w.content | safe }}</div>
 
-  {#- TWO RHYTHMS, AND WHICH ONE DEPENDS ON WHAT THIS PAGE IS.
+  {#- ONE RHYTHM. Its name, its text, and then its work in ONE COLUMN,
+      every photograph taking the whole width. Each picture gets all
+      the space there is, and you keep going down.
 
-      A SUBFOLDER — maison cosette, Atelier Mirabelle, Logofolio — is a
-      blank page: its name, its text, and then its work in ONE COLUMN,
-      every photograph taking the whole width. Each picture gets all the
-      space there is, and you keep going down. No pairs, and no width
-      of its own: varying widths belong to travail sélectionné and
-      nowhere else.
+      THERE WERE TWO. A subfolder got this column; a project got the
+      prototype's rhythm — one photograph full width, then pairs with
+      cream around them. That was a difference nobody could see the
+      reason for from the desk: `grocery list` and `maison cosette` sit
+      side by side as two icons, and clicking them gave two different
+      pages.
 
-      A PROJECT keeps the rhythm from the prototype: the first photograph
-      opens it at full width, and everything after it sits in pairs with
-      cream around them. One big thing, then quieter ones — which is what
-      stops a project reading as a pile of images at one size.
+      Everything on DA and graphic design is one class. A photo, a
+      video and a folder differ in WHAT THEY ARE — and a photo still
+      opens in place, a video still plays in its window — but anything
+      that goes to a page goes to THIS page. 2026-11-13, from the
+      client via Bernardo: *reduce the other objects to act like
+      folders and uniformise this class.*
 
-      Decided by POSITION, not by the shape of the photograph. Position is
-      predictable: she can see which image is first by its name, and
-      renaming 02.jpg to 00.jpg moves it. An aspect-ratio rule would make
-      the page rearrange itself for reasons she cannot see from the
-      Finder.
+      No width of its own either: varying widths belong to travail
+      sélectionné and nowhere else.
 
       Shape is left to CSS, which can bound a tall photograph by its
-      HEIGHT instead of cropping it. Nothing here cuts anyone's picture.
-
-      There are no macros in this engine, so the pairs container is opened
-      and closed inside the loop with a flag. `paired` is the flag. -#}
-  {#- A section is a subfolder; a page is a project. One flag, read
-      twice below, so the two rhythms cannot disagree about which page
-      they are on. -#}
-  {% set one_column = section is defined %}
+      HEIGHT instead of cropping it. Nothing here cuts anyone's
+      picture. -#}
   {% set_global shown = 0 %}
-  {% set_global paired = false %}
 
   {#- THE FILM, where there is one. A project page rendered a folder's
       photographs and silently ignored its video, which left two holes:
@@ -144,8 +138,7 @@
             {% set shape = get_image_metadata(path=asset) %}
       {% set one = resize_image(path=asset, width=900, op="fit_width", format="webp", quality=78) %}
       {% set two = resize_image(path=asset, width=1800, op="fit_width", format="webp", quality=78) %}
-      {%- if shown == 0 or one_column -%}
-        <figure class="proj-open"><img src="{{ one.url }}"
+      <figure class="proj-open"><img src="{{ one.url }}"
           srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
           sizes="100vw"
           width="{{ shape.width }}" height="{{ shape.height }}" alt="{{ alt }}"
@@ -158,20 +151,9 @@
               everything is. That page was 544 KB on arrival, the
               heaviest on the site, on the device we have been fixing. -#}
           {% if shown == 0 %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}></figure>
-      {%- else -%}
-        {%- if not paired %}<div class="proj-pairs">{% set_global paired = true %}{% endif -%}
-        {#- half the page from here, so the browser stops fetching the
-            width it needed for the opener -#}
-        <figure class="proj-fig"><img src="{{ one.url }}"
-          srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
-          sizes="(max-width: 52rem) 100vw, 44vw"
-          width="{{ shape.width }}" height="{{ shape.height }}" alt="{{ alt }}"
-          decoding="async" loading="lazy"></figure>
-      {%- endif -%}
       {% set_global shown = shown + 1 %}
     {% endif %}
   {% endfor %}
-  {% if paired %}</div>{% endif %}
 
   {#- WHAT IS INSIDE, when this page is a folder.
 

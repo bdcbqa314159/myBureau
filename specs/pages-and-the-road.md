@@ -3,7 +3,8 @@
 **Status:** the four behaviours are built. The panel's half is not.
 **Date:** 2026-11-07, replacing *DA as a road*; amended 2026-11-12,
 when the client asked for the road straightened — see *The road is
-straight now*.
+straight now*; amended again 2026-11-13, when the two rhythms became
+one — see *One class, one page*.
 
 ## What each thing is
 
@@ -19,10 +20,42 @@ desks. The road belongs to `travail sélectionné` alone.
 | `travail sélectionné` | the **only** road | photographs down a vertical route, at varying widths |
 | `pellicules` | a gallery | its grid |
 | a **subfolder** (`maison cosette`, `Atelier Mirabelle`, `Logofolio`) | a blank page | title, text, work in **one column** |
-| a **project** (`grocery list`) | a page | the prototype's rhythm: one opener, then pairs |
+| a **project** (`grocery list`, `calendar`, `douze regards`) | the same blank page | the same one column — see *One class, one page* |
 
-Four different things. None of them is the default, and the drift that
-produced this file happened because two of them were treated as one.
+Four different things, and the last two are now one. None of them is
+the default, and the drift that produced this file happened because
+two of them were treated as one.
+
+## One class, one page
+
+**2026-11-13, from the client via Bernardo.** Everything sitting on DA
+or graphic design is one class. What an object IS still differs — a
+photo, a video, a folder — and so does what clicking it does:
+
+| object | is | click |
+|---|---|---|
+| theodora 01, confidence glow 01/02 | a photo | opens in place, on the desk |
+| june's cry | a video | plays in its window, on the desk |
+| maison cosette, atelier mirabelle, logofolio | a folder | its page |
+| grocery list, calendar, douze regards | neither | its page |
+
+**Photos and videos are unchanged.** What changed is the page: there
+used to be two of them.
+
+A subfolder got a plain column; a project got the prototype's rhythm —
+one photograph full width, then pairs with cream around them. From the
+desk that difference had no visible cause: `grocery list` and `maison
+cosette` are two icons side by side that gave two different pages.
+
+So the rhythm is withdrawn. `page.html` has one shape, and the pairs
+container, its flag, `.proj-pairs` and `.proj-fig` are gone with it.
+`.proj-open` keeps its name although every photograph is an opener
+now — renaming it would touch every template and check that spells it,
+for nothing a visitor can see.
+
+**What stayed:** only the first image is eager. Nine photographs all
+marked urgent is the same as none marked urgent, and that is how the
+subfolder page once became the heaviest on the site.
 
 ## The blank page of a subfolder
 
@@ -121,7 +154,7 @@ that belongs to the road.
 | # | criterion | oracle |
 |---|---|---|
 | 1 | a subfolder page is one column | every figure full width, no pairs container |
-| 2 | a project page keeps opener-then-pairs | the pairs container is still built |
+| 2 | a project page is the same page as a subfolder's | no pairs container anywhere, every figure full width |
 | 3 | a subfolder carries no pinning | no inline `--w` on its figures |
 | 4 | the road is on travail sélectionné and nowhere else | asserted against each of the four |
 | 5 | a pin reaches the stop | inline custom properties rendered |
@@ -147,3 +180,8 @@ that belongs to the road.
   "only look and scroll" and still be reachable.
 - **She wants every photograph the same width.** Then `width` goes too
   and the rhythm with it, and the road is a plain column.
+- **She misses the pairs.** The rhythm was the prototype's and it was
+  liked; it was dropped because it applied to a class of object rather
+  than to a choice she made. If it comes back it comes back as a
+  setting per object, not as a consequence of whether a folder has an
+  `_index.md`.
