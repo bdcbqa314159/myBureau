@@ -50,8 +50,19 @@
       {%- set_global ic_clip = a -%}
     {%- elif leaf | split(pat=".") | last | lower in config.extra.doc_types -%}
       {%- set_global ic_doc = a -%}
+    {#- `not_photographs`, the SAME list _preview.html uses, because the
+        two are answering the same question: is there a picture of hers
+        here to show? This excluded `icon` alone, borrowing the rule
+        from the face chooser further down — which answers a different
+        question and is a deliberate exception for a different reason.
+
+        What that cost: a folder whose only image was `poster.jpg` or
+        `wallpaper.jpg` got a `data-window` here and no dialog from
+        _preview.html, so the click did nothing at all. Both shapes are
+        reachable — delete the video from a film and the poster stays;
+        a desk converted to a folder keeps its wallpaper. -#}
     {%- elif leaf | split(pat=".") | last | lower in config.extra.image_types
-             and leaf | split(pat=".") | first != "icon" -%}
+             and not (leaf | split(pat=".") | first in config.extra.not_photographs) -%}
       {%- set_global ic_still = true -%}
     {%- endif -%}
   {%- endfor -%}

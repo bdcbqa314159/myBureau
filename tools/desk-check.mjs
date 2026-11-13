@@ -301,5 +301,78 @@ check("the bar's measured height is published for the stylesheet",
       rootStyle.getPropertyValue("--bar-h") === "88px",
       rootStyle.getPropertyValue("--bar-h") || "(none)");
 
+// --------------------------------------------------------------------
+// A CLICK THAT DOES NOTHING.
+//
+// An icon says `data-window="preview-x"` and the dialog was never
+// rendered. The handler used to suppress the link FIRST and look for
+// the window after, so the icon did not open anything and did not go
+// to its page either — a click that was simply ignored, with a clean
+// build and a green suite behind it.
+//
+// The templates that disagreed agree again, so this is the floor
+// rather than the fix: whatever they do next, the worst case is that
+// the icon navigates, which is what it does with no JavaScript at all.
+//
+// Clicked for real, against the compiled desk.js. A regex over the
+// source was tried first and matched `getElementById … preventDefault`
+// in an unrelated handler, so it could not fail.
+// --------------------------------------------------------------------
+class FakeDialog {
+  constructor() { this.opened = false; }
+  showModal() { this.opened = true; }
+}
+function clickIconNaming(windowId, dialogs) {
+  let listener = null;
+  const icon = {
+    dataset: { window: windowId },
+    classList: { add() {}, remove() {}, contains: () => false },
+    style: fakeStyle(),
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 160, height: 180 }),
+    addEventListener(type, fn) { if (type === "click") listener = fn; },
+  };
+  const ctxc = {
+    ...sandbox,
+    HTMLDialogElement: FakeDialog,
+    // the handler tests `e instanceof MouseEvent` to tell a pointer
+    // click from a keyboard one; the event below is neither, which is
+    // the pointer branch and the one that matters here
+    MouseEvent: class MouseEvent {},
+    document: {
+      ...sandbox.document,
+      // ONLY the bare ".icon" pass, which is the one that attaches this
+      // handler. ".desk .icon" makes an icon draggable, and a dragged
+      // icon sets the flag this handler checks before anything else.
+      querySelectorAll: (sel) => (sel === ".icon" ? [icon] : nothing),
+      getElementById: (id) => dialogs[id] ?? null,
+    },
+  };
+  ctxc.globalThis = ctxc;
+  vm.runInContext(readFileSync("static/js/desk.js", "utf8"), vm.createContext(ctxc));
+  if (listener === null) return { attached: false };
+  let prevented = false;
+  // detail 1, so it reads as a real pointer click rather than a
+  // keyboard activation
+  listener({ detail: 1, preventDefault() { prevented = true; },
+             stopImmediatePropagation() {} });
+  return { attached: true, prevented };
+}
+
+console.log("\n  an icon naming a window that is not there:");
+const missing = clickIconNaming("preview-nobody", {});
+check("the handler is attached at all", missing.attached === true);
+check("the link is NOT suppressed, so the icon goes to its page",
+      missing.prevented === false,
+      missing.prevented ? "preventDefault was called — the click does nothing" : "");
+
+// The control. Without it, a handler that never suppressed anything
+// would satisfy the assertion above and break every preview on the
+// site.
+const real = new FakeDialog();
+const there = clickIconNaming("preview-real", { "preview-real": real });
+check("while a window that IS there opens, and the link is suppressed",
+      there.prevented === true && real.opened === true,
+      `prevented=${there.prevented} opened=${real.opened}`);
+
 console.log(failed === 0 ? "\n  everything holds\n" : `\n  ${failed} FAILED\n`);
 process.exit(failed === 0 ? 0 : 1);
