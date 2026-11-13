@@ -2535,6 +2535,61 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_a_preview_is_one_picture(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """A preview is one screen with one picture on it.
+
+    It used to be "is there a picture at all", and the dialog rendered
+    EVERY photograph in the folder — six <img> laid in a flex row with
+    `overflow: hidden`, which shows slivers and clips the rest.
+
+    Nothing on either desk was in that position: every photograph
+    object holds exactly one, and `grocery list` holds six and carries
+    `opens = "page"`. So the suite was green and the failure was one
+    photograph away — SHE would have triggered it, by adding to a
+    project, which is the worst way for a thing to break.
+
+    Several photographs is a body of work rather than something to
+    glance at, so it goes to its page, where they are a column. That
+    also makes `opens = "page"` unnecessary for the only project that
+    carries it today; the key stays, because a SINGLE photograph may
+    still want its page.
+    """
+    photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
+    base = d / "content" / "da"
+    for name, n in (("une", 1), ("deux", 2), ("six", 6)):
+        q = base / name
+        q.mkdir()
+        (q / "index.md").write_text(FRONT.format(title=f"{name}.jpg", extra=""))
+        for i in range(1, n + 1):
+            (q / f"{i:02d}.jpg").write_bytes(photo)
+    ok, log = build(d)
+    desk = page(d, "da/index.html")
+
+    def window_of(slug: str) -> str:
+        for tag in re.findall(r'<a class="icon".*?>', desk, re.S):
+            if f'data-vt="{slug}"' in tag:
+                m = re.search(r'data-window="([^"]+)"', tag)
+                return m.group(1) if m else ""
+        return "NO SUCH ICON"
+
+    one = window_of("da-une")
+    return [
+        ("builds", ok),
+        ("one photograph opens in place", one.startswith("preview-")),
+        ("and the dialog holds exactly that one picture",
+         len(re.findall(r"<img", re.search(
+             r'<dialog[^>]*id="' + one + r'".*?</dialog>', desk, re.S).group(0))) == 1),
+        # TWO IS ALREADY TOO MANY. The boundary is where a rule is got
+        # wrong, and "any number of pictures" and "exactly one" differ
+        # first at two.
+        ("two photographs go to the page instead", window_of("da-deux") == ""),
+        ("and so do six", window_of("da-six") == ""),
+        ("no icon names a dialog that was not written", dangling(desk) == []),
+        ("and the page they go to shows every one of them",
+         page(d, "da/six/index.html").count('class="proj-open"') == 6),
+    ]
+
+
 def case_a_dead_click(d: pathlib.Path) -> list[tuple[str, bool]]:
     """An icon that names a window nobody rendered.
 
@@ -2663,6 +2718,7 @@ CASES = [
     ("a picture opens plain, a film keeps its frame", case_a_picture_opens_plain),
     ("a project inside a folder that is a page", case_film_in_a_folder),
     ("a dead click", case_a_dead_click),
+    ("a preview is one picture", case_a_preview_is_one_picture),
 ]
 
 

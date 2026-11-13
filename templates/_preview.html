@@ -15,12 +15,14 @@
     THIS FILE DECIDES WHETHER THERE IS A WINDOW AT ALL, the way _film.html
     does. section.html includes it for every project and it emits nothing
     when there is nothing to show — a folder with a video in it is a film,
-    a folder with no picture in it has nothing to preview, and a project
-    that says `opens = "page"` has asked to be read at full width.
-    One place to change the rule instead of a condition at each call.
+    a folder with no picture of hers has nothing to preview, a folder
+    with SEVERAL is a body of work and belongs on its page, and a
+    project that says `opens = "page"` has asked to be read at full
+    width. One place to change the rule instead of a condition at each
+    call.
 -#}
 {% set_global pv_clip = "" %}
-{% set_global pv_still = false %}
+{% set_global pv_stills = 0 %}
 {% set_global pv_doc = "" %}
 {% for a in fp.assets %}
   {% set leaf = a | split(pat="/") | last %}
@@ -29,13 +31,16 @@
   {% elif leaf | split(pat=".") | last | lower in config.extra.doc_types %}
     {% set_global pv_doc = a %}
   {% elif leaf | split(pat=".") | last | lower in config.extra.image_types and not (leaf | split(pat=".") | first in config.extra.not_photographs) %}
-    {% set_global pv_still = true %}
+    {% set_global pv_stills = pv_stills + 1 %}
   {% endif %}
 {% endfor %}
 {#- `pv_doc` keeps this in step with _icon.html, which sends a document
     to its own page: a brochure with a cover photograph in the folder
     would otherwise get a preview dialog here that no icon ever opens. -#}
-{% if pv_clip == "" and pv_doc == "" and pv_still and fp.extra.opens != "page" %}
+{#- EXACTLY ONE. _icon.html reaches the same conclusion about the same
+    folder, and the two must agree or an icon points at a dialog that
+    is not here. See the comment there for why one and not any. -#}
+{% if pv_clip == "" and pv_doc == "" and pv_stills == 1 and fp.extra.opens != "page" %}
 {#- NO FRAME. A photograph is the work; a title bar, a close box and a
     bevel around it are furniture from 1995 standing between her picture
     and the person looking at it. She asked for the picture plain, so

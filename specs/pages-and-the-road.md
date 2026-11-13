@@ -34,10 +34,21 @@ photo, a video, a folder — and so does what clicking it does:
 
 | object | is | click |
 |---|---|---|
-| theodora 01, confidence glow 01/02 | a photo | opens in place, on the desk |
+| theodora 01, confidence glow 01/02 | **one** photo | opens in place, on the desk |
 | june's cry | a video | plays in its window, on the desk |
 | maison cosette, atelier mirabelle, logofolio | a folder | its page |
 | grocery list, calendar, douze regards | neither | its page |
+
+**One photograph, or it is not a preview** (2026-11-13). A preview is
+one screen with one picture on it — pressing space on a Mac, which is
+what the brief asks for by name. Several photographs is a body of work
+rather than something to glance at, so it goes to the page, where they
+are a column.
+
+The rule was "is there a picture at all", and the dialog rendered every
+photograph in the folder into a flex row that clips what will not fit.
+Nothing was in that position, so it would have arrived the day she
+added a second photograph to a project.
 
 **Photos and videos are unchanged.** What changed is the page: there
 used to be two of them.
