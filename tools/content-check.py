@@ -2535,6 +2535,82 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_a_dead_click(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """An icon that names a window nobody rendered.
+
+    `dangling()` has been asserted on nearly every case here since the
+    folder windows went, and it never caught this — because no fixture
+    held the shape that triggers it. The check was right and the
+    content was missing, which is the quietest way for a suite to be
+    green and wrong.
+
+    THE SHAPE: a folder whose only image is one of OURS. _icon.html
+    asked "is there an image that is not icon.*" and _preview.html
+    asked "is there an image that is not icon, poster or wallpaper" —
+    the second being the real question, the first borrowed from the
+    face chooser, which answers something else. So the icon pointed at
+    a dialog _preview.html had refused to write.
+
+    Both arrangements are reachable without anybody doing anything
+    strange:
+
+      a film whose video is deleted keeps its poster.jpg
+      a desk converted to a folder keeps its wallpaper.jpg
+
+    And it was worse than a click that opens nothing: desk.js called
+    preventDefault() before looking for the dialog, so the icon did not
+    even fall through to its own page. That order is reversed now, so
+    the floor under any future disagreement is "it navigates".
+    """
+    photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
+    base = d / "content" / "da"
+    for name, files in (("sans-film", ("poster.jpg",)),
+                        ("mur", ("wallpaper.jpg",)),
+                        ("vraie", ("01.jpg",))):
+        q = base / name
+        q.mkdir()
+        (q / "index.md").write_text(FRONT.format(title=f"{name}.jpg", extra=""))
+        for f in files:
+            (q / f).write_bytes(photo)
+    ok, log = build(d)
+    desk = page(d, "da/index.html")
+
+    def window_of(slug: str) -> str:
+        m = re.search(r'<a class="icon[^"]*"[^>]*data-vt="' + slug + r'"[^>]*>',
+                      desk, re.S)
+        if not m:
+            # the attributes span lines; find the tag, then read it
+            for tag in re.findall(r'<a class="icon".*?>', desk, re.S):
+                if f'data-vt="{slug}"' in tag:
+                    m2 = re.search(r'data-window="([^"]+)"', tag)
+                    return m2.group(1) if m2 else ""
+            return "NO SUCH ICON"
+        m2 = re.search(r'data-window="([^"]+)"', m.group(0))
+        return m2.group(1) if m2 else ""
+
+    return [
+        ("builds", ok),
+        ("nothing on the desk names a window that was never rendered",
+         dangling(desk) == []),
+        ("a film whose video is gone goes to its page, not nowhere",
+         window_of("da-sans-film") == ""),
+        ("and a folder left holding a wallpaper does too",
+         window_of("da-mur") == ""),
+        # WITHOUT THIS THE THREE ABOVE PASS BY SHOWING NOTHING AT ALL.
+        # A rule that previews nothing anywhere satisfies every one of
+        # them; the control is what makes them mean "only these two".
+        ("while a real photograph still opens in place",
+         window_of("da-vraie").startswith("preview-")),
+        ("and the dialog it names is really there",
+         f'id="{window_of("da-vraie")}"' in desk),
+        # The script half of this — that an icon naming a window which
+        # is not there NAVIGATES rather than doing nothing — is in
+        # desk-check.mjs, which runs the real desk.js and clicks. A
+        # regex here matched `getElementById … preventDefault` in an
+        # unrelated handler and could not fail.
+    ]
+
+
 CASES = [
     ("a project with no icon", case_no_icon),
     ("PHOTO.JPG in capitals", case_shouting_extension),
@@ -2586,6 +2662,7 @@ CASES = [
     ("a .DS_Store does not stop the preview", case_finder_droppings),
     ("a picture opens plain, a film keeps its frame", case_a_picture_opens_plain),
     ("a project inside a folder that is a page", case_film_in_a_folder),
+    ("a dead click", case_a_dead_click),
 ]
 
 

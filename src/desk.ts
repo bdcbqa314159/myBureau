@@ -709,9 +709,20 @@ document.querySelectorAll<HTMLElement>(".icon").forEach((icon) => {
     }
     const id = icon.dataset["window"];
     if (id === undefined) return;   // an ordinary link: let it navigate
-    e.preventDefault();
+    // THE DIALOG FIRST, THEN THE PREVENT. This suppressed the link and
+    // then looked for the window, so an icon naming a dialog that was
+    // never rendered did NOTHING AT ALL — not even go to its page. The
+    // templates disagreed about which images count as hers, and that
+    // was the whole of the symptom: a click that was simply ignored.
+    //
+    // The templates agree again, so this is a floor rather than a fix.
+    // It costs one reordering and turns the worst case from "the icon
+    // is broken" into "the icon navigates", which is what it does
+    // without JavaScript anyway.
     const win = document.getElementById(id);
-    if (win instanceof HTMLDialogElement) win.showModal();
+    if (!(win instanceof HTMLDialogElement)) return;
+    e.preventDefault();
+    win.showModal();
   });
 });
 
