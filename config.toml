@@ -26,14 +26,26 @@ image_types = ["jpg", "jpeg", "png", "webp", "avif", "gif"]
 
 # Names that are never one of HER photographs, whatever their
 # extension: the face on a desk, a film's still, the ground a desk
-# stands on. This was written out in five templates with three
-# different answers — a wallpaper could turn up inside a preview and a
-# poster inside the gallery — so it lives here now.
+# stands on, her portrait. This was written out in five templates with
+# three different answers — a wallpaper could turn up inside a preview
+# and a poster inside the gallery — so it lives here.
 #
-# _icon.html deliberately does not use this list. It is choosing a FACE
-# for a desk, and a film's poster is exactly the right face; excluding
-# it would send every film back to a drawn symbol.
-not_photographs = ["icon", "poster", "wallpaper"]
+# THE PANEL AND THE TOOLS READ IT TOO, through tools/filetypes.py.
+# They each kept their own copy: the panel's had four names, look.py's
+# had two, and this had three. look.py's omission was live — a folder
+# holding nothing but a wallpaper counted as a folder with work in it,
+# so the "this page is empty" warning could never fire on the one
+# shape that most needs it.
+#
+# `about` is here rather than panel-only. It is the portrait on the
+# home desk, section.html finds it by name, and a file called
+# about.jpg inside a project was never meant to be rendered as work.
+#
+# _icon.html uses this list to decide whether there is anything to
+# preview, and deliberately does NOT use it when choosing a FACE for a
+# desk: a film's poster is exactly the right face, and excluding it
+# would send every film back to a drawn symbol.
+not_photographs = ["icon", "poster", "wallpaper", "about"]
 
 # A project folder containing one of these opens as a window on the
 # bureau instead of navigating to a page: the film beside the text that
