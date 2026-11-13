@@ -50,6 +50,27 @@ photograph in the folder into a flex row that clips what will not fit.
 Nothing was in that position, so it would have arrived the day she
 added a second photograph to a project.
 
+**And what it exposed** (2026-11-13). A photograph that opens in
+place shows the picture and nothing else: the preview carries no way
+to the page, by her own decision, and the icon's own link is
+intercepted. So **the paragraph she writes about a photograph is
+reachable by nothing on the site.**
+
+`opens = "page"` is the way out, and the panel reported the key
+without being able to write it. It can now — *en cliquant sur
+l'icône: la photo / la page* — offered only where there is a choice
+to make. A film always opens its window, a dossier and several
+photographs always open the page, and a switch there would be a
+setting that does nothing.
+
+The panel writes `opens = "image"` rather than removing the line: an
+absent key and that value mean the same to the templates, and only one
+of them lets the panel show the switch without guessing.
+
+**What would change this:** a preview that carries her words, or a way
+from a preview to the page. Both were taken off on her say-so, so the
+key is the route today.
+
 **What this withdrew** (2026-11-13). Two photographs behind one icon
 used to be an error: the second was reachable only by opening the
 first. `look.py` told her so and advised one folder per photograph,
