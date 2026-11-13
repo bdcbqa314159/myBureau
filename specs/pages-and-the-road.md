@@ -50,6 +50,14 @@ photograph in the folder into a flex row that clips what will not fit.
 Nothing was in that position, so it would have arrived the day she
 added a second photograph to a project.
 
+**What this withdrew** (2026-11-13). Two photographs behind one icon
+used to be an error: the second was reachable only by opening the
+first. `look.py` told her so and advised one folder per photograph,
+and `content-check` enforced it. Neither is true now — every
+photograph in a folder is shown on its page — so the warning and the
+check are gone. `grocery list` is six photographs in one folder and is
+exactly right.
+
 **Photos and videos are unchanged.** What changed is the page: there
 used to be two of them.
 

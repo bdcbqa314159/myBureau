@@ -32,7 +32,6 @@ STATIC = ROOT / "static"
 # so it must not hold its own idea of what a photograph is.
 IMAGE_TYPES = filetypes.IMAGE_TYPES
 VIDEO_TYPES = filetypes.VIDEO_TYPES
-DOC_TYPES = filetypes.DOC_TYPES
 SPOKEN_FOR = filetypes.SPOKEN_FOR
 # things a design program exports that this site will not show
 LOOKS_LIKE_AN_IMAGE = {"tif", "tiff", "bmp", "heic", "heif", "psd", "ai", "svg", "raw", "dng", "cr2", "nef"}
@@ -149,33 +148,22 @@ def main() -> int:
                 "   fix: add images to the folder, or write something under the +++",
             ]))
 
-    # 5b. two photographs behind one icon -> the second is unreachable
+    # 5b. WITHDRAWN — two photographs behind one icon.
     #
-    # A thing on a desk that opens as a photograph is ONE photograph.
-    # Put two in, and the desk shows one icon: the second exists, is
-    # built, and can only be reached by opening the first. A film, a
-    # document and a page are all allowed to hold several — each says so
-    # in a way the engine already reads, so none of them lands here.
-    for md in sorted(CONTENT.rglob("index.md")):
-        folder = md.parent
-        if 'opens = "page"' in md.read_text(encoding="utf-8", errors="replace"):
-            continue
-        files = [f for f in folder.iterdir() if f.is_file()]
-        exts = {f.suffix.lstrip(".").lower() for f in files}
-        if exts & VIDEO_TYPES or exts & DOC_TYPES:
-            continue
-        pictures = [f for f in files
-                    if f.suffix.lstrip(".").lower() in IMAGE_TYPES
-                    and f.stem.lower() not in SPOKEN_FOR]
-        if len(pictures) > 1:
-            notes.append((str(folder.relative_to(ROOT)), [
-                f"{len(pictures)} photos ici, mais une seule icone sur le"
-                " bureau — on ne peut ouvrir les autres qu'en passant par"
-                " la premiere",
-                "   fix: un dossier par photo, chacune avec son nom",
-                '   ou, si c\'est une page avec plusieurs images voulues :'
-                ' ajoute opens = "page" dans [extra]',
-            ]))
+    # This told her: "N photos here, but only one icon on the desk — the
+    # others can only be opened by going through the first", and advised
+    # one folder per photograph.
+    #
+    # It was true, and it is not any more. A thing holding several
+    # photographs goes to its page now, where all of them are shown in a
+    # column; only a thing holding exactly ONE opens in place. So there
+    # is no "going through the first" left to warn about, and the advice
+    # had become wrong — `grocery list` is six photographs in one folder
+    # and is exactly right.
+    #
+    # Removed rather than reworded, because there is nothing left to say.
+    # A warning that names no consequence teaches her to skim this tool,
+    # and this tool is only worth anything if she reads every line of it.
 
     # 6. a text file that is nearly index.md -> the folder is not on the site
     #    TextEdit saves `index.md` as `index.md.txt` unless you insist, and
