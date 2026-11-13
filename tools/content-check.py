@@ -967,9 +967,12 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
          "processed_images" in icon_of("da-dossier-couverture")),
         ("its page shows the document",
          bool(re.search(r'<iframe[^>]*src="[^"]*grocery\.pdf', cv))),
+        # The cover used to be below the document BECAUSE it fell into
+        # the pairs block. There is no pairs block now, so the order is
+        # what the template writes: document first, photographs after.
         ("and the cover below it, not competing with it",
-         cv.index("grocery.pdf") < cv.index("proj-pairs")
-         if "proj-pairs" in cv else False),
+         'class="proj-open"' in cv
+         and cv.index("grocery.pdf") < cv.index('class="proj-open"')),
     ]
 
 
@@ -1003,13 +1006,26 @@ def case_gallery_photographs_open(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
-def case_the_project_page_has_a_rhythm(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """One big thing, then quieter ones — and never a broken container.
+def case_the_project_page_is_a_column(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Every page on a desk is the same page.
 
-    The pairs block is opened and closed inside a loop with a flag,
-    because this template engine has no macros. A flag that is set and
-    never cleared leaves an unclosed <div>, which browsers paper over and
-    nobody notices until a layout goes strange three pages later.
+    THIS CASE IS REVERSED. It asserted the prototype's rhythm — one
+    photograph full width, then pairs with cream around them — against
+    a subfolder's plain column, and the difference was invisible from
+    the desk: `grocery list` and `maison cosette` are two icons side by
+    side that gave two different pages.
+
+    2026-11-13, from the client via Bernardo: everything on DA and
+    graphic design is one class, and anything that goes to a page goes
+    to THAT page. A photo still opens in place and a video still plays
+    in its window — what changed is only what a page looks like.
+
+    The pairs container is gone with the rhythm, and the flag that
+    opened and closed it inside the loop with it. That flag was the
+    reason for half this case: there are no macros in this engine, so
+    an unclosed <div> was one missed branch away. The balance check
+    stays anyway — it costs nothing and the template still has
+    containers.
     """
     photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
     base = d / "content" / "da"
@@ -1032,20 +1048,25 @@ def case_the_project_page_has_a_rhythm(d: pathlib.Path) -> list[tuple[str, bool]
 
     return [
         ("builds", ok),
-        ("the first photograph opens the page",
-         four.count('class="proj-open"') == 1),
-        ("the rest sit in pairs", four.count('class="proj-pairs"') == 1
-                                  and four.count('class="proj-fig"') == 3),
-        ("one photograph gets an opener and no empty pairs block",
-         one.count('class="proj-open"') == 1 and 'proj-pairs' not in one),
-        ("the pairs container is closed on every shape of project",
+        ("every photograph takes the whole width",
+         four.count('class="proj-open"') == 4),
+        ("and none of them is half a page",
+         "proj-pairs" not in four and "proj-fig" not in four),
+        ("a project of one photograph is the same page as a project of four",
+         one.count('class="proj-open"') == 1 and "proj-pairs" not in one),
+        ("every container the template opens is closed",
          all(balanced(s) for s in (one, four, none))),
         ("a project with no photographs still renders its text",
          "Un texte." in none),
-        ("the opener is the one image fetched eagerly",
-         four.count('fetchpriority="high"') == 1),
-        ("the paired images ask for half the page, not all of it",
-         'sizes="(max-width: 52rem) 100vw, 44vw"' in four),
+        # STILL ONE EAGER IMAGE. Nine photographs all marked urgent is
+        # the same as none marked urgent, and that is how the subfolder
+        # page became the heaviest on the site. The rhythm went; the
+        # rule that only the top one is urgent did not.
+        ("only the first image is fetched eagerly, however many there are",
+         four.count('fetchpriority="high"') == 1
+         and four.count('loading="lazy"') == 3),
+        ("and every one of them asks for the full width",
+         four.count('sizes="100vw"') == 4),
         ("every photograph still carries its real proportions",
          len(re.findall(r'<img[^>]*width="\d+" height="\d+"', four)) == 4),
     ]
@@ -1146,9 +1167,14 @@ def case_a_film_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("and one still is for the other", 'id="film-da-film-normal"' in desk),
         ("the page it reaches actually shows the film",
          bool(main) and "<video" in main.group(0)),
+        # One photograph under the film, and it is 01.jpg: `poster.jpg`
+        # is the film's still, so rendering it again below would be the
+        # same frame twice. It was counted as a PAIRED figure until the
+        # page became one column; the count is what matters, not which
+        # container it landed in.
         ("the film's own still is its poster, not a photograph underneath it",
          bool(main) and "poster=" in main.group(0)
-         and main.group(0).count("proj-fig") == 1),
+         and main.group(0).count('class="proj-open"') == 1),
         ("a film page works without JavaScript too — the video is in the page",
          "<video" in normal_html),
         ("nothing dangles", dangling(desk) == []),
@@ -2043,8 +2069,16 @@ def case_a_subfolder_page_is_one_column(d: pathlib.Path) -> list[tuple[str, bool
          "proj-pairs" not in sub),
         ("and nothing on it is pinned — that is the road's business",
          "--w:" not in sub and "--x:" not in sub and "--r:" not in sub),
-        ("a PROJECT still opens with one and pairs the rest",
-         project.count('class="proj-open"') == 1 and "proj-pairs" in project),
+        # REVERSED with the rhythm: a project is this same page now.
+        # The expectation is kept rather than deleted because the thing
+        # it guards is still worth guarding — that both kinds of thing
+        # on a desk reach the SAME page, which is the whole ask.
+        # Not a count: grocery list holds six photographs today and may
+        # hold ten tomorrow. What is asserted is the SHAPE — the same
+        # shape the subfolder above has.
+        ("and a PROJECT is the very same page, not a second rhythm",
+         'class="proj-open"' in project
+         and "proj-pairs" not in project and "proj-fig" not in project),
         ("the route is on travail sélectionné and on nothing else",
          'class="proj-route"' in page(d, "travail-selectionne/index.html")
          and 'class="proj-route"' not in sub
@@ -2524,7 +2558,7 @@ CASES = [
     ("a document is shown, not downloaded", case_a_document_is_shown),
     ("a film wears its own frame", case_a_film_wears_its_own_frame),
     ("every photograph in the gallery opens", case_gallery_photographs_open),
-    ("the project page has a rhythm", case_the_project_page_has_a_rhythm),
+    ("the project page is a column", case_the_project_page_is_a_column),
     ("a project wears its own first photograph", case_icon_is_the_work),
     ("a film can ask for its page", case_a_film_can_ask_for_its_page),
     ("only the opener is urgent", case_only_the_opener_is_urgent),

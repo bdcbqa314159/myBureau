@@ -917,12 +917,18 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 }
 .proj-intro p + p { margin-top: 1em; }
 
-/* ---- the opener ---------------------------------------------------
-   The first photograph carries the page, so it gets the full width —
-   and a CEILING, because "full width" on a portrait photograph is four
-   screens tall on a laptop and the visitor never reaches the second
-   image. Bounded by height and centred rather than cropped: a portfolio
-   does not get to cut someone's picture to fit a layout. */
+/* ---- every photograph on a page ------------------------------------
+   Each one gets the full width — and a CEILING, because "full width"
+   on a portrait photograph is four screens tall on a laptop and the
+   visitor never reaches the next image. Bounded by height and centred
+   rather than cropped: a portfolio does not get to cut someone's
+   picture to fit a layout.
+
+   The name is `proj-open` because this was the OPENER, the one
+   photograph at the top that carried a page while the rest sat in
+   pairs below. The pairs are gone and every photograph is an opener
+   now; the class keeps its name rather than touching every template
+   and check that spells it. */
 .proj-open { margin-top: clamp(3rem, 7vw, 7rem); }
 .proj-open img {
   display: block;
@@ -951,34 +957,10 @@ body.project .bar { color: var(--ink); text-shadow: none; }
   margin-inline: auto;
 }
 
-/* ---- and then they breathe ----------------------------------------
-   Everything after the opener sits two across with cream around it. The
-   change of rhythm is the point: one big thing, then quieter ones, which
-   is what the prototype does on its second screen and what stops a
-   project reading as a pile of images all at one size.
-
-   A row left holding a single photograph is not a bug. It sits in its
-   column with the space beside it, which reads as deliberate — far
-   better than stretching one image to twice the size of its neighbours
-   to fill a gap. */
-.proj-pairs {
-  display: grid; grid-template-columns: repeat(2, 1fr);
-  gap: clamp(2rem, 6vw, 7rem);
-  padding-inline: clamp(1.5rem, 8vw, 9rem);
-  margin-top: clamp(3rem, 8vw, 8rem);
-  align-items: start;
-}
-.proj-fig { margin: 0; }
-.proj-fig img { display: block; width: 100%; height: auto; }
-
-/* One column on a phone, where two of anything is two of nothing. */
-@media (max-width: 52rem) {
-  .proj-pairs {
-    grid-template-columns: 1fr;
-    padding-inline: var(--pad);
-    gap: clamp(2rem, 9vw, 4rem);
-  }
-}
+/* Everything after the opener used to sit two across with cream
+   around it — `.proj-pairs` and `.proj-fig`, gone 2026-11-13 with the
+   two rhythms. Every page on a desk is one column now, so there is
+   nothing left for a second width to apply to. */
 /* WHAT IS INSIDE A FOLDER: a vertical route.
    --------------------------------------------------------------------
    The route runs DOWN. Every photograph inside the folder sits on it
