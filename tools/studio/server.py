@@ -345,6 +345,8 @@ class Studio(http.server.BaseHTTPRequestHandler):
             return verbs.throw_away(ask["item"])
         if name == "set_identity":
             return verbs.set_identity(ask["owner"], ask["studio"])
+        if name == "set_opens":
+            return verbs.set_opens(ask["item"], ask["how"])
         if name == "set_alt":
             return verbs.set_alt(ask["item"], ask["name"], ask["text"])
         if name == "retitle":

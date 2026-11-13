@@ -640,6 +640,59 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("the panel reads back the description it wrote",
           seen.get("02.jpg") == "Un portrait de profil.", str(seen))
 
+    # ---- what a click opens, which she could not set at all ---------
+    #
+    # One photograph opens in place, and the preview carries no way to
+    # the page — by her own decision. So the paragraph written under
+    # the +++ was reachable by nobody. `opens = "page"` was the escape
+    # and model.py reported it while nothing on earth could write it.
+    print()
+    lone = "content/da/theodora-02"
+    out = verbs.set_opens(lone, "page")
+    check("a photograph can be told to open its page",
+          out["opens"] == "page", str(out))
+    check("  in every language, like everything else here",
+          out["files"] == 2, str(out))
+    for f in ("index.md", "index.en.md"):
+        check("  and it is really in {}".format(f),
+              'opens = "page"' in (tmp / lone / f).read_text(encoding="utf-8"))
+    check("the front matter it already had is untouched",
+          "x = 45" in (tmp / lone / "index.md").read_text(encoding="utf-8"))
+    verbs.set_opens(lone, "image")
+    got = (tmp / lone / "index.md").read_text(encoding="utf-8")
+    check("changing it back rewrites the line rather than adding one",
+          got.count("opens =") == 1 and 'opens = "image"' in got)
+    # THE DEFAULT IS WRITTEN OUT, not left absent. An absent key and
+    # `opens = "image"` mean the same to the templates; only one of
+    # them lets the panel show the switch without guessing.
+    the_model.ROOT, the_model.CONTENT = tmp, tmp / "content"
+    says = ""
+    for d in the_model.tree()["desks"]:
+        for c in d["on"]:
+            if c["path"] == lone:
+                says = c.get("opens") or ""
+    check("and the panel reads back what it wrote", says == "image", says)
+    check("a word that is neither is refused",
+          refused(verbs.set_opens, lone, "fenetre") != "")
+    # NOT OFFERED WHERE THERE IS NO CHOICE. A film always opens its
+    # window and a folder of several photographs always opens its page,
+    # so writing the key there would be a setting that does nothing —
+    # saved, shown, and a lie.
+    # A FILM WITH A PHOTOGRAPH IN IT, which is the only shape that
+    # tests the video rule on its own: `june's cry` holds a poster and
+    # nothing else, and a poster is not one of her photographs — so the
+    # one-photograph rule refuses it whether the video rule exists or
+    # not, and the expectation passed with that rule deleted.
+    reel = tmp / "content" / "da" / "junes-cry"
+    (reel / "01.jpg").write_bytes((reel / "poster.jpg").read_bytes())
+    check("a film is refused, because it has no choice to make",
+          refused(verbs.set_opens, "content/da/junes-cry", "image") != "")
+    (reel / "01.jpg").unlink()
+    check("and so is a project holding more than one photograph",
+          refused(verbs.set_opens, proj, "image") != "")
+    verbs.undo()
+    verbs.undo()
+
     verbs.undo()
     verbs.undo()
     verbs.undo()

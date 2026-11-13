@@ -225,6 +225,17 @@ const sandbox = {
               poster: "poster.png", doc: null, languages: ["en", "fr"],
               alt: { "01.jpg": "Deux silhouettes sur une plage." },
             }, {
+              // ONE photograph, no film, no dossier — the only shape
+              // that gets a choice about what its icon opens, and the
+              // shape the fixture had none of. `theodora` above holds
+              // two and a video, so the switch must not appear on it.
+              kind: "project", path: "content/da/seule", name: "seule",
+              titles: { fr: "seule.jpg", en: "seule.jpg" },
+              bodies: { fr: "Un texte.", en: "Some text." },
+              x: "20", y: "70", opens: null, icon: null, wallpaper: null,
+              photographs: ["01.jpg"], video: null, doc: null,
+              languages: ["en", "fr"],
+            }, {
               // a dossier that has not had its PDF yet — the state the
               // panel used to answer by asking for photographs
               kind: "project", path: "content/da/grocery", name: "grocery",
@@ -308,6 +319,31 @@ if (loaded) {
   check("and a text to write", /<textarea[^>]*data-body/.test(look.innerHTML));
   check("one box per language, not one for both",
     (look.innerHTML.match(/data-title="/g) || []).length >= 2);
+
+  // WHAT A CLICK OPENS. One photograph on a desk opens in place, and
+  // the preview has no way to the page — so the text she writes about
+  // it is reachable by nobody unless she says `opens = "page"`, which
+  // the panel reported and could not write.
+  const choose = (name) => {
+    const row = tree.children.find((r) => new RegExp(name).test(r.innerHTML));
+    if (row && row.__click) row.__click();
+    return row !== undefined;
+  };
+  check("the fixture has a lone photograph to choose", choose("seule"));
+  check("a lone photograph is offered a choice of what its icon opens",
+    /name="opens"[^>]*value="page"/.test(look.innerHTML)
+    && /name="opens"[^>]*value="image"/.test(look.innerHTML),
+    look.innerHTML.slice(0, 80));
+  check("and the choice is wired to the verb that writes it",
+    /name="opens"/.test(look.innerHTML));
+  // THE CONTROL. A switch shown where the engine has only one answer
+  // would be saved, read back, and do nothing.
+  check("a film is offered no such choice, having only one answer",
+    choose("theodora") && !/name="opens"/.test(look.innerHTML));
+  // back to the desk the checks below are written against — this block
+  // moved the selection, and the wallpaper and folder-says checks are
+  // asked of a bureau
+  if (daRow && daRow.__click) daRow.__click();
 
   check("the editor offers an appearance to change",
     /data-drop="icon"/.test(look.innerHTML));

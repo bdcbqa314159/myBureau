@@ -2561,6 +2561,72 @@ def case_a_preview_is_one_picture(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_a_photograph_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """`opens = "page"` on a single photograph, and what it is for.
+
+    A photograph on a desk opens IN PLACE: the picture alone, no frame
+    and no title bar, which is what she asked for. Two things follow
+    that nobody put together until the object audit:
+
+      the preview carries NO way to the page — the link out was taken
+      off deliberately, because arriving at a page by clicking the
+      thing you just opened reads as a mistake
+
+      the icon's own href IS the page, and the script intercepts it
+
+    So the paragraph she writes under the +++ of a photograph is
+    reachable by nothing on the site. All four photographs on the DA
+    desk carry a placeholder sentence today; the day she writes a real
+    one, nobody will read it.
+
+    `opens = "page"` is the way out, and until now the panel reported
+    the key and could not write it. It can now — this is the half that
+    proves the key still does what the panel promises.
+    """
+    photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
+    base = d / "content" / "da"
+    for name, extra in (("muette", ""), ("bavarde", '[extra]\nopens = "page"\n'),
+                        ("explicite", '[extra]\nopens = "image"\n')):
+        q = base / name
+        q.mkdir()
+        (q / "index.md").write_text(FRONT.format(title=f"{name}.jpg", extra=extra))
+        (q / "01.jpg").write_bytes(photo)
+    ok, log = build(d)
+    desk = page(d, "da/index.html")
+
+    def window_of(slug: str) -> str:
+        for tag in re.findall(r'<a class="icon".*?>', desk, re.S):
+            if f'data-vt="{slug}"' in tag:
+                m = re.search(r'data-window="([^"]+)"', tag)
+                return m.group(1) if m else ""
+        return "NO SUCH ICON"
+
+    return [
+        ("builds", ok),
+        ("one photograph opens in place by default",
+         window_of("da-muette").startswith("preview-")),
+        ('and `opens = "page"` sends the same thing to its page instead',
+         window_of("da-bavarde") == ""),
+        # THE DEFAULT, WRITTEN OUT. The panel writes "image" rather than
+        # taking the line away, so it can show the switch without
+        # guessing. The templates have to treat it as the default they
+        # always meant — an absent key and this must agree.
+        ('`opens = "image"` means the same as saying nothing',
+         window_of("da-explicite").startswith("preview-")),
+        ("no icon names a dialog that was not written", dangling(desk) == []),
+        # AND THE REASON THE KEY EXISTS AT ALL: her words are on the
+        # page and nowhere else. If a preview ever carries them, or a
+        # way to them, this check should be revisited rather than the
+        # key — but today it is the only route.
+        ("her words are on the page",
+         "Un texte." in page(d, "da/bavarde/index.html")),
+        ("and are nowhere inside the preview that replaces it",
+         "Un texte." not in re.search(
+             r'<dialog[^>]*id="' + window_of("da-muette") + r'".*?</dialog>',
+             desk, re.S).group(0)),
+    ]
+
+
 def case_a_dead_click(d: pathlib.Path) -> list[tuple[str, bool]]:
     """An icon that names a window nobody rendered.
 
@@ -2688,6 +2754,7 @@ CASES = [
     ("a picture opens plain, a film keeps its frame", case_a_picture_opens_plain),
     ("a project inside a folder that is a page", case_film_in_a_folder),
     ("a dead click", case_a_dead_click),
+    ("a photograph can ask for its page", case_a_photograph_can_ask_for_its_page),
     ("a preview is one picture", case_a_preview_is_one_picture),
 ]
 
