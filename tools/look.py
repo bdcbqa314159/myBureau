@@ -33,6 +33,7 @@ STATIC = ROOT / "static"
 IMAGE_TYPES = filetypes.IMAGE_TYPES
 VIDEO_TYPES = filetypes.VIDEO_TYPES
 DOC_TYPES = filetypes.DOC_TYPES
+SPOKEN_FOR = filetypes.SPOKEN_FOR
 # things a design program exports that this site will not show
 LOOKS_LIKE_AN_IMAGE = {"tif", "tiff", "bmp", "heic", "heif", "psd", "ai", "svg", "raw", "dng", "cr2", "nef"}
 
@@ -134,7 +135,11 @@ def main() -> int:
         folder = md.parent
         has_media = any(
             f.suffix.lstrip(".").lower() in IMAGE_TYPES | VIDEO_TYPES
-            and f.stem.lower() not in ("icon", "poster")
+            # SPOKEN_FOR, not ("icon", "poster"): a folder holding
+            # nothing but a wallpaper counted as a folder with work in
+            # it, so this warning could never fire on a converted desk
+            # — the one shape that most needs telling.
+            and f.stem.lower() not in SPOKEN_FOR
             for f in folder.iterdir() if f.is_file()
         )
         body = frontmatter.body(md.read_text(encoding="utf-8", errors="replace"))
@@ -161,7 +166,7 @@ def main() -> int:
             continue
         pictures = [f for f in files
                     if f.suffix.lstrip(".").lower() in IMAGE_TYPES
-                    and f.stem.lower() not in ("icon", "poster")]
+                    and f.stem.lower() not in SPOKEN_FOR]
         if len(pictures) > 1:
             notes.append((str(folder.relative_to(ROOT)), [
                 f"{len(pictures)} photos ici, mais une seule icone sur le"

@@ -30,7 +30,9 @@ CONTENT = ROOT / "content"
 # config.toml owns these. See tools/filetypes.py.
 IMAGE, VIDEO, DOC = filetypes.IMAGE, filetypes.VIDEO, filetypes.DOC
 # a file the engine gives a job to, so it is never one of the photographs
-SPOKEN_FOR = {"icon", "poster", "wallpaper", "about"}
+# config.toml owns these too. See tools/filetypes.py — this was a
+# fourth copy of the list, and the panel never read the config at all.
+SPOKEN_FOR = filetypes.SPOKEN_FOR
 
 
 def front(p: pathlib.Path) -> str:

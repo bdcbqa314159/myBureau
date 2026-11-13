@@ -47,7 +47,7 @@ TRASH = STUDIO / "trash"
 
 # config.toml owns these. See tools/filetypes.py.
 IMAGE, VIDEO, DOC = filetypes.IMAGE, filetypes.VIDEO, filetypes.DOC
-SPOKEN_FOR = {"icon", "poster", "wallpaper", "about"}
+SPOKEN_FOR = filetypes.SPOKEN_FOR
 
 # What to say when she hands over something the site cannot show. A list
 # of permitted extensions is not an answer — it does not say what to do

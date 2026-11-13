@@ -497,6 +497,15 @@ def case_alt_text(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def _uncommented(src: str) -> str:
+    """Python source with its `#` comments removed.
+
+    A comment explaining that a list USED to be `("icon", "poster")` is
+    not a list. Without this the check caught its own explanation.
+    """
+    return "\n".join(re.sub(r"#.*$", "", line) for line in src.splitlines())
+
+
 def dangling(h: str) -> list[str]:
     """Every data-window on a page that has no dialog to open.
 
@@ -1203,6 +1212,9 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
     # machine the test runs on.
     kinds = filetypes.read(root)
     images, videos, docs = kinds["image"], kinds["video"], kinds["doc"]
+    # the same list, from the same place — this held ("icon", "poster")
+    # and so counted a wallpaper as one of her photographs
+    spoken = filetypes.spoken_for(root)
 
     out = []
     for md in sorted((root / "content").rglob("index.md")):
@@ -1215,7 +1227,7 @@ def _grouped_pictures(root: pathlib.Path) -> list[str]:
             continue
         pictures = [f for f in files
                     if f.suffix.lstrip(".").lower() in images
-                    and f.stem.lower() not in ("icon", "poster")]
+                    and f.stem.lower() not in spoken]
         if len(pictures) > 1:
             out.append("{} ({} photographs)".format(
                 folder.relative_to(root), len(pictures)))
@@ -1958,6 +1970,20 @@ def case_the_form_can_be_filled_on_a_phone(d: pathlib.Path) -> list[tuple[str, b
     ]
 
 
+def _reads_the_config(d: pathlib.Path) -> bool:
+    """Change the list in the scratch config; the reader must change."""
+    cfg = d / "config.toml"
+    was = cfg.read_text(encoding="utf-8")
+    try:
+        cfg.write_text(was.replace('not_photographs = ["icon", "poster",'
+                                   ' "wallpaper", "about"]',
+                                   'not_photographs = ["vignette"]'),
+                       encoding="utf-8")
+        return filetypes.spoken_for(d) == {"vignette"}
+    finally:
+        cfg.write_text(was, encoding="utf-8")
+
+
 def case_one_reader_for_the_file_types(d: pathlib.Path) -> list[tuple[str, bool]]:
     """Which files are photographs is answered in one place.
 
@@ -1973,6 +1999,18 @@ def case_one_reader_for_the_file_types(d: pathlib.Path) -> list[tuple[str, bool]
 
     tools/filetypes.py is the one reader now. This is what stops a
     sixth copy.
+
+    THE NAMES ARE THE SAME STORY. `icon`, `poster`, `wallpaper`,
+    `about` — the files that are ours rather than hers — were a list in
+    config.toml with three names, a hardcoded set in model.py with
+    four, another in verbs.py with four, and a two-name tuple in
+    look.py written out twice.
+
+    look.py's was live rather than theoretical: with `wallpaper`
+    missing, a folder holding nothing but a wallpaper counted as a
+    folder with work in it, so "no pictures and almost no text — this
+    page is empty" could never fire on a converted desk, which is the
+    shape that most needs telling.
     """
     owner = ROOT / "tools" / "filetypes.py"
     here = sorted(list((ROOT / "tools").glob("*.py"))
@@ -1990,6 +2028,20 @@ def case_one_reader_for_the_file_types(d: pathlib.Path) -> list[tuple[str, bool]
     copies = [str(f.relative_to(ROOT)) for f in here
               if f != owner and pattern.search(f.read_text(encoding="utf-8"))]
     conf = filetypes.read(d)
+    # A COLLECTION HOLDING TWO OF THE NAMES. Not any mention of them:
+    # `f.stem.lower() == "poster"` is a module naming the one file it
+    # is about to write, which is a different thing and must stay. Two
+    # together in one literal is a list, and a list is a copy.
+    pair = re.compile(r'[\{\(\[][^\{\}\(\)\[\]]*"(?:icon|poster|wallpaper|about)"'
+                      r'[^\{\}\(\)\[\]]*,[^\{\}\(\)\[\]]*'
+                      r'"(?:icon|poster|wallpaper|about)"')
+    # THIS FILE IS EXEMPT, and only this file: a check has to write the
+    # names down to assert them, which is what the expectation below
+    # does three lines from here. Everything else that holds two of
+    # them in one literal is keeping a list.
+    name_copies = [str(f.relative_to(ROOT)) for f in here
+                   if f not in (owner, ROOT / "tools" / "content-check.py")
+                   and pair.search(_uncommented(f.read_text(encoding="utf-8")))]
     return [
         ("the one reader exists", owner.is_file()),
         ("and nothing else spells that answer out", copies == []),
@@ -2002,6 +2054,18 @@ def case_one_reader_for_the_file_types(d: pathlib.Path) -> list[tuple[str, bool]
              for m in ("tools/studio/model.py", "tools/studio/verbs.py"))),
         ("and so does the tool that tells her the site is sound",
          "filetypes." in (ROOT / "tools" / "look.py").read_text(encoding="utf-8")),
+        ("the names that are ours live in the config as well",
+         "not_photographs" in (d / "config.toml").read_text(encoding="utf-8")),
+        ("and the reader hands back all four",
+         filetypes.spoken_for(d) == {"icon", "poster", "wallpaper", "about"}),
+        ("nothing in tools/ keeps a second list of them",
+         name_copies == []),
+        # THE CONTROL. Without it, a reader that returned an empty set
+        # would satisfy every expectation above — nothing would hold a
+        # second list because there would be no list to hold. So: edit
+        # the fixture's config and the answer must follow it.
+        ("and it is really read from there, not built into the reader",
+         _reads_the_config(d)),
     ]
 
 
