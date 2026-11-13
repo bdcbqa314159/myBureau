@@ -1190,50 +1190,6 @@ def case_a_film_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
-def _grouped_pictures(root: pathlib.Path) -> list[str]:
-    """Desk items that open as a photograph and hold more than one.
-
-    A thing on a desk that opens as a PHOTOGRAPH is one photograph. Four
-    kinds are deliberately not that, and each says so in a way the
-    engine already reads:
-
-        a film          there is a video beside the index.md
-        a document      there is a pdf beside it
-        a page          `opens = "page"` — grocery list, the landing
-                        page from the prototype, several images on
-                        purpose
-        a folder        _index.md, not index.md — it IS a page now
-
-    The gallery never reaches here: its photographs sit in the section
-    itself and there is no index.md to find.
-    """
-    # Read from the FIXTURE's config, not this repository's — the
-    # difference between testing the scratch copy and testing the
-    # machine the test runs on.
-    kinds = filetypes.read(root)
-    images, videos, docs = kinds["image"], kinds["video"], kinds["doc"]
-    # the same list, from the same place — this held ("icon", "poster")
-    # and so counted a wallpaper as one of her photographs
-    spoken = filetypes.spoken_for(root)
-
-    out = []
-    for md in sorted((root / "content").rglob("index.md")):
-        folder = md.parent
-        if 'opens = "page"' in md.read_text(encoding="utf-8"):
-            continue
-        files = [f for f in folder.iterdir() if f.is_file()]
-        exts = {f.suffix.lstrip(".").lower() for f in files}
-        if exts & videos or exts & docs:
-            continue
-        pictures = [f for f in files
-                    if f.suffix.lstrip(".").lower() in images
-                    and f.stem.lower() not in spoken]
-        if len(pictures) > 1:
-            out.append("{} ({} photographs)".format(
-                folder.relative_to(root), len(pictures)))
-    return out
-
-
 def case_only_the_opener_is_urgent(d: pathlib.Path) -> list[tuple[str, bool]]:
     """One photograph is fetched first. The rest wait their turn.
 
@@ -2268,64 +2224,6 @@ def case_about_is_read_as_a_text_file(d: pathlib.Path) -> list[tuple[str, bool]]
     ]
 
 
-def case_a_picture_is_one_picture(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """A photograph on a desk is ONE photograph, never a pile of them.
-
-    Her prototype has no stack: `theodora.jpeg`, `colombia.png`, `jojo
-    for maison cosette.png` are each their own file lying on the desk.
-    Grouping two photographs behind one icon makes the second one
-    reachable only by opening the first, which is not what a desk does.
-
-    Both halves are checked. A rule that merely counted would pass by
-    finding nothing to count, so the second half plants an offender and
-    requires it to be caught — and the film, the document and the page
-    are left alone to prove the exemptions still hold.
-    """
-    before = _grouped_pictures(d)
-
-    # a deliberate offender: two photographs behind one icon
-    bad = d / "content" / "da" / "deux-photos"
-    bad.mkdir()
-    (bad / "index.md").write_text(FRONT.format(title="deux photos.jpg", extra=""),
-                                  encoding="utf-8")
-    for n in ("01.jpg", "02.jpg"):
-        shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", bad / n)
-
-    # and three that are allowed to hold several, one per exemption
-    page = d / "content" / "da" / "une-page"
-    page.mkdir()
-    (page / "index.md").write_text(
-        FRONT.format(title="une page.jpg", extra='\n[extra]\nopens = "page"\n'),
-        encoding="utf-8")
-    film = d / "content" / "da" / "un-film-deux-photos"
-    film.mkdir()
-    (film / "index.md").write_text(FRONT.format(title="un film.mov", extra=""),
-                                   encoding="utf-8")
-    (film / "clip.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
-    doc = d / "content" / "da" / "un-doc-deux-photos"
-    doc.mkdir()
-    (doc / "index.md").write_text(FRONT.format(title="un doc.pdf", extra=""),
-                                  encoding="utf-8")
-    (doc / "brochure.pdf").write_bytes(TINY_PDF)
-    for folder in (page, film, doc):
-        for n in ("01.jpg", "02.jpg"):
-            shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", folder / n)
-
-    after = _grouped_pictures(d)
-    ok, log = build(d)
-    return [
-        ("no desk item in the site groups photographs behind one icon",
-         before == []),
-        ("two photographs behind one icon are caught",
-         any("deux-photos" in s for s in after)),
-        ("a page may hold several — that is what a page is",
-         not any("une-page" in s for s in after)),
-        ("so may a film", not any("un-film" in s for s in after)),
-        ("and so may a document", not any("un-doc" in s for s in after)),
-        ("and the site still builds with all of them in it", ok),
-    ]
-
-
 def case_a_closed_dialog_stays_closed(d: pathlib.Path) -> list[tuple[str, bool]]:
     """No stylesheet may set `display` on a window that is not open.
 
@@ -2617,6 +2515,15 @@ def case_a_preview_is_one_picture(d: pathlib.Path) -> list[tuple[str, bool]]:
     also makes `opens = "page"` unnecessary for the only project that
     carries it today; the key stays, because a SINGLE photograph may
     still want its page.
+
+    THIS REPLACED `a picture on a desk is one picture`, withdrawn on
+    2026-11-13. That case forbade two photographs behind one icon,
+    because the second could then be reached only by opening the
+    first — true when a desk item's page was a different page, and
+    false since every photograph in a folder is shown in a column on
+    it. look.py carried the same rule as advice to her and advised one
+    folder per photograph, which `grocery list` has never followed and
+    has never needed to.
     """
     photo = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
     base = d / "content" / "da"
@@ -2776,7 +2683,6 @@ CASES = [
     ("a subfolder page is one column", case_a_subfolder_page_is_one_column),
     ("the sheet has buttons that cannot edit", case_the_sheet_has_buttons),
     ("about me.txt is read as a text file", case_about_is_read_as_a_text_file),
-    ("a picture on a desk is one picture", case_a_picture_is_one_picture),
     ("a closed window stays closed", case_a_closed_dialog_stays_closed),
     ("a .DS_Store does not stop the preview", case_finder_droppings),
     ("a picture opens plain, a film keeps its frame", case_a_picture_opens_plain),
