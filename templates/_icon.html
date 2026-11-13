@@ -17,7 +17,8 @@
 
       opens = "page"          its own page — nothing opens here
       a video in the folder   the film window, on the desk
-      anything else           a PREVIEW window, on the desk
+      ONE picture in the folder   a PREVIEW window, on the desk
+      several pictures        its own page — a column, not a glance
 
     One rule. A click SHOWS you the thing — it does not take you
     somewhere — and the ⬜ in the window's title bar is the deliberate
@@ -42,7 +43,7 @@
     tools/content-check.py.                                           -#}
 {%- if ic_kind == "file" and ic_window == "" -%}
   {%- set_global ic_clip = "" -%}
-  {%- set_global ic_still = false -%}
+  {%- set_global ic_stills = 0 -%}
   {%- set_global ic_doc = "" -%}
   {%- for a in ic_assets -%}
     {%- set leaf = a | split(pat="/") | last -%}
@@ -63,7 +64,7 @@
         a desk converted to a folder keeps its wallpaper. -#}
     {%- elif leaf | split(pat=".") | last | lower in config.extra.image_types
              and not (leaf | split(pat=".") | first in config.extra.not_photographs) -%}
-      {%- set_global ic_still = true -%}
+      {%- set_global ic_stills = ic_stills + 1 -%}
     {%- endif -%}
   {%- endfor -%}
   {#- `opens = "page"` is tested FIRST, so it means the same thing
@@ -79,7 +80,20 @@
       the click should open. Previewing the cover and never showing the
       document is the medley this engine is supposed to have stopped. -#}
   {%- elif ic_doc != "" -%}
-  {%- elif ic_still -%}
+  {#- ONE PHOTOGRAPH, OR IT IS NOT A PREVIEW. A preview is one screen
+      with one picture on it: that is what pressing space on a Mac
+      does, which is what the brief asks for by name.
+
+      This was "is there a picture at all", so a folder of six arrived
+      as six <img> in one dialog, laid in a flex row that clips what
+      will not fit. Nothing on either desk is in that position today —
+      every photograph object holds exactly one — so it would have
+      arrived the day SHE added a second one, which is the kind this
+      repository keeps being caught by.
+
+      Several photographs is a body of work, not a thing to glance at.
+      It goes to its page, where they are a column. -#}
+  {%- elif ic_stills == 1 -%}
     {%- set_global ic_window = "preview-" ~ (ic_path | slugify) -%}
   {%- endif -%}
 {%- endif -%}
