@@ -122,6 +122,15 @@ def thing(folder: pathlib.Path, stem: str, kind: str) -> dict:
         "x": key(first, "x"),
         "y": key(first, "y"),
         "opens": key(first, "opens"),
+        # WHICH TEMPLATE RENDERS THIS, because it is the fact that
+        # decides what the object can even show. `desk()` read it,
+        # tested it for "gallery.html" and threw it away — so the panel
+        # could not tell a DESK (icons on a wallpaper) from a
+        # FOLDER-PAGE (a title, a text and the work below it), and
+        # offered both of them everything.
+        #
+        # Empty for a project, which declares none and gets page.html.
+        "template": key(first, "template") or "",
         "icon": special(folder, "icon") or key(first, "icon"),
         "wallpaper": special(folder, "wallpaper"),
         "about": special(folder, "about"),
@@ -141,8 +150,7 @@ def thing(folder: pathlib.Path, stem: str, kind: str) -> dict:
 
 def desk(folder: pathlib.Path) -> dict:
     d = thing(folder, "_index", "desk")
-    fm = front(next(iter(langs(folder, "_index").values())))
-    d["gallery"] = (key(fm, "template") or "") == "gallery.html"
+    d["gallery"] = d["template"] == "gallery.html"
     d["on"] = []
     for child in sorted(folder.iterdir()):
         if not child.is_dir():
@@ -205,7 +213,7 @@ def tree() -> dict:
             if k is None:
                 continue                      # a project: not a desk anywhere
             for field in ("gallery", "depth", "empty", "holds",
-                          "can_receive"):
+                          "can_receive", "template"):
                 child[field] = k[field]
 
     # ---- about me.txt ------------------------------------------------
@@ -233,6 +241,10 @@ def tree() -> dict:
             # is declared in config-like front matter we do not rewrite
             "x": None, "y": None, "opens": None, "icon": None,
             "wallpaper": None, "photographs": [], "video": None, "doc": None,
+            # it is a <dialog> on the home page, not a template of its
+            # own; the panel keys off `kind` for this row, and the field
+            # is here so every row carries the same set
+            "template": "",
         })
     return {"desks": desks, "identity": identity()}
 

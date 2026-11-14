@@ -596,6 +596,31 @@ function inspect(o) {
   const lonePhoto = !isDesk && !o.gallery && !o.video && !o.doc
     && o.photographs.length === 1;
 
+  // A TEXT BOX WHERE THE TEXT IS SHOWN, and nowhere else.
+  //
+  // Every content file has a body under the +++, so every object got a
+  // box for it. Only two templates render one: `page.html` — a
+  // folder-page, a project, a film, a dossier — and `index.html`, the
+  // home page, which puts it inside the about window.
+  //
+  // `section.html` and `gallery.html` contain no `.content` at all. So
+  // on DA, on graphic design and on pellicules she could type a
+  // paragraph, see it saved, and it appeared on no page of the site.
+  // Checked by putting a marker in each file and building: the two
+  // folder-pages' markers came out in their HTML and these three
+  // came out nowhere.
+  //
+  // THE HOME DESK IS LEFT OUT TOO, and it is the one case where the
+  // text IS rendered. `about me.txt` is a second row on the same path
+  // and writes the same body — the field appeared twice, meaning one
+  // thing in one place and the same thing in the other. The about row
+  // keeps it, because that is the name she is looking for when she
+  // wants to change those words.
+  //
+  // A project declares no template and Zola gives it page.html, which
+  // is why "" counts.
+  const textIsShown = o.template === "page.html" || o.template === "";
+
   look.innerHTML = `
     <h2>${esc(o.titles.fr || o.name)}</h2>
     <p class="what">${kindOf(o)}${o.gallery ? ` · ${o.photographs.length} photos`
@@ -603,7 +628,8 @@ function inspect(o) {
        o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · pas encore posé"}</p>
     ${isDesk ? `<p class="what">${folderSays(o)}</p>` : ""}
     ${waitingFor(o) ? `<p class="waiting">${esc(waitingFor(o))}</p>` : ""}
-    ${titles}${lonePhoto ? "" : bodies + bandeau + face}${wall}
+    ${titles}${lonePhoto || !textIsShown ? "" : bodies}${bandeau}${
+      lonePhoto ? "" : face}${wall}
     ${isDesk && !o.gallery ? "" : dossier(o) + reel(o) + `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">${o.gallery
         ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."
