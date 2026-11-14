@@ -266,6 +266,19 @@ const sandbox = {
               poster: "poster.png", doc: null, languages: ["en", "fr"],
               alt: { "01.jpg": "Deux silhouettes sur une plage." },
             }, {
+              // A FOLDER THAT IS A PAGE, which the fixture had none of.
+              // It is `kind: "folder"` with `depth >= 1` exactly like a
+              // bureau, and the only thing telling them apart is the
+              // template — so without one of these, every rule about
+              // "a desk, but not a folder-page" was unexercised and
+              // passed by finding nothing to be false about.
+              kind: "folder", path: "content/da/cosette", name: "cosette",
+              template: "page.html", gallery: false, depth: 2, empty: true,
+              titles: { fr: "maison cosette", en: "maison cosette" },
+              bodies: { fr: "Un texte.", en: "Some text." },
+              x: "41", y: "57", opens: null, icon: null, wallpaper: null,
+              photographs: [], video: null, doc: null, languages: ["en", "fr"],
+            }, {
               // ONE photograph, no film, no dossier — the only shape
               // that gets a choice about what its icon opens, and the
               // shape the fixture had none of. `theodora` above holds
@@ -285,6 +298,21 @@ const sandbox = {
               x: "60", y: "40", opens: null, icon: null, wallpaper: null,
               photographs: [], video: null, doc: null, languages: ["en", "fr"],
             }],
+          }, {
+            // THE FOLDER-PAGE AS A DESK OF ITS OWN, which is what the
+            // real model does with every folder holding an `_index.md`
+            // — see "ONE FOLDER, ONE SET OF FACTS" in model.py. Without
+            // this row `isDesk` was false for it, so the OLD predicate
+            // (`isDesk && !gallery`) withheld the wallpaper for the
+            // wrong reason and the check could not fail on the bug it
+            // was written for.
+            kind: "desk", path: "content/da/cosette", name: "cosette",
+            gallery: false, depth: 2, empty: true, template: "page.html",
+            titles: { fr: "maison cosette", en: "maison cosette" },
+            bodies: { fr: "Un texte.", en: "Some text." },
+            x: "41", y: "57", opens: null, icon: null, wallpaper: null,
+            about: null, photographs: [], video: null, doc: null,
+            languages: ["en", "fr"], on: [],
           }],
         },
       }),
@@ -416,6 +444,16 @@ if (loaded) {
     /data-drop="icon"/.test(look.innerHTML));
   check("a bureau also offers its wallpaper",
     /data-drop="wallpaper"/.test(look.innerHTML));
+  // A WALLPAPER WHERE THERE IS A DESK TO PUT IT ON. `section.html` is
+  // the only template that renders one and `index.html` extends it; a
+  // folder-page and a gallery read none. This was `isDesk && !gallery`
+  // — and a folder-page IS a desk by that test, so four objects were
+  // offered a ground they cannot show.
+  check("a folder that is a page is offered none, having no ground",
+    choose("maison cosette") && !/data-drop="wallpaper"/.test(look.innerHTML));
+  check("  but keeps its text, which its page does render",
+    /data-body/.test(look.innerHTML));
+  if (daRow && daRow.__click) daRow.__click();
   check("there is a way to make something new",
     /<button[^>]*id="make"/.test(markup) && /<select[^>]*id="kind"/.test(markup));
   check("and a way to look INSIDE a thing rather than at its desk",
