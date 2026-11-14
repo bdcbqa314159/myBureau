@@ -479,6 +479,13 @@ def undo() -> str:
 
 def place(item: str, x: int, y: int) -> dict:
     d = a_project(item)
+    # A POSITION IS A PLACE ON A DESK. A thing inside a folder-page is
+    # a stop on a route, ordered by its folder's name, and x/y are read
+    # by nothing — `papier calque.pdf` still carries `x = 34, y = 43`
+    # from when `travail sélectionné` was a desk.
+    if not drawn_as_an_icon(d):
+        raise Refused("cette chose n'est pas sur un bureau : elle s'affiche"
+                      " dans l'ordre de son nom, sans position.")
     x, y = int(x), int(y)
     if not (0 <= x <= 100 and 0 <= y <= 100):
         raise Refused("une position est un pourcentage du bureau, de 0 à 100.")
@@ -732,6 +739,23 @@ def template_of(d: pathlib.Path) -> str:
 
 def is_gallery(d: pathlib.Path) -> bool:
     return template_of(d) == "gallery.html"
+
+
+def drawn_as_an_icon(d: pathlib.Path) -> bool:
+    """Is this thing drawn as an icon anywhere, with a name under it?
+
+    A desk draws an icon for each thing on it. A FOLDER-PAGE does not —
+    it renders a route, which since the client straightened it carries
+    no links and no names, only photographs. And nothing draws an icon
+    for the home desk at all: it is the root page, and no `data-vt=""`
+    exists in the built site.
+
+    So three things only mean something where this is true: the name
+    under the icon, the face it wears, and its position on the desk.
+    """
+    if d.resolve() == CONTENT.resolve():
+        return False                      # the home desk, drawn nowhere
+    return has_a_ground(d.parent)
 
 
 def has_a_ground(d: pathlib.Path) -> bool:
@@ -1092,6 +1116,13 @@ def set_icon(item: str, name: str, data: bytes) -> dict:
     so this does not quietly add one to the page.
     """
     d = a_project(item)
+    # AN ICON IS A FACE ON A DESK, so there has to be a desk showing it.
+    # The home desk is drawn nowhere, and a thing inside a folder-page
+    # is a photograph on a route rather than an icon — both took a file
+    # called `icon.*` that no page ever reads.
+    if not drawn_as_an_icon(d):
+        raise Refused("rien ne dessine d'icône pour cette chose :"
+                      " une image d'icône ne s'y verrait pas.")
     ext = pathlib.Path(name).suffix.lower()
     if ext in VIDEO:
         raise Refused("une icône est une image fixe, pas une vidéo.")

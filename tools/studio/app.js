@@ -569,6 +569,31 @@ function inspect(o) {
   // as an exception. look.py already says a wallpaper declared on a
   // gallery is a line that does nothing.
   const hasAGround = o.template === "section.html" || o.template === "index.html";
+
+  // IS THIS THING DRAWN AS AN ICON ANYWHERE?
+  //
+  // A desk draws one per thing on it, with the name underneath. A
+  // FOLDER-PAGE draws none — it renders a route, and since the client
+  // straightened it that route carries no links and no names, only
+  // photographs. And nothing draws an icon for the home desk at all:
+  // it is the root page, and no `data-vt=""` exists in the built site.
+  //
+  // Three controls mean something only where this is true:
+  //
+  //   the NAME      it is the label under the icon. On a route stop it
+  //                 is written to an sr-only heading on a page nothing
+  //                 links to.
+  //   the FACE      the picture the icon wears.
+  //   the POSITION  x/y on a desk. A route is ordered by folder name;
+  //                 `papier calque.pdf` still carries `x = 34, y = 43`
+  //                 from when `travail sélectionné` was a desk.
+  //
+  // The home desk keeps its NAME, because that one is still read — it
+  // is the browser tab's title.
+  const parent = model.desks.find((dk) => dk.path === deskOf(o));
+  const onADesk = Boolean(parent)
+    && (parent.template === "section.html" || parent.template === "index.html");
+  const drawnAsAnIcon = o.path !== "content" && onADesk;
   const wall = hasAGround ? `
     <label>fond d'écran
       <div class="wall" id="wall">${o.wallpaper
@@ -646,11 +671,16 @@ function inspect(o) {
     <h2>${esc(o.titles.fr || o.name)}</h2>
     <p class="what">${kindOf(o)}${o.gallery ? ` · ${o.photographs.length} photos`
        : o.holds !== undefined ? ` · ${o.holds} chose${o.holds > 1 ? "s" : ""} dedans` : ""}${
-       o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · pas encore posé"}</p>
+       !drawnAsAnIcon ? "" : o.x !== null ? ` · ${o.x}% / ${o.y}%`
+                                            : " · pas encore posé"}</p>
+    ${drawnAsAnIcon || isDesk || o.kind === "about" ? "" : `<p class="what">Sur
+      une page, pas sur un bureau : elle s'affiche dans l'ordre de son nom de
+      dossier, sans titre et sans position.</p>`}
     ${isDesk ? `<p class="what">${folderSays(o)}</p>` : ""}
     ${waitingFor(o) ? `<p class="waiting">${esc(waitingFor(o))}</p>` : ""}
-    ${titles}${lonePhoto || !textIsShown ? "" : bodies}${bandeau}${
-      lonePhoto ? "" : face}${wall}
+    ${drawnAsAnIcon || o.path === "content" ? titles : ""}${
+      lonePhoto || !textIsShown ? "" : bodies}${bandeau}${
+      lonePhoto || !drawnAsAnIcon ? "" : face}${wall}
     ${isDesk && !o.gallery ? "" : dossier(o) + reel(o) + `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">${o.gallery
         ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."

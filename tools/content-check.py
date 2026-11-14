@@ -1129,6 +1129,19 @@ def case_icon_is_the_work(d: pathlib.Path) -> list[tuple[str, bool]]:
          'width="160" height="160"' not in chosen),
         ("that icon is not also shown among the project's photographs",
          "icon.png" not in page(d, "da/choisie/index.html")),
+        # NOTHING DRAWS AN ICON FOR THE HOME DESK. It is the root page,
+        # not a thing sitting on a surface — so a file called `icon.*`
+        # beside `content/_index.md` is read by nobody. The panel used
+        # to offer it one; the verb now refuses, and this is the fact
+        # behind that refusal.
+        ("nothing draws an icon for the home desk, anywhere on the site",
+         not any('data-vt=""' in f.read_text(encoding="utf-8")
+                 for f in (d / "public").rglob("*.html"))),
+        # THE CONTROL: the slug would be empty for the home desk and is
+        # non-empty for everything else, so this says "no icon for the
+        # root" rather than "no icons at all".
+        ("while the things on a desk are all drawn with one",
+         len(re.findall(r'data-vt="[^"]+"', h)) >= 3),
         ("a project with no images falls back to a drawn icon",
          "/icons/" in bare and "is-photo" not in bare),
         ("a folder still looks like a folder",

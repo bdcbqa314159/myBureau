@@ -760,6 +760,57 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("undo walks all of it back",
           (tmp / proj / "index.md").read_text(encoding="utf-8") == before)
 
+    # ---- no control for a place it has not got ----------------------
+    #
+    # AFTER the undo tally above, deliberately: these verbs write and
+    # undo, which changes how deep the journal is, and that tally
+    # counts a fixed number of undos back to a known file.
+    #
+    # A thing inside a FOLDER-PAGE is a stop on a route: no icon is
+    # drawn for it, so it has no name under one, no face, and no
+    # position. `papier calque.pdf` still carries `x = 34, y = 43` from
+    # when `travail sélectionné` was a desk, and nothing has read it
+    # since.
+    #
+    # And nothing draws an icon for the HOME DESK at all — it is the
+    # root page. `set_icon` would have written `content/icon.png` and
+    # no page would ever have read it.
+    print()
+    road = "content/travail-selectionne/nocturne-01"
+    # NOT theodora-01: that is `proj`, and the undo tally further down
+    # compares its index.md against what it held before. Writing it here
+    # and undoing left the journal a different depth and the tally
+    # reached past what it meant to.
+    # THROUGH `refused`, even though this one is meant to SUCCEED. A
+    # bare call raises when the guard is wrong, and an uncaught Refused
+    # stops the whole suite at this line — so the failure was loud but
+    # every check after it went unrun. This reports it and carries on.
+    said = refused(verbs.place, "content/da/theodora-02", 30, 40)
+    check("a thing on a desk can still be placed", said == "", said)
+    if said == "":
+        verbs.undo()
+    check("a stop on a route cannot, having no position",
+          "ordre" in refused(verbs.place, road, 30, 40))
+    check("and the road itself cannot, being a page on a desk's child",
+          refused(verbs.place, "content/travail-selectionne", 30, 40) == "")
+    said = refused(verbs.set_icon, "content/da", "visage.png", pix)
+    check("a bureau can still be given a face", said == "", said)
+    if said == "":
+        verbs.undo()
+    check("a stop on a route cannot, no icon being drawn for it",
+          "icône" in refused(verbs.set_icon, road, "visage.png", pix))
+    check("and neither can the home desk, drawn nowhere at all",
+          refused(verbs.set_icon, "content", "visage.png", pix) != "")
+    # THE READER BEHIND ALL FOUR, which would make every refusal above
+    # hold if it answered False to everything.
+    check("being drawn as an icon is read from the parent's template",
+          verbs.drawn_as_an_icon(tmp / "content" / "da" / "theodora-01")
+          and verbs.drawn_as_an_icon(tmp / "content" / "da")
+          and not verbs.drawn_as_an_icon(tmp / "content")
+          and not verbs.drawn_as_an_icon(
+              tmp / "content" / "travail-selectionne" / "nocturne-01"))
+
+
 
 def affiche_cases(tmp: pathlib.Path) -> None:
     """A dropped film gets its own first frame as its affiche.
