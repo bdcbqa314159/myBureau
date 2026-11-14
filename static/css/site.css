@@ -800,7 +800,19 @@ img.will-fade.is-in { opacity: 1; }
 }
 .win-film.is-mini .spread { grid-template-columns: 1fr; }
 .win-film.is-mini .spread-note { display: none; }
-.win-film.is-mini .win-bar { cursor: pointer; }
+/* A MINIMISED FILM'S BAR IS CLICKABLE, so it wants the pointing hand
+   rather than the open one a title bar normally gets — but it must be
+   OUR hand. This said `cursor: pointer` and lost the drawn one, the
+   same way the gallery did; nobody noticed because a minimised film is
+   a corner of one page. Declared twice, like every other cursor here:
+   see the block at the foot of this file for why. */
+.win-film.is-mini .win-bar { cursor: url("../img/cursors/point.png") 5 0, pointer; }
+@supports (cursor: image-set(url("x") 1x) 0 0, auto) {
+  .win-film.is-mini .win-bar {
+    cursor: image-set(url("../img/cursors/point.png") 1x,
+                      url("../img/cursors/point@2x.png") 2x) 5 0, pointer;
+  }
+}
 /* see the comment in _film.html — the toggle is the ⬜ down here */
 .win-film.is-mini .win-expand { display: none; }
 .win-controls button { min-width: 1.5rem; }
@@ -1096,8 +1108,12 @@ body.gallery { background: #0d0b0a; }
    across a column break. */
 .grid .shot {
   display: block; margin-bottom: .45rem; break-inside: avoid;
-  cursor: pointer;
 }
+/* NO `cursor: pointer` HERE. It was, and `.shot` is an <a> — so this
+   rule beat the one further down that gives every link the drawn hand,
+   and a gallery was the one page on the site showing the system's own
+   arrow. The link rule already covers it, with `pointer` as the
+   fallback for a browser that cannot load the image. */
 .grid img { width: 100%; display: block; }
 /* A gallery is a dark room; the only thing that should move is the one
    you are pointing at. */
@@ -1303,6 +1319,15 @@ body:not(.project) .dock::before {
 
    Hotspots are in CSS pixels of the 16px image: the arrow points from
    its corner, the hands act from their centre, the finger from its tip.
+
+   EVERY CURSOR ON THIS SITE IS ONE OF OURS. A bare `cursor: pointer`
+   anywhere beats these, because any rule with a class in it outranks
+   `a, button, …` — and the result is one page quietly wearing the
+   system's arrow. It happened twice: `.grid .shot` on the gallery,
+   which the client found, and `.win-film.is-mini .win-bar`, which
+   nobody did. `input, textarea` is the one exception, and it is named
+   in the check: there is no drawn text cursor to use.
+   `every cursor is one we drew` in content-check refuses a third.
    ==================================================================== */
 body                                   { cursor: url("../img/cursors/arrow.png") 0 0, auto; }
 a, button, summary, [role="button"]    { cursor: url("../img/cursors/point.png") 5 0, pointer; }
