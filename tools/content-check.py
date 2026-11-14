@@ -776,12 +776,8 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
         ("what the image pipeline made was never even a candidate",
          "generated file(s) never considered" in r.stdout
          and " 0 generated" not in r.stdout),
-        # REVERSED with the PDF reader. Nothing on any page references
-        # a dossier now, so prune does not publish one — which is the
-        # rule working, not failing. It only ever touches `public/`;
-        # her file in content/ is untouched.
-        ("a document nothing shows is not published",
-         not survived("dossier/dossier.pdf")),
+        ("a document the page shows survived, fragment in its url and all",
+         survived("dossier/dossier.pdf")),
     ]
 
 
@@ -978,25 +974,31 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
 
     # Nothing anywhere may LINK to the file — that is the download.
     links = re.findall(r'<a [^>]*href="[^"]*\.pdf[^"]*"', desk + nu + cv)
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
 
     return [
         ("builds", ok),
-        # REVERSED, 2026-11-14, on the client's say-so. The page showed
-        # the dossier in an <iframe> — the browser's own PDF reader,
-        # inside her page. Every second-class object is the same white
-        # page with a title and her photographs, and a reader from
-        # somewhere else is not that. `calendar` and `douze regards`
-        # both hold their pages as photographs already.
-        #
-        # The FILE stays in content/. Nothing renders it, so prune no
-        # longer publishes it — see "a framed document survived",
-        # reversed with this.
-        ("no page puts a PDF reader inside itself",
-         "<iframe" not in nu),
-        ("nor through <object> or <embed>, which the CSP refuses anyway",
+        # SHOWN THE WAY A PHOTOGRAPH IS SHOWN, 2026-11-14. What was
+        # rejected was the READER — a dark ground and a frame, a window
+        # from somewhere else sitting in her page — not the dossier.
+        # Her ask: *click as it was a photo, scroll it, without border,
+        # and not being able to download it.*
+        ("the page shows the dossier itself",
+         bool(re.search(r'<iframe[^>]*src="[^"]*dossier\.pdf', nu))),
+        ("with nothing drawn around it",
+         bool(re.search(r"\.proj-doc\s*\{[^}]*background:\s*none", css))
+         and bool(re.search(r"\.proj-doc iframe\s*\{[^}]*border:\s*0", css))),
+        ("and it is the same shape as a photograph on that page",
+         'class="proj-open proj-doc"' in nu),
+        ("not through <object> or <embed>, which the CSP refuses",
          "<object" not in nu and "<embed" not in nu),
         ("and the CSP still refuses them, so that stays true",
          "object-src 'none'" in nu),
+        # NOT OURS TO OFFER. The viewer's own save button belongs to the
+        # browser; the fragment asks Chrome and Edge to drop the chrome
+        # it lives in, which is as far as this side reaches.
+        ("the viewer's chrome is asked for off, where a browser listens",
+         "toolbar=0" in nu and "navpanes=0" in nu),
         ("nothing links to the file, so nothing offers to download it",
          links == []),
         ("nor asks for one with a download attribute",
@@ -1014,13 +1016,14 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
          'id="preview-da-dossier-couverture"' not in desk),
         ("but the cover is what the icon looks like",
          "processed_images" in icon_of("da-dossier-couverture")),
-        ("its page shows its photographs, and no reader",
-         "<iframe" not in cv and 'class="proj-open"' in cv),
-        # NOT "the name appears nowhere": this fixture's project is
-        # TITLED `grocery.pdf`, so the words are its heading and its
-        # bandeau. What must not exist is a reference to the FILE.
-        ("and nothing on it points at the file",
-         re.search(r'(?:src|href)="[^"]*\.pdf', cv) is None),
+        ("its page shows the dossier and its photographs both",
+         bool(re.search(r'<iframe[^>]*src="[^"]*grocery\.pdf', cv))
+         and 'class="proj-open"' in cv),
+        # NOT A LINK, which is what a download is. `links` above is the
+        # same test over all three pages; this one is about `download`,
+        # and <img> is stripped first because `decoding` is not it.
+        ("and offers no way to save it",
+         "download" not in re.sub(r'<img[^>]*>', '', cv)),
     ]
 
 

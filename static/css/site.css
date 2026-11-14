@@ -939,10 +939,27 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 /* A film opening a project page gets the same ceiling as a photograph,
    and a black ground so letterboxing is the film's own edge rather than
    a cream gap nobody meant. */
-/* `.proj-doc` was the PDF reader's frame — a dark ground and most of
-   the screen's height. Gone with the reader, 2026-11-14: every
-   second-class object is the same white page with her photographs on
-   it. */
+/* A DOSSIER ON THE PAGE, with nothing around it.
+   --------------------------------------------------------------------
+   It had a dark ground and a frame, which made it a reader sitting in
+   her page rather than part of it. Her ask: *scroll it, without
+   border*. So: the page's own width, no border, no background of its
+   own, and it scrolls inside itself.
+
+   `.proj-open` above already gives it the margin every photograph on
+   the page gets, so a dossier and a photograph are the same shape in
+   the same column.
+
+   The height is a guess and has to be — nothing at build time knows
+   whether a PDF is A4 upright or a landscape spread. Tall enough that
+   a page of it is readable without being the whole screen, and it
+   scrolls from there. */
+.proj-doc { background: none; }
+.proj-doc iframe {
+  display: block; border: 0;
+  width: 100%; height: min(92vh, 1300px);
+}
+@media (max-width: 40rem) { .proj-doc iframe { height: 78vh; } }
 
 .proj-reel { background: #000; }
 .proj-reel video {
