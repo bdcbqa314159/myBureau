@@ -776,8 +776,12 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
         ("what the image pipeline made was never even a candidate",
          "generated file(s) never considered" in r.stdout
          and " 0 generated" not in r.stdout),
-        ("a framed document survived, fragment in its url and all",
-         survived("dossier/dossier.pdf")),
+        # REVERSED with the PDF reader. Nothing on any page references
+        # a dossier now, so prune does not publish one — which is the
+        # rule working, not failing. It only ever touches `public/`;
+        # her file in content/ is untouched.
+        ("a document nothing shows is not published",
+         not survived("dossier/dossier.pdf")),
     ]
 
 
@@ -977,11 +981,19 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
 
     return [
         ("builds", ok),
-        ("the file reaches the build at all",
-         (d / "public" / "da" / "dossier-nu" / "dossier.pdf").is_file()),
-        ("the page shows it in a frame",
-         bool(re.search(r'<iframe[^>]*src="[^"]*dossier\.pdf', nu))),
-        ("not through <object> or <embed>, which the CSP refuses",
+        # REVERSED, 2026-11-14, on the client's say-so. The page showed
+        # the dossier in an <iframe> — the browser's own PDF reader,
+        # inside her page. Every second-class object is the same white
+        # page with a title and her photographs, and a reader from
+        # somewhere else is not that. `calendar` and `douze regards`
+        # both hold their pages as photographs already.
+        #
+        # The FILE stays in content/. Nothing renders it, so prune no
+        # longer publishes it — see "a framed document survived",
+        # reversed with this.
+        ("no page puts a PDF reader inside itself",
+         "<iframe" not in nu),
+        ("nor through <object> or <embed>, which the CSP refuses anyway",
          "<object" not in nu and "<embed" not in nu),
         ("and the CSP still refuses them, so that stays true",
          "object-src 'none'" in nu),
@@ -1002,14 +1014,13 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
          'id="preview-da-dossier-couverture"' not in desk),
         ("but the cover is what the icon looks like",
          "processed_images" in icon_of("da-dossier-couverture")),
-        ("its page shows the document",
-         bool(re.search(r'<iframe[^>]*src="[^"]*grocery\.pdf', cv))),
-        # The cover used to be below the document BECAUSE it fell into
-        # the pairs block. There is no pairs block now, so the order is
-        # what the template writes: document first, photographs after.
-        ("and the cover below it, not competing with it",
-         'class="proj-open"' in cv
-         and cv.index("grocery.pdf") < cv.index('class="proj-open"')),
+        ("its page shows its photographs, and no reader",
+         "<iframe" not in cv and 'class="proj-open"' in cv),
+        # NOT "the name appears nowhere": this fixture's project is
+        # TITLED `grocery.pdf`, so the words are its heading and its
+        # bandeau. What must not exist is a reference to the FILE.
+        ("and nothing on it points at the file",
+         re.search(r'(?:src|href)="[^"]*\.pdf', cv) is None),
     ]
 
 
