@@ -1429,27 +1429,27 @@ def case_a_picture_fits_the_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
-def case_the_road_survives_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """A phone compresses her arrangement; it does not delete it.
+def case_the_road_is_plain_on_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Every photograph takes the whole width, and you scroll.
 
-    The rule here used to set every stop to full width below 52rem,
-    which turned a page of varied photographs into one column of
-    identical ones — nothing of the composition left on the device most
-    people read it on.
+    THIS CASE HAS BEEN REVERSED TWICE, so the history is the point.
 
-    THE OFFSETS AND THE LEAN ARE GONE, by her ask, on every screen: she
-    did not want the fridge. What survives is the width, and a phone
-    narrows the range of widths rather than erasing it.
+    It began as "full width below 52rem". That was called flattening
+    and replaced by a squeeze: widths 20..100 compressed into roughly
+    67..100, so a narrow picture stayed narrower than a wide one. The
+    argument was that the answer to values too extreme is smaller
+    values, not none, and the case asserted exactly that.
 
-    The reasoning was half right: a picture at 24 per cent of a phone
-    IS a stamp. The answer to values too extreme is smaller values, not
-    none.
+    2026-11-14, from the client, who has now SEEN it on a phone: she
+    does not want it. On a screen that narrow the varying widths read
+    as raggedness rather than composition — the same objection she
+    made to the offsets and the lean on every screen. The width is a
+    wide-screen idea and `--w` does not apply below 52rem.
 
-    THE NUMBER IS UNITLESS so this is possible at all. A
-    percentage cannot be scaled by CSS; a number can. If anyone puts
-    the `%` back in the template, the phone silently stops compressing
-    — `calc(55 + 52% * 0.6)` is not a length — and the road flattens
-    again with nothing to show for it.
+    THE NUMBER IS STILL UNITLESS, and that still matters: the rhythm
+    and her own pins are numbers that the `.stop` rule gives a unit
+    to. Put a `%` back in the template and the wide-screen road breaks
+    — `calc(52% * 1%)` is not a length.
     """
     ok, log = build(d)
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
@@ -1459,6 +1459,18 @@ def case_the_road_survives_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
         rules.setdefault(sel.strip(), []).append(body)
 
     stop = " ".join(rules.get(".stop", []))
+    # THE RULE INSIDE THE PHONE BAND, not every `.stop` rule in the
+    # file. Flattening them together is how the old guard came to be
+    # true of a stylesheet that said the opposite: a `width: 100%`
+    # anywhere satisfied it.
+    # EVERY 52rem block, because there are three and only one of them
+    # is the road's. Searching for the first found a block with no
+    # `.stop` in it, which made the expectation below unfalsifiable in
+    # the other direction.
+    bands = re.findall(r"@media\s*\(max-width:\s*52rem\)\s*\{(.*?)\n\}",
+                       css, re.S)
+    phone_stop = [b for band in bands
+                  for b in re.findall(r"\.stop\s*\{([^{}]*)\}", band)]
     rhythm = " ".join(one for sel, bodies in rules.items()
                       if sel.startswith(".stop:nth-child")
                       for one in bodies)
@@ -1471,10 +1483,19 @@ def case_the_road_survives_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
          "calc(var(--w" in stop and "* 1%" in stop),
         ("the rhythm is numbers, not percentages",
          rhythm != "" and "%" not in rhythm and "deg" not in rhythm),
-        ("a phone narrows the range rather than erasing it",
-         any("calc((55 + var(--w" in b for b in rules.get(".stop", []))),
-        ("and nothing resets a stop to full width any more",
-         "--w: 100%" not in css),
+        # REVERSED. This asserted the squeeze — `calc((55 + var(--w ...`
+        # — and before that, its opposite. The phone rule is plain
+        # width now, on her say-so.
+        ("a phone gives every photograph the whole width",
+         any(re.search(r"width:\s*100%", b) for b in phone_stop)),
+        ("and does not squeeze her widths into a range instead",
+         not any("55 + var(--w" in b for b in phone_stop)),
+        # NOT `"--w: 100%" not in css`, which is what stood here: the
+        # phone rule sets `width: 100%`, not `--w`, so that spelling
+        # passed whatever the rule said. A guard has to name the thing
+        # the rule actually writes.
+        ("and the wide-screen road still reads her width",
+         "calc(var(--w" in stop),
         ("the demo road really is pinned, so the idea can be seen",
          len(pins) >= 5),
         ("and what it writes is unitless, which is what the maths needs",
@@ -2813,7 +2834,7 @@ CASES = [
     ("about me.txt has a face", case_about_has_a_face),
     ("a photograph has no close box", case_a_photograph_has_no_close_box),
     ("a picture fits the screen", case_a_picture_fits_the_screen),
-    ("the road survives a phone", case_the_road_survives_a_phone),
+    ("the road is plain on a phone", case_the_road_is_plain_on_a_phone),
     ("the phone agrees with the desk", case_the_phone_agrees_with_the_desk),
     ("a phone desk is not a file list", case_a_phone_desk_is_not_a_file_list),
     ("a phone desk can grow", case_a_phone_desk_can_grow),

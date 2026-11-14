@@ -176,10 +176,16 @@ file** in the front matter of the folder holding it, in the shape
   English is a bug.
 - **Out of range is clamped, not refused.** A number she drags to is
   never an error.
-- **A phone narrows the range rather than erasing it.** The number is
-  unitless so CSS can scale it; a picture at 24 per cent of a phone is
-  a stamp, and the answer to values too extreme is smaller values, not
-  none.
+- **A phone ignores it.** Below 52rem every photograph takes the whole
+  width and you scroll. This went back and forth — full width, then a
+  squeeze into 67..100 so a narrow picture stayed narrower, then full
+  width again on 2026-11-14 when the client saw it on a phone. On a
+  screen that narrow the varying widths read as raggedness rather than
+  composition, which is the objection she made to the offsets and the
+  lean. The width is a wide-screen idea.
+- **The number stays unitless** even so: the rhythm and her own pins
+  are numbers that `.stop` gives a unit to, and a `%` in the template
+  breaks the wide-screen road.
 
 ## What the panel still has to do
 
