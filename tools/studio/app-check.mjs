@@ -312,7 +312,20 @@ const sandbox = {
             bodies: { fr: "Un texte.", en: "Some text." },
             x: "41", y: "57", opens: null, icon: null, wallpaper: null,
             about: null, photographs: [], video: null, doc: null,
-            languages: ["en", "fr"], on: [],
+            languages: ["en", "fr"],
+            // A STOP ON A ROUTE: a project inside a folder-page. It is
+            // drawn as no icon, so it has no name under one, no face
+            // and no position — and the fixture had nothing in this
+            // position, so none of that could be checked.
+            on: [{
+              kind: "project", path: "content/da/cosette/nocturne",
+              name: "nocturne", template: "",
+              titles: { fr: "nocturne 01.jpg", en: "nocturne 01.jpg" },
+              bodies: { fr: "", en: "" },
+              x: "34", y: "43", opens: null, icon: null, wallpaper: null,
+              photographs: ["01.jpg"], video: null, doc: null,
+              languages: ["en", "fr"], alt: {},
+            }],
           }],
         },
       }),
@@ -453,6 +466,36 @@ if (loaded) {
     choose("maison cosette") && !/data-drop="wallpaper"/.test(look.innerHTML));
   check("  but keeps its text, which its page does render",
     /data-body/.test(look.innerHTML));
+
+  // NO CONTROL FOR A PLACE IT HAS NOT GOT.
+  //
+  // A thing inside a folder-page is a stop on a route: drawn as no
+  // icon, so no name under one, no face, and no position. The route is
+  // ordered by folder name.
+  check("a stop on a route is offered no name, nothing showing one",
+    choose("nocturne") && !/data-title/.test(look.innerHTML));
+  check("  nor a face, because no icon is drawn for it",
+    !/data-drop="icon"/.test(look.innerHTML));
+  check("  nor a position, the route being in name order",
+    !/34% \/ 43%/.test(look.innerHTML) && !/pas encore posé/.test(look.innerHTML));
+  check("  and it says so, rather than just showing less",
+    /dans l'ordre de son nom/.test(look.innerHTML));
+  check("  while its photograph and its description are still hers",
+    /data-drop="photos"/.test(look.innerHTML) && /data-alt/.test(look.innerHTML));
+  check("  and she can still throw it away", /id="binall"/.test(look.innerHTML));
+
+  // THE HOME DESK is drawn as no icon either — but its name IS read,
+  // as the browser tab's title, so that one stays.
+  check("the home desk is offered no face, being drawn nowhere",
+    choose("myBureau") && !/data-drop="icon"/.test(look.innerHTML));
+  check("  but keeps its name, which the browser tab shows",
+    /data-title/.test(look.innerHTML));
+
+  // THE CONTROL for all of the above: a thing ON a desk keeps all three.
+  check("while a thing on a desk keeps its name, its face and its place",
+    choose("theodora") && /data-title/.test(look.innerHTML)
+    && /data-drop="icon"/.test(look.innerHTML)
+    && /32% \/ 12%/.test(look.innerHTML));
   if (daRow && daRow.__click) daRow.__click();
   check("there is a way to make something new",
     /<button[^>]*id="make"/.test(markup) && /<select[^>]*id="kind"/.test(markup));
