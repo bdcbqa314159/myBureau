@@ -1060,20 +1060,35 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
          "object-src 'none'" in nu),
         ("the dossier is ONE figure, where a photograph would be",
          nu.count('class="proj-open proj-doc"') == 1),
-        ("its pages are inside it, every one of them",
+        # NOT SCROLLABLE ON THE PAGE. It is one picture there — its
+        # first page — and the dimension comes from `.proj-open img`,
+        # which her photographs use. A box that scrolled in place came
+        # out a narrow tall sliver on a page of wide photographs, and
+        # a document is not read in a sliver.
+        ("and on the page it is one picture, not a scroller",
+         "doc-scroll" not in re.search(
+             r'class="proj-open proj-doc".*?</figure>', nu, re.S).group(0)),
+        ("its size is a photograph's, taken from the same rule",
+         bool(re.search(r"\.proj-open img\s*\{[^}]*max-height", plain_css))
+         and not re.search(r"\.proj-doc img\s*\{[^}]*(max-)?height", plain_css)),
+        ("clicking it is what opens the dossier",
+         'href="#dossier-da-dossier-nu"' in nu
+         and 'id="dossier-da-dossier-nu"' in nu),
+        # AND IT SCROLLS IN THE POP-FRONT, which is the frameless
+        # full-screen dialog a photograph on a desk opens into.
+        ("the pop-front is that frameless window, not one of its own",
+         'class="win win-preview win-dossier"' in nu),
+        ("every page of it is in there",
          len(re.findall(r"<img", re.search(
              r'class="doc-scroll"[^>]*>.*?</div>', nu, re.S).group(0))) == 2),
-        ("and none of them is a photograph of hers",
+        ("and none of them is a photograph of hers on the page",
          nu.count('<figure class="proj-open">') == 0),
-        # IT SCROLLS WHERE IT STANDS — bounded, not the whole screen,
-        # and it does not carry the page behind it when it reaches the
-        # end.
-        ("it is bounded in height and scrolls inside itself",
+        ("it scrolls in there, filling the screen it was given",
          bool(re.search(r"\.doc-scroll\s*\{[^}]*overflow-y:\s*auto", plain_css))
-         and bool(re.search(r"\.doc-scroll\s*\{[^}]*max-height", plain_css))),
+         and bool(re.search(r"\.doc-scroll\s*\{[^}]*height:\s*100%", plain_css))),
         ("and reaching its end does not scroll the page behind it",
-         bool(re.search(r"\.doc-scroll\s*\{[^}]*overscroll-behavior:\s*contain", css))),
-        ("a keyboard can reach it, which a scroll box must be",
+         bool(re.search(r"\.doc-scroll\s*\{[^}]*overscroll-behavior:\s*contain", plain_css))),
+        ("a keyboard can reach the scroller, which it must be able to",
          'class="doc-scroll" tabindex="0"' in nu),
         ("nothing on the page points at the PDF at all",
          re.search(r'(?:src|href)="[^"]*\.pdf', nu) is None),
