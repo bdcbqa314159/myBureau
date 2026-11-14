@@ -65,59 +65,22 @@
     {% if leaf | split(pat=".") | last | lower in config.extra.video_types %}{% set_global reel = a %}{% endif %}
     {% if leaf | split(pat=".") | first == "poster" %}{% set_global sheet = a %}{% endif %}
   {% endfor %}
-  {#- A DOSSIER IS SHOWN AS A PHOTOGRAPH, AND OPENS WHEN YOU CLICK IT.
+  {#- A DOSSIER IS ITS PAGES, and they are photographs.
       --------------------------------------------------------------
-      Her words, 2026-11-14: *see it as a photo, then when clicking we
-      can scroll without border, without pdf reader headlines.*
+      There is no code here for a PDF, which is the point. Three
+      attempts put a READER on this page — framed, then frameless, then
+      a cover opening the browser's viewer full screen — and every one
+      was a window from somewhere else. Her words: *the pdf displays on
+      scroll on front without the pdf reader, and even in firefox.*
 
-      Two tries before this one. First a READER on the page — a dark
-      ground and a frame, a browser's viewer sitting inside her page.
-      Then the same reader with the frame taken off, which was still a
-      reader. What she asked for is a PICTURE on the page, and the
-      document only once she has asked for it.
+      A browser cannot show a PDF without its viewer, so the PDF stops
+      being what this page shows. `verbs.pages_of` rasterises it when
+      she drops it and writes 01.png, 02.png … — ordinary photograph
+      names — and the loop below shows them as it shows anything else.
+      Scrolling, no chrome, the same in every browser, because they are
+      pictures.
 
-      THE PICTURE IS PAGE ONE, drawn by Quick Look when she drops the
-      PDF — the same machinery and the same convention a film's affiche
-      uses (`cover.png` is ours, anything else called `cover` is hers).
-      See verbs.first_page.
-
-      No cover — no qlmanage on the machine, or a PDF Quick Look could
-      not read — and the page shows her photographs and nothing else,
-      which is what it did before any of this. A missing cover is
-      honest; inventing one is not.
-
-      THE DOCUMENT ITSELF is in the dialog below, and that dialog is
-      the frameless full-screen one a photograph opens into: no border,
-      no title bar, no close box, Escape or a click off it to leave.
-      `#toolbar=0&navpanes=0` is what asks a browser to drop its own
-      viewer headlines inside it. -#}
-  {% set_global dossier = "" %}
-  {% set_global cover = "" %}
-  {% for a in w.assets %}
-    {% set leaf = a | split(pat="/") | last %}
-    {% if leaf | split(pat=".") | last | lower in config.extra.doc_types %}{% set_global dossier = a %}{% endif %}
-    {% if leaf | split(pat=".") | first == "cover" %}{% set_global cover = a %}{% endif %}
-  {% endfor %}
-  {% if dossier and cover %}
-    {% set cshape = get_image_metadata(path=cover) %}
-    {% set csmall = resize_image(path=cover, width=900, op="fit_width", format="webp", quality=78) %}
-    {% set cbig = resize_image(path=cover, width=1800, op="fit_width", format="webp", quality=78) %}
-    <figure class="proj-open proj-cover">
-      {#- A LINK TO THE DIALOG, which is how every window on this site
-          is opened: desk.js turns an href="#id" pointing at a <dialog>
-          into a showModal(). Written as a link so it is focusable and
-          says where it goes. -#}
-      <a href="#dossier-{{ w.path | slugify }}">
-        <img src="{{ csmall.url }}"
-             srcset="{{ csmall.url }} {{ csmall.width }}w, {{ cbig.url }} {{ cbig.width }}w"
-             sizes="100vw"
-             width="{{ cshape.width }}" height="{{ cshape.height }}"
-             alt="{{ trans(key='doc_open', lang=lang) }}"
-             loading="eager" fetchpriority="high" decoding="async">
-      </a>
-    </figure>
-    {% set_global shown = 1 %}
-  {% endif %}
+      The file stays in the folder as the source. Nothing renders it. -#}
   {% if reel %}
     <figure class="proj-open proj-reel">
       <video controls playsinline preload="metadata"
@@ -217,28 +180,6 @@
         {% include "_place.html" %}
       {% endfor %}
     </div>
-  {% endif %}
-
-  {#- THE DOSSIER, FULL SCREEN AND BARE.
-      --------------------------------------------------------------
-      `win-preview` is the frameless full-screen dialog a photograph
-      opens into: no border, no title bar, no close box. Escape closes
-      it, because a modal dialog does that itself, and desk.js closes
-      every `.win-preview` on a click that lands off the content.
-
-      `#toolbar=0&navpanes=0` is the part that answers "without pdf
-      reader headlines": Chrome and Edge drop their viewer chrome,
-      which is also where their save button lives. Firefox keeps its
-      own and we cannot reach it from inside the page.
-
-      Nothing links to the file. The only way to it is this dialog, and
-      the only way in is the picture above. -#}
-  {% if dossier and cover %}
-    <dialog class="win win-preview win-dossier" id="dossier-{{ w.path | slugify }}"
-            aria-label="{{ w.title }}">
-      <iframe src="{{ get_url(path=dossier) }}#toolbar=0&amp;navpanes=0"
-              title="{{ w.title }}" loading="lazy"></iframe>
-    </dialog>
   {% endif %}
 
   {# ancestors gives a FILE PATH — get_section turns it into a URL.

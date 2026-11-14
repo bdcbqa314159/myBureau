@@ -430,6 +430,7 @@ def main() -> int:
 
     doc_cases(tmp)
     gate_cases(tmp)
+    dossier_cases(tmp)
     affiche_cases(tmp)
     honesty_cases(tmp)
     identity_cases(tmp)
@@ -448,11 +449,34 @@ def main() -> int:
 
 
 TINY_PDF = b"%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n"
+# A REAL ONE, four pages, from the kit she is handed. TINY_PDF above is
+# enough bytes to pass the sniffer and is not a document anything can
+# read — which was fine while a dossier was shown through a reader and
+# is not now that its PAGES are what the site shows. Where `add_doc`
+# is expected to SUCCEED it gets this.
+REAL_PDF = (ROOT / "kit" / "documents" / "brochure-4-pages.pdf").read_bytes()
 
 
 def doc_cases(tmp: pathlib.Path) -> None:
-    """A dossier, and the guardrails around which file goes where."""
+    """A dossier, and the guardrails around which file goes where.
+
+    HALF OF THIS NEEDS POPPLER. `add_doc` rasterises the dossier's
+    pages now, so every check that wants a PDF to LAND needs pdftoppm
+    — and CI is Linux, where it is absent. Those are grouped and
+    announced rather than left to raise: an uncaught Refused stopped
+    this whole function at its first add_doc, and the build failed
+    with a message about brew on a machine that has no brew.
+
+    The refusals do not need it. They turn on the extension, or on a
+    video sitting beside, and all of that happens before the tool is
+    ever asked for.
+    """
     print("\n  -- a dossier PDF --\n")
+    has_pop = verbs.have_pdftoppm()
+    if not has_pop:
+        print("  ---- no pdftoppm here (brew install poppler), so a dossier")
+        print("       cannot LAND. The refusals below are checked; the")
+        print("       landing and its pages are not.\n")
     pixels = (ROOT / "content/da/theodora-01/01.jpg").read_bytes()
     clip = b"\x00\x00\x00\x18ftypmp42"
 
@@ -468,21 +492,28 @@ def doc_cases(tmp: pathlib.Path) -> None:
     check("a new document is named .pdf, so it has a face before it has a file",
           made["title"].endswith(".pdf"))
 
-    verbs.add_doc(proj, "Grocery Brochure.PDF", TINY_PDF)
     folder = tmp / proj
-    check("the PDF lands in the project",
-          (folder / "dossier.pdf").read_bytes() == TINY_PDF)
-    check("and the extension is lowered",
-          [f.name for f in folder.iterdir() if f.suffix.lower() == ".pdf"]
-          == ["dossier.pdf"])
+    if has_pop:
+        verbs.add_doc(proj, "Grocery Brochure.PDF", REAL_PDF)
+        check("the PDF lands in the project",
+              (folder / "dossier.pdf").read_bytes() == REAL_PDF)
+        check("and the extension is lowered",
+              [f.name for f in folder.iterdir() if f.suffix.lower() == ".pdf"]
+              == ["dossier.pdf"])
 
-    verbs.add_doc(proj, "v2.pdf", TINY_PDF + b"2")
-    check("a second PDF replaces the first rather than sitting beside it",
-          len([f for f in folder.iterdir() if f.suffix.lower() == ".pdf"]) == 1
-          and (folder / "dossier.pdf").read_bytes() == TINY_PDF + b"2")
-    verbs.undo()
-    check("undo brings the first one back",
-          (folder / "dossier.pdf").read_bytes() == TINY_PDF)
+        # A SECOND PDF REPLACES THE FIRST — and its pages have to go
+        # with it, or the page would show one dossier while another sat
+        # beside it. The pages are written as photographs, so `add_doc`
+        # refuses a project that already has some: the replacement goes
+        # through `undo`, which is the only path that takes the old
+        # pages away too.
+        says = refused(verbs.add_doc, proj, "v2.pdf", REAL_PDF)
+        check("a second PDF is refused while the first one's pages are there",
+              "photos" in says, says)
+        verbs.undo()
+        check("undo takes the dossier and its pages together",
+              not (folder / "dossier.pdf").is_file()
+              and list(folder.glob("0*.png")) == [])
 
     # ---- which file goes where ---------------------------------------
     check("an image is refused on the dossier, and says where it goes",
@@ -507,17 +538,32 @@ def doc_cases(tmp: pathlib.Path) -> None:
           refused(verbs.set_poster, proj, "x.pdf", TINY_PDF) != "")
 
     # ---- a film and a dossier are two different projects -------------
-    check("a film cannot also be a dossier",
-          "propre projet" in refused(verbs.add_video, proj, "film.mp4", clip))
+    # The undo above took the dossier away, and this needs one to be
+    # there — a film is refused BECAUSE a PDF is beside it. So it needs
+    # poppler, like every other landing.
+    if has_pop:
+        verbs.add_doc(proj, "brochure.pdf", REAL_PDF)
+        check("a film cannot also be a dossier",
+              "propre projet" in refused(verbs.add_video, proj, "film.mp4", clip))
     film = verbs.new_project("content/da", "une bande", "film")["made"]
     verbs.add_video(film, "clip.mp4", clip)
     check("and a dossier cannot be added to a film",
-          "propre page" in refused(verbs.add_doc, film, "x.pdf", TINY_PDF))
+          "propre page" in refused(verbs.add_doc, film, "x.pdf", REAL_PDF))
 
-    # photographs are still welcome — a brochure has a cover
-    verbs.add_image(proj, "cover.jpg", pixels)
-    check("a dossier still takes a cover photograph",
-          (folder / "01.jpg").is_file())
+    # PHOTOGRAPHS ARE STILL WELCOME, and they land AFTER the pages.
+    # "a brochure has a cover" was the reason this check existed; page
+    # one is the cover now, so what is left to assert is that her own
+    # pictures can still go in and do not displace the pages.
+    if has_pop:
+        was = sorted(f.name for f in folder.iterdir()
+                     if f.suffix.lower() == ".png")
+        verbs.add_image(proj, "annexe.jpg", pixels)
+        now = sorted(f.name for f in folder.iterdir()
+                     if f.suffix.lower() in (".png", ".jpg"))
+        check("a photograph can still be added to a dossier",
+              any(f.endswith(".jpg") for f in now), str(now))
+        check("  and the dossier's own pages are still there, in order",
+              [f for f in now if f.endswith(".png")] == was, str(now))
 
     check("a dossier cannot be made in a gallery",
           refused(verbs.new_project, "content/pellicules", "x", "document") != "")
@@ -810,6 +856,72 @@ def honesty_cases(tmp: pathlib.Path) -> None:
           and not verbs.drawn_as_an_icon(
               tmp / "content" / "travail-selectionne" / "nocturne-01"))
 
+
+
+def dossier_cases(tmp: pathlib.Path) -> None:
+    """A dossier is its pages, drawn on the way in.
+
+    THREE READERS WERE TRIED AND REJECTED before this — framed,
+    frameless, and a cover opening the browser's viewer full screen.
+    Each was a window from somewhere else inside her page. Her words:
+    *the pdf displays on scroll on front without the pdf reader, and
+    even in firefox.*
+
+    A browser cannot show a PDF without its viewer, so the PDF stops
+    being what the page shows: `pages_of` rasterises it and writes
+    01.png, 02.png, which are ordinary photograph names.
+
+    POPPLER IS NOT MACOS. It is one `brew install poppler`, the same
+    shape as ffmpeg for the gif tool — and like Quick Look above, the
+    drawing itself cannot be checked where the tool is absent. Said
+    out loud rather than skipped quietly.
+    """
+    has_pop = verbs.have_pdftoppm()
+    print("\n  -- a dossier is its pages --\n")
+    if not has_pop:
+        print("  ---- no pdftoppm on this machine (brew install poppler), so the")
+        print("       drawing itself is NOT checked here. The refusals are.\n")
+
+    pdf = REAL_PDF
+    pix = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
+
+    def refused(fn, *a, **k):
+        try:
+            fn(*a, **k)
+        except verbs.Refused as why:
+            return str(why)
+        return ""
+
+    made = verbs.new_project("content/da", "un dossier", "document")["made"]
+    if has_pop:
+        out = verbs.add_doc(made, "brochure.pdf", pdf)
+        d = tmp / made
+        check("the PDF lands as the source", (d / "dossier.pdf").is_file())
+        check("and its pages land beside it, as photographs",
+              len(out["pages"]) >= 2 and (d / "01.png").is_file(), str(out))
+        check("  numbered from one, in order",
+              out["pages"] == sorted(out["pages"])
+              and out["pages"][0] == "01.png")
+        check("  and nothing is left of the drawing",
+              list(d.glob("page-*.png")) == [])
+        # THE PAGES ARE HER PHOTOGRAPHS NOW, which is the whole trick:
+        # no template had to learn a new kind of file.
+        check("the model reports them as the project's photographs",
+              verbs.photographs_in(d) == out["pages"])
+        check("undo takes the whole dossier back",
+              verbs.undo() == "add_doc" and not (d / "01.png").is_file())
+    else:
+        verbs.add_doc  # named, so a reader sees what is not being run
+
+    # HER PICTURES ARE NEVER OURS TO REPLACE. The pages take the names
+    # 01, 02 — so a project that already has photographs would have
+    # them written over.
+    busy = verbs.new_project("content/da", "deja des photos", "photos")["made"]
+    verbs.add_image(busy, "01.jpg", pix)
+    check("a project that already has photographs is refused",
+          "déjà des photos" in refused(verbs.add_doc, busy, "x.pdf", pdf))
+    check("and a film is still refused, for its own reason",
+          refused(verbs.add_doc, "content/da/junes-cry", "x.pdf", pdf) != "")
 
 
 def affiche_cases(tmp: pathlib.Path) -> None:

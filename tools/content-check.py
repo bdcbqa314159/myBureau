@@ -749,11 +749,10 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
     doc.mkdir()
     (doc / "index.md").write_text(FRONT.format(title="le dossier.pdf", extra=""))
     (doc / "dossier.pdf").write_bytes(TINY_PDF)
-    # AND ITS COVER, or the page shows no dossier and nothing references
-    # the file — which is prune doing its job, not failing, and would
-    # have made the expectation below assert the opposite of what it
-    # says. A dossier reaches a page through its cover now.
-    shutil.copyfile(ROOT / "static/img/brand/youtube-white.png", doc / "cover.png")
+    # ITS PAGES, which is what the site shows for a dossier. Written as
+    # plain PNGs rather than rasterised: pdftoppm is not on CI, and
+    # what is being checked here is prune, not the drawing.
+    shutil.copyfile(ROOT / "static/img/brand/youtube-white.png", doc / "01.png")
 
     ok, log = build(d)
     pub = d / "public"
@@ -799,11 +798,18 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
         ("what the image pipeline made was never even a candidate",
          "generated file(s) never considered" in r.stdout
          and " 0 generated" not in r.stdout),
-        # The page reaches it through the dialog its cover opens, and
-        # the url carries `#toolbar=0&navpanes=0` — prune has to see
-        # past a fragment to know the file is wanted.
-        ("a document the page shows survived, fragment in its url and all",
-         survived("dossier/dossier.pdf")),
+        # REVERSED, and this is the third time this one has moved, so
+        # the reason matters: a dossier is its PAGES now. Nothing on any
+        # page references the PDF, so prune does not publish it — the
+        # rule working, not failing. The pages themselves are ordinary
+        # photographs and survive as any photograph does.
+        ("a PDF nothing shows is not published",
+         not survived("dossier/dossier.pdf")),
+        # NOT `survived("dossier/01.png")`, which was tried: the page
+        # loads the RESIZED copy out of processed_images, so the
+        # colocated original is unreferenced and prune is right to drop
+        # it. "the images the pages actually load survived" above is
+        # the expectation that covers them.
     ]
 
 
@@ -984,37 +990,32 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
     (plain / "index.md").write_text(FRONT.format(title="le dossier.pdf", extra=""))
     (plain / "dossier.pdf").write_bytes(TINY_PDF)
 
-    # A COVER, which is what the page shows for a dossier now: page one
-    # drawn by Quick Look when she drops the PDF. Written here as a
-    # plain PNG rather than drawn, because qlmanage is macOS and this
-    # suite runs on Linux in CI — what is being checked is the TEMPLATE
-    # given a cover, not the drawing of one.
-    shutil.copyfile(ROOT / "static/img/brand/youtube-white.png",
-                    plain / "cover.png")
+    # ITS PAGES, as `pages_of` writes them. Plain PNGs rather than
+    # rasterised, because pdftoppm is not on CI and what is checked
+    # here is the TEMPLATE given a dossier's pages, not the drawing of
+    # them — verbs' own suite checks the drawing, where pdftoppm is.
+    for n in ("01.png", "02.png"):
+        shutil.copyfile(ROOT / "static/img/brand/youtube-white.png", plain / n)
 
     cover = bureau / "dossier-couverture"
     cover.mkdir()
     (cover / "index.md").write_text(FRONT.format(title="grocery.pdf", extra=""))
     (cover / "grocery.pdf").write_bytes(TINY_PDF)
     shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", cover / "01.jpg")
-    shutil.copyfile(ROOT / "static/img/brand/youtube-white.png",
-                    cover / "cover.png")
 
-    # AND ONE WITH NO COVER AT ALL — no qlmanage on the machine, or a
-    # PDF Quick Look could not read. The page must then show her
-    # photographs and nothing else rather than a broken picture or an
-    # empty dialog.
-    bare = bureau / "dossier-sans-couverture"
+    # A PDF WITH NO PAGES BESIDE IT — poppler missing on the machine
+    # that dropped it, or a file nobody ran through the panel. The page
+    # must show nothing rather than a reader or a broken picture.
+    bare = bureau / "dossier-sans-pages"
     bare.mkdir()
     (bare / "index.md").write_text(FRONT.format(title="nu.pdf", extra=""))
     (bare / "nu.pdf").write_bytes(TINY_PDF)
-    shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", bare / "01.jpg")
 
     ok, log = build(d)
     desk = page(d, "da/index.html")
     nu = page(d, "da/dossier-nu/index.html")
     cv = page(d, "da/dossier-couverture/index.html")
-    sans = page(d, "da/dossier-sans-couverture/index.html")
+    sans = page(d, "da/dossier-sans-pages/index.html")
     icons = re.findall(r'<a class="icon".*?</a>', desk, re.S)
     icon_of = lambda slug: next(
         (i for i in icons if 'data-vt="{}"'.format(slug) in i), "")
@@ -1025,44 +1026,28 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
 
     return [
         ("builds", ok),
-        # A PICTURE FIRST, THE DOCUMENT WHEN ASKED. 2026-11-14, third
-        # attempt and the one she described: *see it as a photo, then
-        # when clicking we can scroll without border, without pdf
-        # reader headlines.*
+            # A DOSSIER IS ITS PAGES. 2026-11-14, fourth attempt and the
+        # one she described: *the pdf displays on scroll on front
+        # without the pdf reader, and even in firefox.*
         #
-        # A reader on the page was rejected twice — once with a dark
-        # ground and a frame, once with the frame taken off. It was
-        # still a reader.
-        ("the page shows page one as a picture",
-         'class="proj-open proj-cover"' in nu),
-        ("and that picture is the same shape as a photograph",
-         bool(re.search(r'class="proj-open proj-cover">\s*<a[^>]*>\s*<img', nu))),
-        ("clicking it opens the dossier, and nothing else does",
-         'href="#dossier-da-dossier-nu"' in nu
-         and 'id="dossier-da-dossier-nu"' in nu),
-        ("the document is in there, with the viewer's headlines asked off",
-         bool(re.search(r'<dialog[^>]*win-dossier.*?<iframe[^>]*src="[^"]*dossier\.pdf'
-                        r'[^"]*toolbar=0[^"]*navpanes=0', nu, re.S))),
-        ("and that dialog is the frameless one a photograph opens into",
-         'class="win win-preview win-dossier"' in nu
-         and bool(re.search(r"\.win-dossier iframe\s*\{[^}]*border:\s*0", css))),
-        ("nothing is drawn around the picture either",
-         bool(re.search(r"\.proj-cover a\s*\{[^}]*text-decoration:\s*none", css))),
-        ("not through <object> or <embed>, which the CSP refuses",
+        # A browser cannot show a PDF without its viewer, so the PDF
+        # stopped being what the page shows. verbs.pages_of rasterises
+        # it on the way in and writes 01.png, 02.png — photograph
+        # names — and the page shows them as it shows any photograph.
+        #
+        # Three readers were tried and rejected: framed, frameless, and
+        # a cover opening the viewer full screen. Each was a window
+        # from somewhere else inside her page.
+        ("no page puts a PDF reader inside itself",
+         "<iframe" not in nu and "proj-doc" not in nu and "proj-cover" not in nu),
+        ("nor through <object> or <embed>, which the CSP refuses anyway",
          "<object" not in nu and "<embed" not in nu),
         ("and the CSP still refuses them, so that stays true",
          "object-src 'none'" in nu),
-        # THE COVER IS OURS, not one of her photographs — the same rule
-        # `poster` has, and it is in config.toml with it.
-        ("the cover is not counted among her photographs",
-         "cover" in (d / "config.toml").read_text(encoding="utf-8")
-         and nu.count('class="proj-open"') == 0),
-        # NO COVER, NO PICTURE AND NO DIALOG. The honest fallback, and
-        # without this fixture the template could render a broken <img>
-        # on every machine without qlmanage and nothing would say so.
-        ("a dossier with no cover shows her photographs and nothing else",
-         "proj-cover" not in sans and "win-dossier" not in sans
-         and sans.count('class="proj-open"') == 1),
+        ("the pages are shown as photographs, full width, one after another",
+         nu.count('class="proj-open"') == 2),
+        ("nothing on the page points at the PDF at all",
+         re.search(r'(?:src|href)="[^"]*\.pdf', nu) is None),
         ("nothing links to the file, so nothing offers to download it",
          links == []),
         ("nor asks for one with a download attribute",
@@ -1080,8 +1065,8 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
          'id="preview-da-dossier-couverture"' not in desk),
         ("but the cover is what the icon looks like",
          "processed_images" in icon_of("da-dossier-couverture")),
-        ("its page shows the cover and its photographs both",
-         "proj-cover" in cv and 'class="proj-open"' in cv),
+        ("a project with a PDF and her own photographs shows the photographs",
+         'class="proj-open"' in cv and "<iframe" not in cv),
         # NOT A LINK, which is what a download is. `links` above is the
         # same test over all three pages; this one is about `download`,
         # and <img> is stripped first because `decoding` is not it.
@@ -2152,7 +2137,7 @@ def case_one_reader_for_the_file_types(d: pathlib.Path) -> list[tuple[str, bool]
          "not_photographs" in (d / "config.toml").read_text(encoding="utf-8")),
         ("and the reader hands back every one of them",
          filetypes.spoken_for(d)
-         == {"icon", "poster", "wallpaper", "about", "cover"}),
+         == {"icon", "poster", "wallpaper", "about"}),
         ("nothing in tools/ keeps a second list of them",
          name_copies == []),
         # THE CONTROL. Without it, a reader that returned an empty set

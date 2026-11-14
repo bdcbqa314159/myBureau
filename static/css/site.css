@@ -939,42 +939,10 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 /* A film opening a project page gets the same ceiling as a photograph,
    and a black ground so letterboxing is the film's own edge rather than
    a cream gap nobody meant. */
-/* A DOSSIER, AS A PICTURE AND THEN AS A DOCUMENT.
-   --------------------------------------------------------------------
-   On the page it is `page one`, drawn by Quick Look, wearing exactly
-   what a photograph wears: `.proj-open` gives it the margin and the
-   column, and the link around it carries no colour and no underline,
-   so it reads as the picture it is rather than as a link.
-
-   Clicking opens `.win-dossier`, which is a `.win-preview` — the
-   frameless full-screen dialog a photograph opens into. The only
-   difference is what is inside: an iframe rather than an img, so it
-   needs a size of its own and no border.
-
-   It had two earlier shapes, both wrong and both rejected: a reader on
-   the page with a dark ground and a frame, then the same reader with
-   the frame removed. What was wanted was a picture, and the document
-   only once asked for. */
-.proj-cover a { display: block; text-decoration: none; color: inherit; }
-.proj-cover img {
-  display: block;
-  width: auto; max-width: 100%;
-  max-height: 92vh;
-  margin-inline: auto;
-}
-.win-dossier[open] { padding: 0; }
-.win-dossier iframe {
-  display: block; border: 0;
-  width: 100%; height: 100%;
-  background: #fff;
-}
-
-.proj-reel { background: #000; }
-.proj-reel video {
-  display: block;
-  width: 100%; max-height: 92vh;
-  margin-inline: auto;
-}
+/* No rule for a dossier. It is its pages now, and a page of it is a
+   photograph — `.proj-open` above is the whole of its styling.
+   `.proj-cover` and `.win-dossier` were the cover-and-dialog shape
+   that replaced the reader and was replaced in turn. */
 
 /* Everything after the opener used to sit two across with cream
    around it — `.proj-pairs` and `.proj-fig`, gone 2026-11-13 with the
