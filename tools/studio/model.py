@@ -83,6 +83,16 @@ def photographs(folder: pathlib.Path) -> list:
     return out
 
 
+def face_of(folder: pathlib.Path, fm: str) -> str:
+    """Which of the three icon slots holds this thing's face."""
+    got = special(folder, "icon")
+    if got:
+        return "gif" if got.lower().endswith(".gif") else "photo"
+    if "/icons/folder" in (key(fm, "icon") or ""):
+        return "folder"
+    return ""
+
+
 def special(folder: pathlib.Path, kind: str) -> "str | None":
     for f in sorted(folder.iterdir()):
         if f.is_file() and f.stem.lower() == kind:
@@ -150,6 +160,20 @@ def thing(folder: pathlib.Path, stem: str, kind: str) -> dict:
         # Empty for a project, which declares none and gets page.html.
         "template": key(first, "template") or "",
         "icon": special(folder, "icon") or key(first, "icon"),
+        # WHICH OF THE THREE SLOTS holds the face, so the panel can
+        # show one chosen and two empty rather than one box whose
+        # meaning depends on what is in the folder.
+        #
+        #   "gif"     a colocated icon.gif — it moves on the desk
+        #   "photo"   any other colocated icon.*
+        #   "folder"  a drawn one declared in the front matter
+        #   ""        none of the three; the engine falls back
+        #
+        # Read in _icon.html's own order of precedence: a colocated
+        # file beats a declared path. If that order ever changes this
+        # becomes a lie — which is why `set_icon` and `set_face` each
+        # clear the other two rather than relying on it.
+        "face": face_of(folder, first),
         "wallpaper": special(folder, "wallpaper"),
         "about": special(folder, "about"),
         # the affiche — the panel shows it as the proof a film landed
@@ -262,7 +286,7 @@ def tree() -> dict:
             # it is a <dialog> on the home page, not a template of its
             # own; the panel keys off `kind` for this row, and the field
             # is here so every row carries the same set
-            "template": "", "type": "",
+            "template": "", "type": "", "face": "",
         })
     return {"desks": desks, "identity": identity()}
 

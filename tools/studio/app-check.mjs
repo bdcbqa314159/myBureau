@@ -273,6 +273,25 @@ const sandbox = {
               photographs: [], video: "film.mp4",
               poster: "poster.png", doc: null, languages: ["en", "fr"], alt: {},
             }, {
+              // ONE WEARING A GIF and one declaring a DRAWN FOLDER, so
+              // "exactly one slot is marked" has all three states to
+              // be true about — the third is `grocery`, which has
+              // neither and falls back.
+              kind: "project", path: "content/da/gifly", name: "gifly",
+              template: "", type: "page", face: "gif", icon: "icon.gif",
+              titles: { fr: "gifly", en: "gifly" }, bodies: { fr: "", en: "" },
+              x: "5", y: "5", opens: null, wallpaper: null,
+              photographs: [], video: null, doc: null,
+              languages: ["en", "fr"], alt: {},
+            }, {
+              kind: "project", path: "content/da/drawnly", name: "drawnly",
+              template: "", type: "page", face: "folder",
+              icon: "img/icons/folder-rust.svg",
+              titles: { fr: "drawnly", en: "drawnly" }, bodies: { fr: "", en: "" },
+              x: "6", y: "6", opens: null, wallpaper: null,
+              photographs: [], video: null, doc: null,
+              languages: ["en", "fr"], alt: {},
+            }, {
               // A PHOTO SHE HAS NOT FILLED YET — type photo, no image.
               // This is the one shape where reading the TYPE and
               // counting the files disagree: counting says "not one
@@ -488,6 +507,24 @@ if (loaded) {
   // asked of a bureau
   if (daRow && daRow.__click) daRow.__click();
 
+  // HER ICON: THREE SLOTS, AND ONLY ONE HOLDS THE FACE.
+  //
+  // It was one box. Drop anything in it and you got an icon; what you
+  // had before was not shown, and whether a dropped file beat a
+  // declared one was a precedence rule in _icon.html she could not
+  // see — so "I chose a photograph" and "the desk draws a folder"
+  // were both true at once.
+  check("the editor offers three slots for the icon, not one box",
+    (look.innerHTML.match(/data-face="/g) || []).length === 3,
+    look.innerHTML.slice(0, 120));
+  check("  a dossier, a photo and a GIF, each named",
+    /data-face="folder"/.test(look.innerHTML)
+    && /data-face="photo"/.test(look.innerHTML)
+    && /data-face="gif"/.test(look.innerHTML));
+  check("  the drawn folders are offered as buttons, not as a drop",
+    (look.innerHTML.match(/data-drawn="/g) || []).length === 4);
+  check("  and a photo or a GIF is still a drop",
+    (look.innerHTML.match(/data-drop="icon"/g) || []).length >= 2);
   check("the editor offers an appearance to change",
     /data-drop="icon"/.test(look.innerHTML));
   check("a bureau also offers its wallpaper",
@@ -501,6 +538,24 @@ if (loaded) {
     choose("maison cosette") && !/data-drop="wallpaper"/.test(look.innerHTML));
   check("  but keeps its text, which its page does render",
     /data-body/.test(look.innerHTML));
+
+  // EXACTLY ONE SLOT IS MARKED, and it is the one the model reports.
+  // `douze regards` carries an `icon.gif`; `atelier mirabelle`
+  // declares a drawn folder; `grocery` has neither and falls back.
+  for (const [row, want] of [["gifly", "gif"], ["drawnly", "folder"],
+                             ["grocery", ""]]) {
+    choose(row);
+    const pane = look.innerHTML;
+    const marked = (pane.match(/class="slot is-chosen" data-face="([a-z]+)"/) || [])[1] || "";
+    check("a thing wearing a " + (want || "fallback") + " says so, and only that",
+      marked === want
+      && (pane.match(/is-chosen/g) || []).length === (want ? 1 : 0),
+      "marked: " + marked);
+    check("  and the one with nothing chosen offers to take it back"
+      + " only when there is something to take",
+      want ? /id="noface"/.test(pane) : !/id="noface"/.test(pane));
+  }
+  if (daRow && daRow.__click) daRow.__click();
 
   // EACH TYPE IS OFFERED ITS OWN CONTROLS, AND NOT THE OTHERS'.
   //

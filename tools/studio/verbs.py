@@ -586,6 +586,26 @@ def set_alt(item: str, name: str, text: str) -> dict:
     return {"described": name, "files": wrote}
 
 
+def drop_key(text: str, name: str) -> str:
+    """Take one key out of the front matter, leaving every other byte.
+
+    The inverse of set_key, and it exists because a FACE is one of
+    three things and choosing one has to unchoose the others. Without
+    this, picking a photograph left `icon = "…/folder.svg"` behind and
+    the declared path won over the file — so the panel said photograph
+    and the desk drew a folder.
+
+    `[ \t]*` and not `\s*`: see set_key. `\n?` takes the line's own
+    newline with it rather than leaving a blank one behind.
+    """
+    parts = frontmatter.parts(text)
+    if len(parts) < 3:
+        return text
+    parts[1] = re.sub(r'^[ \t]*' + re.escape(name) + r'[ \t]*=.*$\n?',
+                      "", parts[1], count=1, flags=re.M)
+    return frontmatter.rejoin(parts)
+
+
 def set_alt_key(text: str, file: str, value: str,
                 where: str = "ce fichier") -> str:
     """One line inside `[extra.alt]`, leaving every other byte alone.
@@ -1348,7 +1368,42 @@ def set_icon(item: str, name: str, data: bytes) -> dict:
     if not data:
         raise Refused("ce fichier est vide.")
     must_really_be(name, data)
-    moves = []
+    # WHICH OF THE THREE SLOTS this fills, from the file's own format —
+    # which is a fact about the bytes, not a reading of a name. A GIF
+    # moves on the desk and a photograph does not, so they are two
+    # choices rather than one.
+    slot = "gif" if ext == ".gif" else "photo"
+    moves, texts = [], []
+    # AND THE OTHER TWO ARE UNCHOSEN. Without this a declared
+    # `icon = "…/folder.svg"` stayed in the front matter, and
+    # _icon.html gives a colocated file precedence — so the panel
+    # showed the photograph she had just dropped while the desk went on
+    # drawing the folder.
+    _unface(d, moves, texts)
+    dest = d / ("icon" + ext)
+    tmp = dest.with_name(dest.name + ".studio-tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, dest)
+    moves.append({"from": "", "to": rel(dest)})
+    record("set_icon", texts, moves)
+    return {"icon": dest.name, "face": slot}
+
+
+# The drawn folder pictures she may choose between. Ours, hand-drawn,
+# in static/img/icons — see NOTICE: nothing here comes from anybody's
+# icon pack.
+DRAWN_FOLDERS = ("folder", "folder-olive", "folder-rust", "folder-slate")
+
+
+def _unface(d: pathlib.Path, moves: list, texts: list) -> None:
+    """Take away whatever face this thing has, all three sorts of it.
+
+    A FACE IS ONE OF THREE THINGS and choosing one has to unchoose the
+    others, or the precedence in _icon.html decides instead of her: a
+    colocated `icon.*` beats a declared path, which beats the default.
+    So a photograph dropped on a thing that already declared a folder
+    looked chosen in the panel and was not drawn on the desk.
+    """
     for old in sorted(d.iterdir()):
         if old.is_file() and old.stem.lower() == "icon":
             TRASH.mkdir(parents=True, exist_ok=True)
@@ -1356,13 +1411,48 @@ def set_icon(item: str, name: str, data: bytes) -> dict:
             bin_.mkdir(exist_ok=True)
             shutil.move(str(old), str(bin_ / old.name))
             moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
-    dest = d / ("icon" + ext)
-    tmp = dest.with_name(dest.name + ".studio-tmp")
-    tmp.write_bytes(data)
-    os.replace(tmp, dest)
-    moves.append({"from": "", "to": rel(dest)})
-    record("set_icon", [], moves)
-    return {"icon": dest.name}
+    for f in language_files(d):
+        before = f.read_text(encoding="utf-8")
+        after = drop_key(before, "icon")
+        if after != before:
+            texts.append({"path": rel(f), "before": before})
+            atomic(f, after)
+
+
+def set_face(item: str, how: str, which: str = "folder") -> dict:
+    """Give a thing a DRAWN face, or take its face away.
+
+    Three slots, and only one of them can hold the face:
+
+        un dossier   one of our drawn folder pictures — this verb
+        une photo    a file she drops            — set_icon
+        un GIF       a file she drops            — set_icon
+
+    `how = "folder"` picks a drawn one, `how = "none"` clears all three
+    and lets the engine fall back — the first photograph for a thing
+    that has one, a drawn folder for a thing that does not.
+    """
+    d = a_project(item)
+    if not drawn_as_an_icon(d):
+        raise Refused("rien ne dessine d'icône pour cette chose :"
+                      " une image d'icône ne s'y verrait pas.")
+    if how not in ("folder", "none"):
+        raise Refused("une icône est un dossier, une photo ou un GIF.")
+    if how == "folder" and which not in DRAWN_FOLDERS:
+        raise Refused("je ne connais pas ce dessin de dossier.")
+    moves, texts = [], []
+    _unface(d, moves, texts)
+    if how == "folder":
+        path = "img/icons/{}.svg".format(which)
+        for f in language_files(d):
+            before = f.read_text(encoding="utf-8")
+            after = set_key(before, "icon", path, rel(f))
+            if after != before:
+                texts.append({"path": rel(f), "before": before})
+                atomic(f, after)
+    if moves or texts:
+        record("set_face", texts, moves)
+    return {"face": how, "which": which if how == "folder" else None}
 
 
 def set_identity(owner: str, studio: str) -> dict:
