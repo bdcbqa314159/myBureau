@@ -628,8 +628,10 @@ def case_second_level_page(d: pathlib.Path) -> list[tuple[str, bool]]:
          'class="project"' in own and '<main class="desk"' not in own),
         ("it carries no wallpaper", "--wallpaper" not in own),
         ("its description is on it", "Une description, deux lignes." in own),
-        ("and its photographs are, every one of them at full width",
-         own.count("proj-open") == 2 and "proj-pairs" not in own),
+        # REVERSED: a page is MINIATURES now, each opening full screen,
+        # not a column of full-width figures. 2026-11-14.
+        ("and its photographs are, every one of them a miniature",
+         own.count('class="thing"') == 2 and "proj-pairs" not in own),
         ("no dangling window reference", dangling(desk) == []),
     ]
 
@@ -752,7 +754,7 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
     # ITS PAGES, which is what the site shows for a dossier. Written as
     # plain PNGs rather than rasterised: pdftoppm is not on CI, and
     # what is being checked here is prune, not the drawing.
-    shutil.copyfile(ROOT / "static/img/brand/youtube-white.png", doc / "01.png")
+    shutil.copyfile(ROOT / "static/img/brand/youtube-white.png", doc / "page-01.png")
 
     ok, log = build(d)
     pub = d / "public"
@@ -990,11 +992,12 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
     (plain / "index.md").write_text(FRONT.format(title="le dossier.pdf", extra=""))
     (plain / "dossier.pdf").write_bytes(TINY_PDF)
 
-    # ITS PAGES, as `pages_of` writes them. Plain PNGs rather than
-    # rasterised, because pdftoppm is not on CI and what is checked
-    # here is the TEMPLATE given a dossier's pages, not the drawing of
-    # them — verbs' own suite checks the drawing, where pdftoppm is.
-    for n in ("01.png", "02.png"):
+    # ITS PAGES, under the reserved `page-NN` prefix `pages_of` writes.
+    # Plain PNGs rather than rasterised, because pdftoppm is not on CI
+    # and what is checked here is the TEMPLATE given a dossier's pages,
+    # not the drawing of them — verbs' own suite checks that, where the
+    # tool is.
+    for n in ("page-01.png", "page-02.png"):
         shutil.copyfile(ROOT / "static/img/brand/youtube-white.png", plain / n)
 
     cover = bureau / "dossier-couverture"
@@ -1002,6 +1005,13 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
     (cover / "index.md").write_text(FRONT.format(title="grocery.pdf", extra=""))
     (cover / "grocery.pdf").write_bytes(TINY_PDF)
     shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", cover / "01.jpg")
+    # AND ITS PAGES, so this fixture is the combination `add_doc` used
+    # to refuse: a dossier AND her own photographs in one project. The
+    # pages took `01`, `02` and would have written over hers; under the
+    # `page-NN` prefix they cannot, so the page shows a miniature for
+    # each of her pictures and one for the dossier.
+    shutil.copyfile(ROOT / "static/img/brand/youtube-white.png",
+                    cover / "page-01.png")
 
     # A PDF WITH NO PAGES BESIDE IT — poppler missing on the machine
     # that dropped it, or a file nobody ran through the panel. The page
@@ -1044,8 +1054,16 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
          "<object" not in nu and "<embed" not in nu),
         ("and the CSP still refuses them, so that stays true",
          "object-src 'none'" in nu),
-        ("the pages are shown as photographs, full width, one after another",
-         nu.count('class="proj-open"') == 2),
+        # ONE MINIATURE FOR THE DOSSIER, not one per page: its first
+        # page, chosen by nobody, and the pages live in the dialog it
+        # opens.
+        ("the dossier is one miniature, and it is its first page",
+         nu.count('class="thing thing-doc"') == 1 and "page-01" in nu),
+        ("every page of it is inside what that miniature opens",
+         len(re.findall(r"<img", re.search(
+             r'class="doc-scroll">.*?</div>', nu, re.S).group(0))) == 2),
+        ("and no page of it is a miniature of its own",
+         nu.count('class="thing"') == 0),
         ("nothing on the page points at the PDF at all",
          re.search(r'(?:src|href)="[^"]*\.pdf', nu) is None),
         ("nothing links to the file, so nothing offers to download it",
@@ -1065,8 +1083,10 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
          'id="preview-da-dossier-couverture"' not in desk),
         ("but the cover is what the icon looks like",
          "processed_images" in icon_of("da-dossier-couverture")),
-        ("a project with a PDF and her own photographs shows the photographs",
-         'class="proj-open"' in cv and "<iframe" not in cv),
+        ("a project with a PDF and her own photographs shows both",
+         cv.count('class="thing"') == 1
+         and cv.count('class="thing thing-doc"') == 1
+         and "<iframe" not in cv),
         # NOT A LINK, which is what a download is. `links` above is the
         # same test over all three pages; this one is about `download`,
         # and <img> is stripped first because `decoding` is not it.
@@ -1147,12 +1167,13 @@ def case_the_project_page_is_a_column(d: pathlib.Path) -> list[tuple[str, bool]]
 
     return [
         ("builds", ok),
-        ("every photograph takes the whole width",
-         four.count('class="proj-open"') == 4),
+        ("every photograph is a miniature that opens",
+         four.count('class="thing"') == 4
+         and len(re.findall(r'<dialog[^>]*id="thing-', four)) == 4),
         ("and none of them is half a page",
          "proj-pairs" not in four and "proj-fig" not in four),
         ("a project of one photograph is the same page as a project of four",
-         one.count('class="proj-open"') == 1 and "proj-pairs" not in one),
+         one.count('class="thing"') == 1 and "proj-pairs" not in one),
         ("every container the template opens is closed",
          all(balanced(s) for s in (one, four, none))),
         ("a project with no photographs still renders its text",
@@ -1161,13 +1182,17 @@ def case_the_project_page_is_a_column(d: pathlib.Path) -> list[tuple[str, bool]]
         # the same as none marked urgent, and that is how the subfolder
         # page became the heaviest on the site. The rhythm went; the
         # rule that only the top one is urgent did not.
-        ("only the first image is fetched eagerly, however many there are",
-         four.count('fetchpriority="high"') == 1
-         and four.count('loading="lazy"') == 3),
-        ("and every one of them asks for the full width",
-         four.count('sizes="100vw"') == 4),
-        ("every photograph still carries its real proportions",
-         len(re.findall(r'<img[^>]*width="\d+" height="\d+"', four)) == 4),
+        # STILL ONE EAGER IMAGE, and now it is the first MINIATURE.
+        # What the dialogs hold is all lazy: nothing is open until she
+        # clicks, so none of it is urgent.
+        ("only the first miniature is fetched eagerly",
+         four.count('fetchpriority="high"') == 1),
+        ("and what the dialogs hold waits to be asked for",
+         four.count('loading="lazy"') >= 4),
+        ("a full-screen picture still says how much of the screen it fills",
+         four.count('sizes="100vw"') >= 1),
+        ("every picture carries its real proportions, miniature and full alike",
+         len(re.findall(r'<img[^>]*width="\d+" height="\d+"', four)) == 8),
     ]
 
 
@@ -1286,7 +1311,7 @@ def case_a_film_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
         # container it landed in.
         ("the film's own still is its poster, not a photograph underneath it",
          bool(main) and "poster=" in main.group(0)
-         and main.group(0).count('class="proj-open"') == 1),
+         and main.group(0).count('class="thing"') == 1),
         ("a film page works without JavaScript too — the video is in the page",
          "<video" in normal_html),
         ("nothing dangles", dangling(desk) == []),
@@ -1320,11 +1345,14 @@ def case_only_the_opener_is_urgent(d: pathlib.Path) -> list[tuple[str, bool]]:
     eager = [x for x in tags if 'loading="lazy"' not in x]
     return [
         ("builds", ok),
-        ("all four photographs are on the page", html.count("proj-open") == 4),
+        # MINIATURES, and the dialogs double the <img> count — so the
+        # eager/lazy tally below counts the MINIATURES only, which is
+        # what this case is about: one urgent picture, not four.
+        ("all four photographs are on the page", html.count('class="thing"') == 4),
         ("exactly one of them is fetched eagerly", len(eager) == 1),
         ("and only that one is called urgent",
          sum('fetchpriority="high"' in x for x in tags) == 1),
-        ("the rest wait", sum('loading="lazy"' in x for x in tags) == 3),
+        ("the rest wait", sum('loading="lazy"' in x for x in tags) >= 3),
     ]
 
 
@@ -2207,8 +2235,8 @@ def case_a_subfolder_page_is_one_column(d: pathlib.Path) -> list[tuple[str, bool
     project = page(d, "graphic-design/grocery-list/index.html")
     return [
         ("builds", ok),
-        ("every photograph on a subfolder page takes the whole width",
-         sub.count('class="proj-open"') == 3),
+        ("every photograph on a subfolder page is a miniature",
+         sub.count('class="thing"') == 3),
         ("so there is no pairs container on it at all",
          "proj-pairs" not in sub),
         ("and nothing on it is pinned — that is the road's business",
@@ -2221,7 +2249,7 @@ def case_a_subfolder_page_is_one_column(d: pathlib.Path) -> list[tuple[str, bool
         # hold ten tomorrow. What is asserted is the SHAPE — the same
         # shape the subfolder above has.
         ("and a PROJECT is the very same page, not a second rhythm",
-         'class="proj-open"' in project
+         'class="thing"' in project
          and "proj-pairs" not in project and "proj-fig" not in project),
         ("the route is on travail sélectionné and on nothing else",
          'class="proj-route"' in page(d, "travail-selectionne/index.html")
@@ -2681,7 +2709,7 @@ def case_a_preview_is_one_picture(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("and so do six", window_of("da-six") == ""),
         ("no icon names a dialog that was not written", dangling(desk) == []),
         ("and the page they go to shows every one of them",
-         page(d, "da/six/index.html").count('class="proj-open"') == 6),
+         page(d, "da/six/index.html").count('class="thing"') == 6),
     ]
 
 

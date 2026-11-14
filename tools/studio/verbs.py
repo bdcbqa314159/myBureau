@@ -215,7 +215,8 @@ def photographs_in(d: pathlib.Path) -> list:
     """Her photographs in this folder — not ours, not a page of a PDF."""
     return [f.name for f in sorted(d.iterdir())
             if f.is_file() and f.suffix.lower() in IMAGE
-            and f.stem.lower() not in SPOKEN_FOR]
+            and f.stem.lower() not in SPOKEN_FOR
+            and f.stem.lower().split("-")[0] != "page"]
 
 
 def a_project(p: "pathlib.Path | str") -> pathlib.Path:
@@ -1072,21 +1073,35 @@ def pages_of(d: pathlib.Path, doc: pathlib.Path, moves: list) -> list:
     thumbnail, which is what the cover was. `pdftoppm` is the only one
     that hands back every page, and it is one `brew install poppler`.
 
-    Written as 01.png, 02.png … which are ordinary photograph names, so
-    nothing in any template has to learn a new one.
+    Written as `page-01.png`, `page-02.png` … A RESERVED PREFIX, not
+    ordinary photograph names: the pages are not her photographs, they
+    are what the dossier's own full-screen view scrolls through, and
+    the page itself shows ONE miniature for the whole dossier. Named
+    `01.png` they took the place of her pictures and `add_doc` had to
+    refuse a project that already had some.
+
+    The test everywhere is `stem | split(pat="-") | first == "page"`,
+    which costs one short expression and no new machinery. Her own
+    drops are numbered by `add_image` and never carry a dash.
     """
+    # pdftoppm names its output `<prefix>-N.png`, and OUR names are
+    # `page-NN.png` — one digit against two, so `page-1.png` and
+    # `page-01.png` would both exist and the second run would find the
+    # first run's leftovers. It draws under `draw-` and is renamed.
+    for stale in sorted(d.glob("draw-*.png")):
+        stale.unlink()
     out = subprocess.run(
-        ["pdftoppm", "-r", str(PAGE_DPI), "-png", str(doc), str(d / "page")],
+        ["pdftoppm", "-r", str(PAGE_DPI), "-png", str(doc), str(d / "draw")],
         capture_output=True, text=True, timeout=120)
     if out.returncode != 0:
         raise Refused("je n'ai pas pu lire les pages de ce PDF : "
                       + (out.stderr.strip()[-200:] or "pdftoppm a refusé."))
-    drawn = sorted(d.glob("page-*.png"))
+    drawn = sorted(d.glob("draw-*.png"))
     if not drawn:
         raise Refused("ce PDF n'a aucune page à montrer.")
     made = []
     for i, f in enumerate(drawn, start=1):
-        dest = d / "{:02d}.png".format(i)
+        dest = d / "page-{:02d}.png".format(i)
         os.replace(str(f), str(dest))
         moves.append({"from": "", "to": rel(dest)})
         made.append(dest.name)
@@ -1122,16 +1137,24 @@ def add_doc(item: str, name: str, data: bytes) -> dict:
     if any(f.suffix.lower() in VIDEO for f in d.iterdir() if f.is_file()):
         raise Refused("ce projet est un film. Un dossier PDF a besoin de sa"
                       " propre page — fais-en un projet à part.")
-    # THE PAGES BECOME THE PHOTOGRAPHS, so a project that already has
-    # photographs would have them written over. Refused, with the thing
-    # to do instead — her pictures are never ours to replace.
-    if photographs_in(d):
-        raise Refused("ce projet a déjà des photos, et les pages du PDF"
-                      " prendraient leur place. Fais-en un projet à part.")
+    # HER PHOTOGRAPHS ARE SAFE, so this no longer refuses a project
+    # that has some: the pages are `page-NN.png` and she drops `01.jpg`.
+    # A dossier and photographs sit on one page as miniatures together.
     if not have_pdftoppm():
         raise Refused("il me manque poppler, qui lit les pages d'un PDF."
                       " Dans le Terminal : brew install poppler")
     moves = []
+    # THE OLD PAGES GO WITH THE OLD DOSSIER. Without this a second PDF
+    # left the first one's pages behind, and the miniature would open a
+    # document that was no longer there.
+    for old in sorted(d.iterdir()):
+        if old.is_file() and old.suffix.lower() == ".png" \
+                and old.stem.lower().split("-")[0] == "page":
+            TRASH.mkdir(parents=True, exist_ok=True)
+            bin_ = TRASH / str(int(time.time() * 1000))
+            bin_.mkdir(exist_ok=True)
+            shutil.move(str(old), str(bin_ / old.name))
+            moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
     for old in sorted(d.iterdir()):
         if old.is_file() and old.suffix.lower() in DOC:
             TRASH.mkdir(parents=True, exist_ok=True)

@@ -23,12 +23,17 @@
     at all, reachability is not this page's job any more. See the note
     in specs/pages-and-the-road.md.
 
-    `icon.*`, `poster.*` and `wallpaper.*` are not her photographs. -#}
+    `icon.*`, `poster.*`, `wallpaper.*` and a dossier's `page-NN.*`
+    are not her photographs. -#}
 {%- for a in pl_assets -%}
   {%- set leaf = a | split(pat="/") | last -%}
   {%- set stem = leaf | split(pat=".") | first -%}
   {%- set ext = leaf | split(pat=".") | last | lower -%}
-  {%- if ext in config.extra.image_types and not (stem in config.extra.not_photographs) -%}
+  {#- `page-NN` is a dossier's page, not one of her photographs — see
+      verbs.pages_of. Without this a dossier inside a folder-page put
+      every page of itself on the route. -#}
+  {%- if ext in config.extra.image_types and not (stem in config.extra.not_photographs)
+         and stem | split(pat="-") | first != "page" -%}
     {%- set src = pl_here ~ leaf -%}
     {%- set shape = get_image_metadata(path=src) -%}
     {%- set small = resize_image(path=src, width=900, op="fit_width", format="webp", quality=78) -%}

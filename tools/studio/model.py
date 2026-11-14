@@ -73,6 +73,12 @@ def photographs(folder: pathlib.Path) -> list:
             continue
         if f.stem.lower() in SPOKEN_FOR:
             continue
+        # A DOSSIER'S PAGE, drawn from the PDF — not a photograph she
+        # dropped, so the panel must not offer it for reordering or a
+        # description, and must not let her throw one away on its own.
+        # See verbs.pages_of for the `page-NN` convention.
+        if f.stem.lower().split("-")[0] == "page":
+            continue
         out.append(f.name)
     return out
 
