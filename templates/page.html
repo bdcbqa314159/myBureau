@@ -154,32 +154,39 @@
     {% endif %}
   {% endfor %}
 
-  {#- The dossier itself, after her photographs: one figure, scrolling
-      its own pages. `shown` is not touched — the eager/lazy rule is
-      about her photographs, and nothing in here is urgent. -#}
-  {% set_global has_pages = false %}
+  {#- THE DOSSIER ON THE PAGE: ITS FIRST PAGE, AS A PHOTOGRAPH.
+      It does not scroll here. It is one picture, the size a photograph
+      is, and clicking it brings the pop-front where the pages scroll.
+
+      The box that scrolled in place was the wrong dimension for every
+      document — `width: auto` on a flex column of pages gave a narrow
+      tall thing on a page of wide photographs. A photograph's own
+      rules give the right size for nothing extra: `.proj-open img` is
+      `max-width: 100%; max-height: 92vh`, centred, which is exactly
+      "a sensible dimension".
+
+      `shown` is not touched: the eager-first rule is about her
+      photographs, and this comes after them. -#}
+  {% set_global doc_first = "" %}
   {% for asset in w.assets %}
     {% set file = asset | split(pat="/") | last %}
-    {% if file | split(pat=".") | first | split(pat="-") | first == "page" %}
-      {% set_global has_pages = true %}
+    {% if doc_first == "" and file | split(pat=".") | first | split(pat="-") | first == "page" %}
+      {% set_global doc_first = here ~ file %}
     {% endif %}
   {% endfor %}
-  {% if has_pages %}
+  {% if doc_first %}
+    {% set dsh = get_image_metadata(path=doc_first) %}
+    {% set done = resize_image(path=doc_first, width=900, op="fit_width", format="webp", quality=78) %}
+    {% set dtwo = resize_image(path=doc_first, width=1800, op="fit_width", format="webp", quality=78) %}
     <figure class="proj-open proj-doc">
-      <div class="doc-scroll" tabindex="0" aria-label="{{ w.title }}">
-        {% for asset in w.assets %}
-          {% set file = asset | split(pat="/") | last %}
-          {% if file | split(pat=".") | first | split(pat="-") | first == "page" %}
-            {% set pg = here ~ file %}
-            {% set psh = get_image_metadata(path=pg) %}
-            {%- set_global pw = 1600 -%}
-            {%- if psh.width < 1600 -%}{%- set_global pw = psh.width -%}{%- endif -%}
-            {% set pim = resize_image(path=pg, width=pw, op="fit_width", format="webp", quality=80) %}
-            <img src="{{ pim.url }}" width="{{ psh.width }}" height="{{ psh.height }}"
-                 alt="" loading="lazy" decoding="async">
-          {% endif %}
-        {% endfor %}
-      </div>
+      <a href="#dossier-{{ w.path | slugify }}">
+        <img src="{{ done.url }}"
+             srcset="{{ done.url }} {{ done.width }}w, {{ dtwo.url }} {{ dtwo.width }}w"
+             sizes="100vw"
+             width="{{ dsh.width }}" height="{{ dsh.height }}"
+             alt="{{ trans(key='doc_open', lang=lang) }}"
+             loading="lazy" decoding="async">
+      </a>
     </figure>
   {% endif %}
 
@@ -218,6 +225,42 @@
         {% include "_place.html" %}
       {% endfor %}
     </div>
+  {% endif %}
+
+  {#- THE POP-FRONT, where the dossier scrolls.
+      --------------------------------------------------------------
+      `win-preview` is the frameless full-screen dialog a photograph on
+      a desk opens into: no border, no title bar, no close box. Escape
+      closes it — a modal dialog does that itself — and desk.js closes
+      every `.win-preview` on a click that lands off the content.
+
+      Inside, every page in one scrolling column. They are PICTURES,
+      drawn by pdftoppm when she dropped the PDF, which is the whole of
+      why there is no viewer, no toolbar and nothing to hide — and why
+      Firefox behaves like every other browser.
+
+      `overscroll-behavior: contain` so the last page does not carry on
+      into the page behind. `tabindex` on the scroller, because a
+      scroll container only a pointer can reach cannot be used from a
+      keyboard. -#}
+  {% if doc_first %}
+    <dialog class="win win-preview win-dossier" id="dossier-{{ w.path | slugify }}"
+            aria-label="{{ w.title }}">
+      <div class="doc-scroll" tabindex="0">
+        {% for asset in w.assets %}
+          {% set file = asset | split(pat="/") | last %}
+          {% if file | split(pat=".") | first | split(pat="-") | first == "page" %}
+            {% set pg = here ~ file %}
+            {% set psh = get_image_metadata(path=pg) %}
+            {%- set_global pw = 2000 -%}
+            {%- if psh.width < 2000 -%}{%- set_global pw = psh.width -%}{%- endif -%}
+            {% set pim = resize_image(path=pg, width=pw, op="fit_width", format="webp", quality=80) %}
+            <img src="{{ pim.url }}" width="{{ psh.width }}" height="{{ psh.height }}"
+                 alt="" loading="lazy" decoding="async">
+          {% endif %}
+        {% endfor %}
+      </div>
+    </dialog>
   {% endif %}
 
   {# ancestors gives a FILE PATH — get_section turns it into a URL.
