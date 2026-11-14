@@ -211,6 +211,13 @@ def inside(p: "pathlib.Path | str") -> pathlib.Path:
     return q
 
 
+def photographs_in(d: pathlib.Path) -> list:
+    """Her photographs in this folder — not ours, not a page of a PDF."""
+    return [f.name for f in sorted(d.iterdir())
+            if f.is_file() and f.suffix.lower() in IMAGE
+            and f.stem.lower() not in SPOKEN_FOR]
+
+
 def a_project(p: "pathlib.Path | str") -> pathlib.Path:
     d = inside(p)
     if not d.is_dir():
@@ -1028,62 +1035,62 @@ def first_frame(d: pathlib.Path, film: pathlib.Path, moves: list) -> "str | None
         shutil.rmtree(out, ignore_errors=True)
 
 
-def first_page(d: pathlib.Path, doc: pathlib.Path, moves: list) -> "str | None":
-    """The dossier's own first page, as its cover.
+# What turns a dossier into something the site can show. Poppler, via
+# Homebrew — the same shape as ffmpeg for the gif tool: not part of her
+# three-step path, so when it is missing she is told the one line that
+# fixes it rather than shown a failure.
+PAGE_DPI = 150
 
-    The same move as `first_frame` and the same reason. A dossier is
-    shown on its page AS A PHOTOGRAPH — one picture you click — and a
-    PDF is not a picture, so one has to be drawn. Quick Look
-    thumbnails a PDF in the Finder; it will do it here.
 
-    `cover.png` is OURS and is replaced when the dossier changes.
-    Anything else called `cover` she dropped herself and is left
-    alone — the same convention `poster` uses.
+def have_pdftoppm() -> bool:
+    """Is the one thing a dossier needs installed?"""
+    return shutil.which("pdftoppm") is not None
 
-    No qlmanage, no cover: the page then shows the dossier's own
-    photographs and nothing else, which is what it did before this
-    existed. A missing cover is honest; a wrong one is not.
+
+def pages_of(d: pathlib.Path, doc: pathlib.Path, moves: list) -> list:
+    """Every page of the dossier, as photographs.
+
+    THE DOSSIER IS ITS PAGES. Three earlier attempts put a PDF READER
+    on the page — a framed one, a frameless one, then a cover that
+    opened the browser's viewer full screen — and each was a window
+    from somewhere else inside her page. What she asked for, and what
+    her own other site does: *the pdf displays on scroll on front
+    without the pdf reader, and even in firefox.*
+
+    A browser cannot show a PDF without its viewer. So the PDF stops
+    being what the page shows: its pages are rasterised here, once,
+    when she drops it, and the page shows them exactly as it shows any
+    photograph — full width, one after another, scrolling. No reader,
+    no chrome, no dialog, and the same in every browser because they
+    are pictures.
+
+    It also collapses the last special case: every second-class object
+    is a white page with a title and a column of pictures.
+
+    WHY NOT A MACOS BUILT-IN. `sips` renders page one at 72dpi and
+    stops; `cupsfilter` produced an empty file. Quick Look gives one
+    thumbnail, which is what the cover was. `pdftoppm` is the only one
+    that hands back every page, and it is one `brew install poppler`.
+
+    Written as 01.png, 02.png … which are ordinary photograph names, so
+    nothing in any template has to learn a new one.
     """
-    hers = [f for f in sorted(d.iterdir())
-            if f.is_file() and f.stem.lower() == "cover"
-            and f.suffix.lower() != ".png"]
-    if hers:
-        return None
-    if not shutil.which("qlmanage"):
-        return None
-    # OURS GOES FIRST, drawn or not: it is the cover of the dossier
-    # being replaced, and leaving it would show one document and open
-    # another.
-    for old in sorted(d.iterdir()):
-        if old.is_file() and old.stem.lower() == "cover" \
-                and old.suffix.lower() == ".png":
-            TRASH.mkdir(parents=True, exist_ok=True)
-            bin_ = TRASH / str(int(time.time() * 1000))
-            bin_.mkdir(exist_ok=True)
-            shutil.move(str(old), str(bin_ / old.name))
-            moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
-    # The same two guards the film has, for the same reasons: a floor
-    # below which there is no document to look at, and a deadline,
-    # because this runs while the write lock is held.
-    if len(doc.read_bytes()[:DOC_FLOOR]) < DOC_FLOOR:
-        return None
-    out = d / "studio-cover"
-    try:
-        shutil.rmtree(out, ignore_errors=True)
-        out.mkdir()
-        if not quick_look(doc, out):
-            return None
-        drawn = [f for f in out.iterdir() if f.suffix.lower() == ".png"]
-        if not drawn:
-            return None
-        dest = d / "cover.png"
-        os.replace(str(drawn[0]), str(dest))
+    out = subprocess.run(
+        ["pdftoppm", "-r", str(PAGE_DPI), "-png", str(doc), str(d / "page")],
+        capture_output=True, text=True, timeout=120)
+    if out.returncode != 0:
+        raise Refused("je n'ai pas pu lire les pages de ce PDF : "
+                      + (out.stderr.strip()[-200:] or "pdftoppm a refusé."))
+    drawn = sorted(d.glob("page-*.png"))
+    if not drawn:
+        raise Refused("ce PDF n'a aucune page à montrer.")
+    made = []
+    for i, f in enumerate(drawn, start=1):
+        dest = d / "{:02d}.png".format(i)
+        os.replace(str(f), str(dest))
         moves.append({"from": "", "to": rel(dest)})
-        return dest.name
-    except (OSError, subprocess.SubprocessError):
-        return None
-    finally:
-        shutil.rmtree(out, ignore_errors=True)
+        made.append(dest.name)
+    return made
 
 
 def add_doc(item: str, name: str, data: bytes) -> dict:
@@ -1115,6 +1122,15 @@ def add_doc(item: str, name: str, data: bytes) -> dict:
     if any(f.suffix.lower() in VIDEO for f in d.iterdir() if f.is_file()):
         raise Refused("ce projet est un film. Un dossier PDF a besoin de sa"
                       " propre page — fais-en un projet à part.")
+    # THE PAGES BECOME THE PHOTOGRAPHS, so a project that already has
+    # photographs would have them written over. Refused, with the thing
+    # to do instead — her pictures are never ours to replace.
+    if photographs_in(d):
+        raise Refused("ce projet a déjà des photos, et les pages du PDF"
+                      " prendraient leur place. Fais-en un projet à part.")
+    if not have_pdftoppm():
+        raise Refused("il me manque poppler, qui lit les pages d'un PDF."
+                      " Dans le Terminal : brew install poppler")
     moves = []
     for old in sorted(d.iterdir()):
         if old.is_file() and old.suffix.lower() in DOC:
@@ -1128,10 +1144,11 @@ def add_doc(item: str, name: str, data: bytes) -> dict:
     tmp.write_bytes(data)
     os.replace(tmp, dest)
     moves.append({"from": "", "to": rel(dest)})
-    # ITS FIRST PAGE, so the page has a photograph to show for it.
-    cover = first_page(d, dest, moves)
+    # EVERY PAGE, as photographs. The PDF itself stays in the folder as
+    # the source and is shown by nothing.
+    pages = pages_of(d, dest, moves)
     record("add_doc", [], moves)
-    return {"doc": dest.name, "cover": cover}
+    return {"doc": dest.name, "pages": pages}
 
 
 def set_poster(item: str, name: str, data: bytes) -> dict:

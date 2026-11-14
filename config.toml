@@ -26,8 +26,8 @@ image_types = ["jpg", "jpeg", "png", "webp", "avif", "gif"]
 
 # Names that are never one of HER photographs, whatever their
 # extension: the face on a desk, a film's still, the ground a desk
-# stands on, her portrait, a dossier's first page. This was written
-# out in five templates with three different answers — a wallpaper could turn up inside a preview
+# stands on, her portrait. This was written out in five templates
+# with three different answers — a wallpaper could turn up inside a preview
 # and a poster inside the gallery — so it lives here.
 #
 # THE PANEL AND THE TOOLS READ IT TOO, through tools/filetypes.py.
@@ -45,7 +45,7 @@ image_types = ["jpg", "jpeg", "png", "webp", "avif", "gif"]
 # preview, and deliberately does NOT use it when choosing a FACE for a
 # desk: a film's poster is exactly the right face, and excluding it
 # would send every film back to a drawn symbol.
-not_photographs = ["icon", "poster", "wallpaper", "about", "cover"]
+not_photographs = ["icon", "poster", "wallpaper", "about"]
 
 # A project folder containing one of these opens as a window on the
 # bureau instead of navigating to a page: the film beside the text that
@@ -168,7 +168,6 @@ sheet_italic   = "Italique"
 sheet_bigger   = "Agrandir le texte"
 sheet_smaller  = "Réduire le texte"
 window_close   = "Fermer"
-doc_open       = "Ouvrir le dossier"
 window_desk    = "Ouvrir en plein bureau"
 window_page    = "Ouvrir la page du projet"
 window_min     = "Réduire"
@@ -213,7 +212,6 @@ sheet_italic   = "Italic"
 sheet_bigger   = "Larger text"
 sheet_smaller  = "Smaller text"
 window_close   = "Close"
-doc_open       = "Open the dossier"
 window_desk    = "Open as a full desk"
 window_page    = "Open the project page"
 window_min     = "Minimise"
