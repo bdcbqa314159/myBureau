@@ -222,13 +222,18 @@ const sandbox = {
           desks: [{
             kind: "desk", path: "content", name: "content", gallery: false,
             depth: 0, empty: false,
+            // THE TEMPLATE, which decides what the object can show at
+            // all. Left out of this fixture, every row looked like a
+            // page to the panel and the text box was asserted on a
+            // DESK — which renders no body anywhere.
+            template: "index.html",
             titles: { fr: "myBureau", en: "myBureau" },
             bodies: { fr: "", en: "" },
             x: null, y: null, opens: null, icon: null, wallpaper: null,
             about: "about.jpg",
             photographs: [], video: null, doc: null, languages: ["en", "fr"],
             on: [{
-              kind: "folder", path: "content/da", name: "da",
+              kind: "folder", path: "content/da", name: "da", template: "section.html",
               titles: { fr: "DA", en: "art direction" }, bodies: { fr: "", en: "" },
               x: "66", y: "66", opens: null, icon: null, wallpaper: "wallpaper.jpg",
               photographs: [], video: null, languages: ["en", "fr"],
@@ -237,7 +242,7 @@ const sandbox = {
               // has no path of its own and carries the home desk's. The
               // model appends it; leaving it out of this fixture is how
               // the panel got checked against a tree it never sees.
-              kind: "about", path: "content", name: "about me.txt",
+              kind: "about", path: "content", name: "about me.txt", template: "",
               titles: { fr: "about me.txt", en: "about me.txt" },
               bodies: { fr: "Je suis directrice artistique.",
                         en: "I am an art director." },
@@ -247,13 +252,13 @@ const sandbox = {
             }],
           }, {
             kind: "desk", path: "content/da", name: "da", gallery: false,
-            depth: 1, empty: false,
+            depth: 1, empty: false, template: "section.html",
             titles: { fr: "DA", en: "art direction" },
             bodies: { fr: "Un texte.", en: "Some text." },
             x: "66", y: "66", opens: null, icon: null, wallpaper: "wallpaper.jpg",
             photographs: [], video: null, languages: ["en", "fr"],
             on: [{
-              kind: "project", path: "content/da/theodora", name: "theodora",
+              kind: "project", path: "content/da/theodora", name: "theodora", template: "",
               titles: { fr: "theodora.jpeg", en: "theodora.jpeg" },
               bodies: { fr: "", en: "" },
               x: "32", y: "12", opens: null, icon: null, wallpaper: null,
@@ -265,7 +270,7 @@ const sandbox = {
               // that gets a choice about what its icon opens, and the
               // shape the fixture had none of. `theodora` above holds
               // two and a video, so the switch must not appear on it.
-              kind: "project", path: "content/da/seule", name: "seule",
+              kind: "project", path: "content/da/seule", name: "seule", template: "",
               titles: { fr: "seule.jpg", en: "seule.jpg" },
               bodies: { fr: "Un texte.", en: "Some text." },
               x: "20", y: "70", opens: null, icon: null, wallpaper: null,
@@ -274,7 +279,7 @@ const sandbox = {
             }, {
               // a dossier that has not had its PDF yet — the state the
               // panel used to answer by asking for photographs
-              kind: "project", path: "content/da/grocery", name: "grocery",
+              kind: "project", path: "content/da/grocery", name: "grocery", template: "",
               titles: { fr: "grocery.pdf", en: "grocery.pdf" },
               bodies: { fr: "", en: "" },
               x: "60", y: "40", opens: null, icon: null, wallpaper: null,
@@ -352,7 +357,12 @@ if (loaded) {
     look.innerHTML.length > 0 && !/Choisis quelque chose/.test(look.innerHTML),
     JSON.stringify(look.innerHTML.slice(0, 60)));
   check("the editor offers a name to type into", /<input[^>]*data-title/.test(look.innerHTML));
-  check("and a text to write", /<textarea[^>]*data-body/.test(look.innerHTML));
+  // REVERSED, 2026-11-14. A DESK renders no body anywhere —
+  // `section.html` has no `.content` in it — so the box that was
+  // asserted here saved a paragraph onto no page of the site. Where
+  // the text IS shown is checked a few lines down, on a project.
+  check("and NOT a text to write, because a desk shows no text",
+    !/<textarea[^>]*data-body/.test(look.innerHTML));
   check("one box per language, not one for both",
     (look.innerHTML.match(/data-title="/g) || []).length >= 2);
 
@@ -389,6 +399,14 @@ if (loaded) {
   // of the above and leave her unable to write a word anywhere.
   check("a project that is not a lone photograph keeps its text",
     choose("theodora") && /data-body/.test(look.innerHTML));
+  // A TEXT BOX WHERE THE TEXT IS SHOWN. `page.html` renders a body and
+  // so does a project, which declares no template and gets it.
+  // `section.html` and `gallery.html` render none, so a desk and a
+  // gallery are offered none.
+  check("and the home desk is offered none either — about me.txt owns those words",
+    choose("myBureau") && !/data-body/.test(look.innerHTML));
+  check("  while about me.txt, which is the same body, keeps the box",
+    choose("about me.txt") && /data-body/.test(look.innerHTML));
   // back to the desk the checks below are written against — this block
   // moved the selection, and the wallpaper and folder-says checks are
   // asked of a bureau

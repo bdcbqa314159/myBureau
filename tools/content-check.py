@@ -2727,6 +2727,60 @@ def case_what_the_panel_writes_zola_reads(d: pathlib.Path) -> list[tuple[str, bo
     ]
 
 
+def case_a_body_is_shown_or_not_offered(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Which templates render her words, and which never do.
+
+    Every content file has a body under the `+++`, and the panel used
+    to offer a box for it on every object. Two templates render one:
+    `page.html`, and `index.html` by putting it inside the about
+    window. `section.html` and `gallery.html` contain no `.content` at
+    all — so on DA, on graphic design and on pellicules she could type
+    a paragraph, watch it save, and find it on no page of the site.
+
+    THE PANEL NOW HIDES THE BOX on those, which means the panel depends
+    on this. Add `{{ section.content }}` to section.html and the box
+    would be the thing that is wrong, with nothing saying so. This case
+    is what notices.
+
+    Asked of the BUILD, with a marker per template, because that is how
+    the thing was found. Reading the templates for the word `content`
+    would pass on a comment.
+    """
+    marks = {
+        "content/da/_index.md": "MARQUEDESK",
+        "content/pellicules/_index.md": "MARQUEGALERIE",
+        "content/travail-selectionne/_index.md": "MARQUEPAGE",
+        "content/_index.md": "MARQUEACCUEIL",
+    }
+    for rel, mark in marks.items():
+        f = d / rel
+        f.write_text(f.read_text(encoding="utf-8").rstrip() + "\n\n" + mark + "\n",
+                     encoding="utf-8")
+    ok, log = build(d)
+    html = "".join(f.read_text(encoding="utf-8")
+                   for f in (d / "public").rglob("*.html"))
+
+    return [
+        ("builds", ok),
+        # NOWHERE AT ALL — not on the desk, not on any other page.
+        ("a desk shows her words on no page of the site",
+         "MARQUEDESK" not in html),
+        ("and neither does a gallery", "MARQUEGALERIE" not in html),
+        # THE CONTROL. If no marker arrived anywhere, the three above
+        # would hold because the fixture never worked.
+        ("while a folder-page shows them, which is why it keeps the box",
+         "MARQUEPAGE" in html),
+        ("and the home page shows them, inside the about window",
+         "MARQUEACCUEIL" in html),
+        # INSIDE THE SHEET, not merely somewhere on the home page. The
+        # body arrives wrapped in <p>, so a regex demanding the marker
+        # immediately after the tag fails on markup that is correct.
+        ("the about window is where they land, not the desk itself",
+         "MARQUEACCUEIL" in re.search(
+             r'class="about-sheet".*?</div>', page(d, "index.html"), re.S).group(0)),
+    ]
+
+
 def case_a_dead_click(d: pathlib.Path) -> list[tuple[str, bool]]:
     """An icon that names a window nobody rendered.
 
@@ -2854,6 +2908,7 @@ CASES = [
     ("a picture opens plain, a film keeps its frame", case_a_picture_opens_plain),
     ("a project inside a folder that is a page", case_film_in_a_folder),
     ("what the panel writes, zola reads", case_what_the_panel_writes_zola_reads),
+    ("a body is shown, or not offered", case_a_body_is_shown_or_not_offered),
     ("a dead click", case_a_dead_click),
     ("a photograph can ask for its page", case_a_photograph_can_ask_for_its_page),
     ("a preview is one picture", case_a_preview_is_one_picture),
