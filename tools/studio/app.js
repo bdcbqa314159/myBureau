@@ -302,6 +302,22 @@ const isBureau = (o) => model.desks.some((d) => d.path === o.path);
  * refused with where it should have gone, and the same the other way. */
 /* What a project is waiting for, said in the empty space rather than
  * left for her to guess from a generic "drop photos here". */
+/* IS THIS A BLANK PAGE WITH HER CONTENT ON IT?
+ *
+ * `page.html` renders one, and a project declares no template and gets
+ * it. That is the whole test — and it is a fact about the folder, not
+ * a reading of its name.
+ *
+ * It replaces three different guesses that had grown up beside each
+ * other: `kind === "project"`, `isDesk && !gallery`, and "does the
+ * title end in .pdf". Those are why `grocery list.png` could take
+ * photographs and a text while `logofolio`, `atelier mirabelle` and
+ * `maison cosette` could take neither — the same kind of object,
+ * told apart by how it was spelled. */
+function isPage(o) {
+  return o.template === "page.html" || o.template === "";
+}
+
 function waitingFor(o) {
   // ONLY A PROJECT WAITS FOR A FILE. This used to exclude "desk", which
   // is what the home desk and a bureau looked at as themselves are
@@ -309,28 +325,45 @@ function waitingFor(o) {
   // "folder", and those fell straight through. So every folder with no
   // photographs of its own announced "Rien dedans pour l'instant."
   // directly under a line saying it holds four things.
-  if (o.kind !== "project" || o.gallery) return "";
+  if (!isPage(o)) return "";
   const named = (o.titles.fr || "").toLowerCase();
-  const isFilm = o.video || /\.(mov|mp4|m4v|webm)$/.test(named);
-  const isDoc = /\.pdf$/.test(named);
-  if (isFilm && !o.video) return "Ce film attend sa vidéo.";
-  // A document waits for its PDF, not for photographs. It used to ask
-  // for "ses pages, en JPEG", which was true of an engine that could not
-  // show a PDF and is now simply wrong.
-  if (isDoc && !o.doc) return "Ce dossier attend son PDF.";
+  // A FILM IS THE ONE THING A NAME MAY STILL ANNOUNCE, because a film
+  // is genuinely a different object: its icon opens a window on the
+  // desk rather than going to a page. `x.mov` with no video in it is
+  // a film waiting for one, and saying so is useful.
+  //
+  // `.pdf` NO LONGER ANNOUNCES ANYTHING. A page may hold a dossier
+  // whatever it is called, so "ce dossier attend son PDF" was telling
+  // her the name had committed her to something. It had not.
+  if ((o.video || /\.(mov|mp4|m4v|webm)$/.test(named)) && !o.video)
+    return "Ce film attend sa vidéo.";
   if (!o.photographs.length && !o.video && !o.doc)
     return "Rien dedans pour l'instant.";
   return "";
 }
 
-/* The dossier. Offered on a project NAMED .pdf, or one already holding
- * one — the same "what she typed, or what is in the folder" test the
- * film well uses, so a document has somewhere to be dropped before it is
- * a document. */
+/* The dossier, offered on EVERY PAGE, whatever it is called.
+ *
+ * It used to need the title to end in `.pdf`, or a PDF to be in the
+ * folder already. So `12 regards.pdf` had somewhere to drop one and
+ * `logofolio` did not — and the only difference between them was the
+ * three letters she happened to type in a name.
+ *
+ * That is the thing to stop doing. A NAME IS A NAME. `un document`,
+ * `une page` and `un dossier` are the same object: a blank page with
+ * her content on it, and she may call it whatever she likes. What
+ * decides is the TEMPLATE, which is a fact about the folder rather
+ * than a guess from a string.
+ *
+ * A gallery is excluded because it renders only its own photographs: a
+ * PDF dropped there would be built and shown nowhere. A desk is
+ * excluded because it holds icons, not work. */
 function dossier(o) {
-  const named = (o.titles.fr || "").toLowerCase();
-  const wants = o.doc || /\.pdf$/.test(named);
-  if (o.kind === "desk" || o.gallery || !wants) return "";
+  // NOT ON A FILM, and this one is read from the FOLDER rather than
+  // the name: `add_doc` refuses a project holding a video, because a
+  // film's icon opens a window that never shows a dossier. A box that
+  // can only be refused is worse than no box.
+  if (!isPage(o) || o.video) return "";
   return `
     <label>le dossier
       <div class="face wide" data-drop="doc">${o.doc
@@ -343,8 +376,13 @@ function dossier(o) {
 
 function reel(o) {
   const named = (o.titles.fr || "").toLowerCase();
+  // A film IS a different object — its icon opens a window rather than
+  // going to a page — so unlike the dossier this one stays announced
+  // by the name, or by a video already in the folder. What changed is
+  // the first test: `kind === "desk"` hid it from a folder-page, which
+  // is a page like any other.
   const wantsFilm = o.video || /\.(mov|mp4|m4v|webm)$/.test(named);
-  if (o.kind === "desk" || !wantsFilm) return "";
+  if (!isPage(o) || !wantsFilm) return "";
   // THE FILM HAS TO LOOK DIFFERENT ONCE IT IS THERE. It said only the
   // file name, in the same grey box as before — "I had been dropping it
   // ten times before noticing the video was already there." So: the
@@ -681,7 +719,7 @@ function inspect(o) {
     ${drawnAsAnIcon || o.path === "content" ? titles : ""}${
       lonePhoto || !textIsShown ? "" : bodies}${bandeau}${
       lonePhoto || !drawnAsAnIcon ? "" : face}${wall}
-    ${isDesk && !o.gallery ? "" : dossier(o) + reel(o) + `<ul class="shots">${shots}</ul>
+    ${hasAGround ? "" : dossier(o) + reel(o) + `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">${o.gallery
         ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."
         : "Dépose des photos ici. La première est l'icône."}</p>
