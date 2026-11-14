@@ -48,7 +48,7 @@ subfolder page.
 | 1 | **One set of breakpoints.** Name the bands, collapse the strays, write down what each means. No visual change. | **built** |
 | 2 | **A desk must never hide an icon.** `min-height` on the narrow desk so the grid can grow; `arrange()` pins that grown height before the icons become absolute. | **built** |
 | 3 | **The desks.** Decided: the grid stays, and is made good. One stylesheet serves all three desks, so there was no per-desk work to do. | **built** |
-| 4 | **The pages.** The road compresses rather than flattening, a subfolder is one column, the gallery drops to two, a project's pairs become one. | **built** |
+| 4 | **The pages.** The road is plain, a subfolder is one column, the gallery drops to two. (The road *compressed* when this was written; the client saw it and asked for plain — 2026-11-14. A project's pairs are gone everywhere.) | **built** |
 | 5 | **The windows.** Preview bounded by the screen, film already had a rule, the about window is fluid by construction, and the contact form no longer zooms the page. | **built** |
 
 Phase 2 before 3, because a silent failure with a growing trigger beats
@@ -58,8 +58,13 @@ without it.
 ## Phases 4 and 5, as built
 
 Most of phase 4 happened through the work itself rather than as a
-phase: the road compresses instead of flattening, a subfolder page is
-one column, the gallery drops to two, a project's pairs become one.
+phase: a subfolder page is one column and the gallery drops to two.
+
+Two things here have since been reversed BY THE CLIENT, looking at it,
+which is the half this file says the project cannot check for itself:
+the road does not compress, it is plain (2026-11-14), and a project's
+pairs are gone on every screen rather than becoming one column on a
+narrow one.
 
 Phase 5 turned out to be smaller than feared, because three of the four
 windows were **fluid by construction** rather than unexamined —

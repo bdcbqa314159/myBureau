@@ -1027,20 +1027,26 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 
 /* 52rem — two columns become one, so the widths come together too.
    It lived at 46rem for no reason anybody wrote down. */
-/* 52rem — the road is COMPRESSED, not flattened.
-   This used to set every stop to full width, which turned a page of
-   varied photographs into a column of identical ones: nothing of the
-   composition left on the device most people read it on.
+/* 52rem — THE ROAD IS PLAIN ON A PHONE. Every photograph takes the
+   whole width, one after another, and you scroll.
 
-   The reasoning behind that was half right. A picture at 24% of a
-   phone IS a stamp. But the answer to values that are too extreme is
-   smaller values, not none.
+   This went back and forth, so the history is worth having. It began
+   as full width; that was called flattening and replaced by a squeeze
+   — widths 20..100 compressed into roughly 67..100, so a narrow
+   picture stayed narrower than a wide one. The argument was that the
+   answer to values too extreme is smaller values, not none.
 
-   So her widths are squeezed into a range a phone can hold: 20..100
-   lands between about 67 and 115, clamped at 100. A narrow picture is
-   still narrower than a wide one. */
+   The client has now seen it on a phone and does not want it: on a
+   screen this narrow the varying widths read as raggedness rather
+   than composition, which is the same objection she made to the
+   offsets and the lean on every screen. 2026-11-14.
+
+   So the widths are a wide-screen idea, and `--w` simply does not
+   apply down here. Nothing is lost that she can see: on a phone a
+   photograph at 70% and one at 100% differ by a margin, not by a
+   composition. */
 @media (max-width: 52rem) {
-  .stop { width: min(100%, calc((55 + var(--w, 46) * 0.6) * 1%)); }
+  .stop { width: 100%; }
 }
 
 .proj-back {
