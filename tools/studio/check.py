@@ -501,19 +501,21 @@ def doc_cases(tmp: pathlib.Path) -> None:
               [f.name for f in folder.iterdir() if f.suffix.lower() == ".pdf"]
               == ["dossier.pdf"])
 
-        # A SECOND PDF REPLACES THE FIRST — and its pages have to go
-        # with it, or the page would show one dossier while another sat
-        # beside it. The pages are written as photographs, so `add_doc`
-        # refuses a project that already has some: the replacement goes
-        # through `undo`, which is the only path that takes the old
-        # pages away too.
-        says = refused(verbs.add_doc, proj, "v2.pdf", REAL_PDF)
-        check("a second PDF is refused while the first one's pages are there",
-              "photos" in says, says)
+        # A SECOND PDF REPLACES THE FIRST, pages and all — the old ones
+        # go to the bin with it, or the miniature would open a document
+        # that is no longer there. It briefly REFUSED this, back when
+        # the pages were named `01.png` and collided with her
+        # photographs; under `page-NN` they do not, so replacing works.
+        verbs.add_doc(proj, "v2.pdf", REAL_PDF)
+        check("a second PDF replaces the first rather than sitting beside it",
+              len([f for f in folder.iterdir()
+                   if f.suffix.lower() == ".pdf"]) == 1)
+        check("  and the first one's pages went with it",
+              len(list(folder.glob("page-*.png"))) == 4)
         verbs.undo()
-        check("undo takes the dossier and its pages together",
-              not (folder / "dossier.pdf").is_file()
-              and list(folder.glob("0*.png")) == [])
+        check("undo brings the first dossier and its pages back",
+              (folder / "dossier.pdf").is_file()
+              and len(list(folder.glob("page-*.png"))) == 4)
 
     # ---- which file goes where ---------------------------------------
     check("an image is refused on the dossier, and says where it goes",
@@ -897,29 +899,42 @@ def dossier_cases(tmp: pathlib.Path) -> None:
         out = verbs.add_doc(made, "brochure.pdf", pdf)
         d = tmp / made
         check("the PDF lands as the source", (d / "dossier.pdf").is_file())
-        check("and its pages land beside it, as photographs",
-              len(out["pages"]) >= 2 and (d / "01.png").is_file(), str(out))
+        check("and its pages land beside it, under a reserved name",
+              len(out["pages"]) >= 2 and (d / "page-01.png").is_file(), str(out))
         check("  numbered from one, in order",
               out["pages"] == sorted(out["pages"])
-              and out["pages"][0] == "01.png")
+              and out["pages"][0] == "page-01.png")
         check("  and nothing is left of the drawing",
-              list(d.glob("page-*.png")) == [])
-        # THE PAGES ARE HER PHOTOGRAPHS NOW, which is the whole trick:
-        # no template had to learn a new kind of file.
-        check("the model reports them as the project's photographs",
-              verbs.photographs_in(d) == out["pages"])
+              list(d.glob("draw-*.png")) == [])
+        # NOT HER PHOTOGRAPHS. They are what the dossier's own
+        # full-screen view scrolls through, and the page shows ONE
+        # miniature for the whole dossier — so the panel must not offer
+        # them for reordering, description, or throwing away one of.
+        check("they are not counted among her photographs",
+              verbs.photographs_in(d) == [])
+        check("  and her own picture beside them still is",
+              verbs.add_image(made, "01.jpg", pix)
+              and verbs.photographs_in(d) == ["01.jpg"])
+        verbs.undo()
         check("undo takes the whole dossier back",
               verbs.undo() == "add_doc" and not (d / "01.png").is_file())
     else:
         verbs.add_doc  # named, so a reader sees what is not being run
 
-    # HER PICTURES ARE NEVER OURS TO REPLACE. The pages take the names
-    # 01, 02 — so a project that already has photographs would have
-    # them written over.
+    # REVERSED, and this is why the prefix exists. The pages were named
+    # `01.png`, `02.png` — her own photograph names — so a project that
+    # already had pictures had to be REFUSED a dossier or they would
+    # have been written over. Under `page-NN` they cannot collide, and
+    # a dossier sits beside her photographs on one page: a miniature
+    # each, and one more for the dossier.
     busy = verbs.new_project("content/da", "deja des photos", "photos")["made"]
     verbs.add_image(busy, "01.jpg", pix)
-    check("a project that already has photographs is refused",
-          "déjà des photos" in refused(verbs.add_doc, busy, "x.pdf", pdf))
+    if has_pop:
+        got = verbs.add_doc(busy, "x.pdf", pdf)
+        check("a project with photographs can also take a dossier",
+              len(got["pages"]) == 4, str(got))
+        check("  and her photograph is untouched beside it",
+              verbs.photographs_in(tmp / busy) == ["01.jpg"])
     check("and a film is still refused, for its own reason",
           refused(verbs.add_doc, "content/da/junes-cry", "x.pdf", pdf) != "")
 
