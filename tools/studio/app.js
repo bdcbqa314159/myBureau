@@ -150,6 +150,13 @@ function reframe(expect) {
    not a set of stills, a shortcut is not in content/ at all. */
 function kindOf(o) {
   if (o.kind === "about") return "présentation";
+  // WHAT SHE MADE IT, said back to her in her words. It used to be
+  // worked out from the folder: `o.video` meant film, `o.doc` meant
+  // dossier, one photograph meant photo — so a thing she had not
+  // filled in yet was described as something else.
+  if (o.type === "photo") return o.photographs.length ? "une photo" : "une photo, vide";
+  if (o.type === "video") return o.video ? "un film" : "un film, sans sa vidéo";
+  if (o.type === "page") return "une page";
   if (o.kind === "desk" || o.kind === "folder") {
     if (o.gallery) return "galerie";
     // every folder opens a page now — a bureau of its own at the top,
@@ -315,7 +322,38 @@ const isBureau = (o) => model.desks.some((d) => d.path === o.path);
  * `maison cosette` could take neither — the same kind of object,
  * told apart by how it was spelled. */
 function isPage(o) {
+  // HER TYPE, not the template and not the name. `type` is written into
+  // the file when she makes it — see specs/the-four-types.md.
+  //
+  // The template was a better guess than the name and still a guess:
+  // it answers "what renders this" rather than "what did she make".
+  // They agree today, and the day they do not it is the type that is
+  // right.
+  //
+  // "" is anything that predates the type being written down. It falls
+  // back to the template so a folder nobody has labelled still works.
+  if (o.type) return o.type === "page";
   return o.template === "page.html" || o.template === "";
+}
+
+/* Where photographs go, in the words the thing deserves. */
+function dropPhotos(o) {
+  return `<p class="drop" data-drop="photos">${
+    o.gallery ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."
+      : o.type === "photo" ? "Dépose la photo ici."
+        : "Dépose des photos ici. La première est l'icône."}</p>`;
+}
+
+/* A photograph: one picture, and that is the whole object. */
+function isPhoto(o) {
+  return o.type === "photo";
+}
+
+/* A film: its video and its affiche. Its own mechanics, unchanged. */
+function isFilm(o) {
+  if (o.type) return o.type === "video";
+  // unlabelled: what is in the folder, which is the old rule
+  return Boolean(o.video);
 }
 
 function waitingFor(o) {
@@ -325,20 +363,12 @@ function waitingFor(o) {
   // "folder", and those fell straight through. So every folder with no
   // photographs of its own announced "Rien dedans pour l'instant."
   // directly under a line saying it holds four things.
+  // WHAT IT IS WAITING FOR IS WHAT ITS TYPE NEEDS. No name is read
+  // here any more: a film waits for a film because she made a film.
+  if (isFilm(o)) return o.video ? "" : "Ce film attend sa vidéo.";
+  if (isPhoto(o)) return o.photographs.length ? "" : "Cette photo attend son image.";
   if (!isPage(o)) return "";
-  const named = (o.titles.fr || "").toLowerCase();
-  // A FILM IS THE ONE THING A NAME MAY STILL ANNOUNCE, because a film
-  // is genuinely a different object: its icon opens a window on the
-  // desk rather than going to a page. `x.mov` with no video in it is
-  // a film waiting for one, and saying so is useful.
-  //
-  // `.pdf` NO LONGER ANNOUNCES ANYTHING. A page may hold a dossier
-  // whatever it is called, so "ce dossier attend son PDF" was telling
-  // her the name had committed her to something. It had not.
-  if ((o.video || /\.(mov|mp4|m4v|webm)$/.test(named)) && !o.video)
-    return "Ce film attend sa vidéo.";
-  if (!o.photographs.length && !o.video && !o.doc)
-    return "Rien dedans pour l'instant.";
+  if (!o.photographs.length && !o.doc) return "Rien dedans pour l'instant.";
   return "";
 }
 
@@ -359,11 +389,10 @@ function waitingFor(o) {
  * PDF dropped there would be built and shown nowhere. A desk is
  * excluded because it holds icons, not work. */
 function dossier(o) {
-  // NOT ON A FILM, and this one is read from the FOLDER rather than
-  // the name: `add_doc` refuses a project holding a video, because a
-  // film's icon opens a window that never shows a dossier. A box that
-  // can only be refused is worse than no box.
-  if (!isPage(o) || o.video) return "";
+  // A PAGE TAKES PDFs. Nothing else does — a photo is one photograph
+  // and a film is its video — and the verb refuses both, so a box
+  // there could only ever be refused.
+  if (!isPage(o)) return "";
   return `
     <label>le dossier
       <div class="face wide" data-drop="doc">${o.doc
@@ -381,8 +410,11 @@ function reel(o) {
   // by the name, or by a video already in the folder. What changed is
   // the first test: `kind === "desk"` hid it from a folder-page, which
   // is a page like any other.
-  const wantsFilm = o.video || /\.(mov|mp4|m4v|webm)$/.test(named);
-  if (!isPage(o) || !wantsFilm) return "";
+  // BY TYPE. It used to be `o.video || the name ends in .mov` — so an
+  // empty film had nowhere to put its film unless she had typed the
+  // extension, and a page called `x.mov` was offered a film well it
+  // would be refused on.
+  if (!isFilm(o)) return "";
   // THE FILM HAS TO LOOK DIFFERENT ONCE IT IS THERE. It said only the
   // file name, in the same grey box as before — "I had been dropping it
   // ten times before noticing the video was already there." So: the
@@ -654,6 +686,20 @@ function inspect(o) {
              placeholder="ce qu'on voit sur cette photo">
     </li>`).join("");
 
+  // CAN ANOTHER PHOTOGRAPH GO IN? A page and a gallery: always. A
+  // photo: only while it is still empty.
+  const canTakeAPhoto = isPhoto(o) ? o.photographs.length === 0 : true;
+
+  // A PHOTO IS A PHOTO. It holds one, and `add_image` refuses a second
+  // — so while it has its photograph there is nowhere to drop another.
+  // Her ✕ on the picture takes it away and the drop zone comes back. A
+  // drop zone that can only be refused is worse than none.
+  //
+  // (Said here rather than inside the template literal: a `*/` in
+  // there closes the `${...}` early, and the file stopped parsing.)
+  const full = `<p class="hintline">Une photo seule n'en tient qu'une.
+    Jette celle-ci pour en mettre une autre, ou fais-en une page.</p>`;
+
   const canBin = o.path !== "content";
   // A PHOTOGRAPH IS A PHOTOGRAPH.
   //
@@ -677,8 +723,13 @@ function inspect(o) {
   // DESKS ONLY, deliberately. The gallery and `travail sélectionné`
   // hold photographs that behave differently — a grid, a road — and
   // this is about the ones dropped alone on DA and graphic design.
-  const lonePhoto = !isDesk && !o.gallery && !o.video && !o.doc
-    && o.photographs.length === 1;
+  // A PHOTO, because she said so when she made it — not because the
+  // folder happens to hold one picture. The old test counted files, so
+  // a page with one photograph in it became a photograph, and a photo
+  // she had not filled yet was a page.
+  const lonePhoto = o.type ? isPhoto(o)
+    : (!isDesk && !o.gallery && !o.video && !o.doc
+       && o.photographs.length === 1);
 
   // A TEXT BOX WHERE THE TEXT IS SHOWN, and nowhere else.
   //
@@ -719,13 +770,12 @@ function inspect(o) {
     ${drawnAsAnIcon || o.path === "content" ? titles : ""}${
       lonePhoto || !textIsShown ? "" : bodies}${bandeau}${
       lonePhoto || !drawnAsAnIcon ? "" : face}${wall}
-    ${hasAGround ? "" : dossier(o) + reel(o) + `<ul class="shots">${shots}</ul>
-      <p class="drop" data-drop="photos">${o.gallery
-        ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."
-        : "Dépose des photos ici. La première est l'icône."}</p>
-      ${o.photographs.length ? `<p class="hintline">La description sert aux
-        personnes qui ne voient pas la photo. Elle est écrite une fois pour
-        toutes les langues.</p>` : ""}`}
+    ${hasAGround || isFilm(o) ? "" : `<ul class="shots">${shots}</ul>`}
+    ${dossier(o)}${reel(o)}
+    ${hasAGround || isFilm(o) ? "" : canTakeAPhoto ? dropPhotos(o) : full}
+    ${hasAGround || isFilm(o) || !o.photographs.length ? "" : `<p class="hintline">La
+      description sert aux personnes qui ne voient pas la photo. Elle est
+      écrite une fois pour toutes les langues.</p>`}
     ${canBin ? `<button class="bin-all" id="binall">Jeter ${esc(o.titles.fr || o.name)}</button>` : ""}`;
   wire(o);
 }
