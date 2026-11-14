@@ -1582,87 +1582,113 @@ def case_a_picture_fits_the_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
-def case_the_road_is_plain_on_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """Every photograph takes the whole width, and you scroll.
+def case_three_columns_and_a_picture_in_one(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """The blank space is three columns, and a photograph sits in one.
 
-    THIS CASE HAS BEEN REVERSED TWICE, so the history is the point.
+    THIS CASE HAS BEEN REWRITTEN THREE TIMES, so the history is the
+    point rather than an aside.
 
-    It began as "full width below 52rem". That was called flattening
-    and replaced by a squeeze: widths 20..100 compressed into roughly
-    67..100, so a narrow picture stayed narrower than a wide one. The
-    argument was that the answer to values too extreme is smaller
-    values, not none, and the case asserted exactly that.
+    It began as a FRIDGE: a width, an offset off the centre line, and a
+    lean, all per file. The client rejected the offset and the lean.
+    What was left was the width — a free percentage of the page — and
+    on a phone it was squeezed into a narrower range, then flattened
+    outright when she saw it.
 
-    2026-11-14, from the client, who has now SEEN it on a phone: she
-    does not want it. On a screen that narrow the varying widths read
-    as raggedness rather than composition — the same objection she
-    made to the offsets and the lean on every screen. The width is a
-    wide-screen idea and `--w` does not apply below 52rem.
+    2026-11-14 she asked for the limit instead of the freedom: *three
+    columns within the blank space where we can sit one picture, a
+    display per column taken by the width of a picture, and the three
+    columns setting the limits of expression.*
 
-    THE NUMBER IS STILL UNITLESS, and that still matters: the rhythm
-    and her own pins are numbers that the `.stop` rule gives a unit
-    to. Put a `%` back in the template and the wide-screen road breaks
-    — `calc(52% * 1%)` is not a length.
+    So `--c` replaces `--w`. The column decides the size and the choice
+    of column decides the place, and there is nothing else to declare.
+
+    PLACEMENT IS SPARSE, which is the browser's default and is what
+    makes this a composition rather than a gallery: a photograph goes
+    into the next free row of its OWN column, so two in different
+    columns can share a row and two in the same column cannot. The
+    rhythm is 1, 3, 2, 1, 3 — five steps over three columns, so rows
+    are rarely full and a folder nobody has arranged still reads as
+    composed.
+
+    ONLY 1, 2 OR 3 may reach the stylesheet. `grid-column: 5` in a
+    three-column grid does not fail: the browser grows implicit columns
+    to hold it and the whole route silently becomes five columns wide.
     """
     ok, log = build(d)
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
-    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
-    # searched the whole file for `.doc-scroll { … max-height }` and
-    # found the PHONE rule — so deleting the desktop bound entirely
-    # left the expectation passing.
-    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
     css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
     rules = {}
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
         rules.setdefault(sel.strip(), []).append(body)
 
+    route = " ".join(rules.get(".proj-route", []))
     stop = " ".join(rules.get(".stop", []))
-    # THE RULE INSIDE THE PHONE BAND, not every `.stop` rule in the
-    # file. Flattening them together is how the old guard came to be
-    # true of a stylesheet that said the opposite: a `width: 100%`
-    # anywhere satisfied it.
-    # EVERY 52rem block, because there are three and only one of them
-    # is the road's. Searching for the first found a block with no
-    # `.stop` in it, which made the expectation below unfalsifiable in
-    # the other direction.
+    rhythm = {sel: " ".join(b) for sel, b in rules.items()
+              if sel.startswith(".stop:nth-child")}
     bands = re.findall(r"@media\s*\(max-width:\s*52rem\)\s*\{(.*?)\n\}",
                        css, re.S)
+    phone_route = [b for band in bands
+                   for b in re.findall(r"\.proj-route\s*\{([^{}]*)\}", band)]
     phone_stop = [b for band in bands
                   for b in re.findall(r"\.stop\s*\{([^{}]*)\}", band)]
-    rhythm = " ".join(one for sel, bodies in rules.items()
-                      if sel.startswith(".stop:nth-child")
-                      for one in bodies)
+    # THE RHYTHM AS A SEQUENCE, in nth-child order, then laid out the
+    # way a browser lays it out.
+    cycle = []
+    for i in range(1, len(rhythm) + 1):
+        got = rhythm.get(".stop:nth-child(5n+{})".format(i), "")
+        m = re.search(r"--c:\s*(\d+)", got)
+        cycle.append(int(m.group(1)) if m else 0)
+
+    def laid_out(seq: list, n: int = 12) -> list:
+        """How many pictures land on each row, placed sparsely.
+
+        The cursor only moves forward: an item whose column is not
+        after the last one placed starts a new row.
+        """
+        out, last = [0], 0
+        for k in range(n):
+            c = seq[k % len(seq)] if seq else 0
+            if c <= last:
+                out.append(0)
+                last = 0
+            out[-1] += 1
+            last = c
+        return out
+
+    rows = laid_out(cycle)
     road = page(d, "travail-selectionne/index.html")
     pins = re.findall(r'<figure class="stop"[^>]*style="([^"]*)"', road)
 
     return [
         ("builds", ok),
-        ("the stop puts the units on itself, so the numbers can be scaled",
-         "calc(var(--w" in stop and "* 1%" in stop),
-        ("the rhythm is numbers, not percentages",
-         rhythm != "" and "%" not in rhythm and "deg" not in rhythm),
-        # REVERSED. This asserted the squeeze — `calc((55 + var(--w ...`
-        # — and before that, its opposite. The phone rule is plain
-        # width now, on her say-so.
-        ("a phone gives every photograph the whole width",
-         any(re.search(r"width:\s*100%", b) for b in phone_stop)),
-        ("and does not squeeze her widths into a range instead",
-         not any("55 + var(--w" in b for b in phone_stop)),
-        # NOT `"--w: 100%" not in css`, which is what stood here: the
-        # phone rule sets `width: 100%`, not `--w`, so that spelling
-        # passed whatever the rule said. A guard has to name the thing
-        # the rule actually writes.
-        ("and the wide-screen road still reads her width",
-         "calc(var(--w" in stop),
-        ("the demo road really is pinned, so the idea can be seen",
-         len(pins) >= 5),
-        ("and what it writes is unitless, which is what the maths needs",
-         pins != [] and all("%" not in s and "deg" not in s for s in pins)),
-        # WIDTH ONLY. The offsets and the lean are gone by her ask —
-        # the fridge was not what she wanted, here or on a phone — so a
-        # pin carries the one number that is left.
-        ("and it is a width, not a place or an angle",
-         pins != [] and all("--x" not in s and "--r" not in s for s in pins)),
+        ("the blank space is three columns",
+         "repeat(3, 1fr)" in route),
+        ("a photograph sits in one of them, and fills it",
+         "grid-column: var(--c" in stop and "width: 100%" in stop),
+        ("the rhythm uses all three columns",
+         len(rhythm) == 5 and set(cycle) == {1, 2, 3}),
+        # SIMULATED, not asserted as a sequence. "the sequence repeats
+        # a column" was tried and is a TAUTOLOGY — five steps over
+        # three columns must repeat one — so changing the rhythm to
+        # 1,2,3,1,2 passed it while filling every third row and turning
+        # the page into the gallery.
+        #
+        # What matters is what the BROWSER does with the sequence, so
+        # that is what is worked out: CSS Grid's sparse placement puts
+        # an item in the next free row of its own column and never goes
+        # backwards. A row that holds all three is a row with no gap in
+        # it, and the gaps are the composition.
+        ("and no row comes out full (" + ",".join(str(r) for r in rows)
+         + " per row), which is where the eye rests",
+         max(rows) < 3),
+        ("no width is left anywhere on the route",
+         "--w" not in stop and not any("--w" in v for v in rhythm.values())),
+        ("and nothing leans or is pushed off a line",
+         "rotate" not in stop and "translate" not in stop),
+        ("a phone has one column, three being three slivers at 390px",
+         any("1fr" in b and "repeat" not in b for b in phone_route)),
+        ("and a photograph down there asks for column one, not hers",
+         any("grid-column: 1" in b for b in phone_stop)),
     ]
 
 
@@ -1709,17 +1735,25 @@ def case_the_phone_agrees_with_the_desk(d: pathlib.Path) -> list[tuple[str, bool
 
 
 def case_a_phone_desk_is_not_a_file_list(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """The grid is softened, and the lean never touches a measured box.
+    """The grid is softened, and NOTHING LEANS.
 
     Evenly spaced icons in rows with labels underneath is a file
-    manager. A desk is not tidy. The icons are smaller, every other one
-    sits lower, and the pictures lean about a degree.
+    manager. A desk is not tidy. The icons are smaller and every other
+    one sits lower.
 
-    THE LEAN IS ON THE PICTURE, NEVER THE ICON. arrange() measures each
-    icon with getBoundingClientRect to pin it in place, and the measured
-    box of a rotated element is its bounding box — bigger than the
-    element, and wrong. Rotating the icon itself would put a quiet error
-    into every position on a phone.
+    THE LEAN IS GONE, 2026-11-14. The pictures tilted about a degree
+    here, and that is the postcard-on-a-fridge effect the client has
+    now rejected three times — on `travail sélectionné`, on its phone
+    version, and here. A phone was the last place it survived, which is
+    why it took three.
+
+    This case used to assert the lean AND that it was applied to the
+    <img> rather than to the icon box, because arrange() measures each
+    icon with getBoundingClientRect and the measured box of a rotated
+    element is its bounding box — bigger than the element, and wrong.
+    That second half still matters for anything that ever rotates on a
+    desk, so it is kept and widened: nothing in a measured box may
+    rotate, and now nothing rotates at all.
     """
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
     # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
@@ -1743,8 +1777,13 @@ def case_a_phone_desk_is_not_a_file_list(d: pathlib.Path) -> list[tuple[str, boo
 
     return [
         ("builds", ok),
-        ("the pictures lean", leaning != {}),
-        ("and the lean is on the picture, never on the box that is measured",
+        # REVERSED. It asserted that the pictures lean; the client has
+        # asked three times for them not to.
+        ("nothing on a desk leans", leaning == {}),
+        # KEPT AND WIDENED. If anything is ever rotated here again, it
+        # must be the <img> and never the icon box — arrange() measures
+        # that box, and a rotated box measures bigger than it is.
+        ("and if anything ever does, it is the picture, not the measured box",
          on_the_box == []),
         ("every other icon sits lower, so they are not in rows",
          staggered != []),
@@ -2619,13 +2658,21 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     # a third that nothing declares anything about, so the rhythm case
     # has a photograph of its own to be true about
     shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", r / "03.jpg")
-    # and it SIZES one of them by hand, which is the whole point of
-    # the route being more than a column. Nothing in the real
+    # and it PLACES one of them by hand, which is the whole point of
+    # three columns rather than one. Nothing in the real
     # content had to declare this when the code was written, so without
     # a fixture that does, the path is never executed and the check
     # passes by finding nothing.
     (r / "index.md").write_text(
-        '+++\ntitle = "une photo.jpg"\n\n[extra.width]\n"02.jpg" = 37\n\n'
+        # ONE TABLE, TWO KEYS: `03.jpg` asks for a column that does not
+        # exist. A three-column grid given `grid-column: 7` does not
+        # fail — it grows implicit columns and the whole route becomes
+        # seven wide — so the template has to drop it and let the
+        # rhythm place the photograph. (Two `[extra.column]` tables in
+        # one file is a duplicate-table error and the build says so,
+        # which is how this fixture was found to be wrong.)
+        '+++\ntitle = "une photo.jpg"\n\n'
+        '[extra.column]\n"02.jpg" = 3\n"03.jpg" = 7\n\n'
         # offset and angle are DECLARED and must be IGNORED. She asked
         # for no lean and no way to add one, and "no way to add one" is
         # only true if writing the old keys by hand does nothing — the
@@ -2683,8 +2730,10 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
          "un-film" not in inside),
         ("EVERY photograph is a stop, not one face for the whole thing",
          inside.count('<figure class="stop"') == 3),
-        ("a photograph pinned by hand carries its own width",
-         '--w:37;' in inside),
+        ("a photograph placed by hand sits in the column she chose",
+         '--c:3;' in inside),
+        ("and a column that does not exist is dropped, not grown",
+         '--c:7;' not in inside and inside.count("--c:") == 1),
         ("and an angle cannot be given at all any more",
          '--r:' not in inside),
         ("and one nobody pinned carries no style at all, so the rhythm sizes it",
@@ -3255,7 +3304,7 @@ CASES = [
     ("about me.txt has a face", case_about_has_a_face),
     ("a photograph has no close box", case_a_photograph_has_no_close_box),
     ("a picture fits the screen", case_a_picture_fits_the_screen),
-    ("the road is plain on a phone", case_the_road_is_plain_on_a_phone),
+    ("three columns, and a picture in one", case_three_columns_and_a_picture_in_one),
     ("the phone agrees with the desk", case_the_phone_agrees_with_the_desk),
     ("a phone desk is not a file list", case_a_phone_desk_is_not_a_file_list),
     ("a phone desk can grow", case_a_phone_desk_can_grow),

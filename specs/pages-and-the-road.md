@@ -152,40 +152,60 @@ that position today: the single film sits on the DA desk as its own
 icon. `content-check` holds an expectation naming this, so it is
 noticed rather than discovered.
 
-## The road — `travail sélectionné` only
+## Three columns — `travail sélectionné` only
 
-Each photograph is a stop. A stop takes one number, declared **per
-file** in the front matter of the folder holding it, in the shape
-`[extra.alt]` already uses:
+**2026-11-14, from the client.** *Three columns within the blank space
+where we can sit one picture, a display per column taken by the width
+of a picture, and the three columns setting the limits of expression.*
+
+The blank space is three columns. A photograph sits in one and is the
+width of that column, so **the column decides the size and the choice
+of column decides the place**. One number, declared per file in the
+shape `[extra.alt]` already uses:
 
 ```toml
-[extra.width]
-"02.jpg" = 72        # per cent of the page, as a NUMBER — no %
+[extra.column]
+"02.jpg" = 3         # 1, 2 or 3
 ```
 
 | field | type | default | range |
 |---|---|---|---|
-| `width` | integer, per cent | from the rhythm | 20–100 |
+| `column` | integer | from the rhythm | 1–3, anything else dropped |
 
-- **Optional, per file.** Without one, the rhythm gives a width.
+- **Optional, per file.** Without one, the rhythm places it.
+- **Out of range is DROPPED, not clamped** — and this is the one that
+  bites: `grid-column: 7` in a three-column grid does not fail, the
+  browser grows implicit columns and the whole route silently becomes
+  seven wide. So the template refuses it and the rhythm places the
+  photograph instead.
+- **Placement is sparse**, which is the browser's default and is what
+  makes this a composition rather than a gallery: a photograph goes in
+  the next free row of its own column, so two in different columns can
+  share a row and two in the same column cannot. The gaps are the
+  composition.
+- **The rhythm is 1, 3, 2, 1, 3** — five steps over three columns, so
+  no row comes out full. `content-check` works out the row counts the
+  way a browser would rather than asserting the sequence: "the
+  sequence repeats a column" was tried and is a tautology.
 - **It never interferes with `x`/`y`.** A thing has a position on a
-  desk; its photographs have widths on a road.
+  desk; its photographs have columns on a road.
 - **Order is filename order.** Rearranging is renumbering, which the
   panel already does.
 - **Written to every language file.** Wide in French and narrow in
   English is a bug.
 - **Out of range is clamped, not refused.** A number she drags to is
   never an error.
-- **A phone ignores it.** Below 52rem every photograph takes the whole
-  width and you scroll. This went back and forth — full width, then a
-  squeeze into 67..100 so a narrow picture stayed narrower, then full
-  width again on 2026-11-14 when the client saw it on a phone. On a
-  screen that narrow the varying widths read as raggedness rather than
-  composition, which is the objection she made to the offsets and the
-  lean. The width is a wide-screen idea.
-- **The number stays unitless** even so: the rhythm and her own pins
-  are numbers that `.stop` gives a unit to, and a `%` in the template
-  breaks the wide-screen road.
+- **A phone has one column.** Three columns of a 390px screen is three
+  slivers, so below 52rem they collapse into one and every photograph
+  takes the whole width. A stop asks for `grid-column: 1` down there
+  rather than `auto`, or her declared column would ask for a track
+  that does not exist and the grid would grow one to hold it.
+
+**What this replaced, in order:** a width, an offset and a lean, all
+per file — the fridge. The lean and the offset were rejected; then the
+free width was squeezed on a phone, then flattened; then the width
+itself went, because a column that sets the size is the same idea with
+a limit on it, and the limit is what she asked for.
 
 ## What the panel still has to do
 
@@ -216,7 +236,7 @@ that belongs to the road.
 | 2 | a project page is the same page as a subfolder's | no pairs container anywhere, every figure full width |
 | 3 | a subfolder carries no pinning | no inline `--w` on its figures |
 | 4 | the road is on travail sélectionné and nowhere else | asserted against each of the four |
-| 5 | a pin reaches the stop | inline custom properties rendered |
+| 5 | a column she chose reaches the stop | `--c` rendered inline; out of range dropped |
 | 6 | nothing on the road can be clicked or names a file | no `<a>` and no `<span>` inside `.proj-route` |
 | 7 | a desk is a desk | DA and graphic design keep wallpaper and icons |
 | 8 | an angle cannot be declared at all | `--r` appears nowhere, even when front matter asks |

@@ -310,22 +310,23 @@ a, button, summary { -webkit-tap-highlight-color: transparent; }
 
   /* NOT ROWS. A grid of evenly spaced icons with labels under them is
      a file manager, and that is what this looked like. A desk is not
-     tidy. Three things take the rigidity out without giving up the
+     tidy, so two things take the rigidity out without giving up the
      predictability of a grid:
 
        every other one sits a little lower
-       the pictures lean, by about a degree
        the icons are smaller, so the labels and the wallpaper have room
 
-     The lean is on the PICTURE and never on the icon box. arrange()
-     measures each icon to pin it in place, and the measured box of a
-     rotated element is its bounding box — larger, and wrong. Rotating
-     only the image inside leaves every measurement honest. */
+     THERE WAS A THIRD, AND IT IS GONE: the pictures leaned, by a
+     degree or two. That is the postcard-on-a-fridge effect, which the
+     client has now rejected three times — on `travail sélectionné`, on
+     a phone's version of it, and here. A phone was the last place it
+     survived, which is why it took three.
+
+     Nothing else rotates on a desk. `.icon.dragging` still leans while
+     it is actually being dragged, and that is feedback for a gesture
+     in progress rather than decoration sitting there. */
   .desk .icon:nth-child(even) { margin-top: 1.15rem; }
   .desk .icon:nth-child(4n+3) { margin-top: .5rem; }
-  .desk .icon:nth-child(3n+1) img { rotate: -1.4deg; }
-  .desk .icon:nth-child(3n+2) img { rotate: 1.1deg; }
-  .desk .icon:nth-child(5n)   img { rotate: 2deg; }
 
   .desk.arranged { display: block; padding: 0; }
   .desk.arranged .icon { position: absolute; }
@@ -1000,63 +1001,58 @@ body.project .bar { color: var(--ink); text-shadow: none; }
    around it — `.proj-pairs` and `.proj-fig`, gone 2026-11-13 with the
    two rhythms. Every page on a desk is one column now, so there is
    nothing left for a second width to apply to. */
-/* WHAT IS INSIDE A FOLDER: a vertical route.
+/* WHAT IS INSIDE A FOLDER: THREE COLUMNS, AND A PICTURE IN ONE.
    --------------------------------------------------------------------
-   The route runs DOWN. Every photograph inside the folder sits on it
-   at its own width, centred — a column that breathes, and nothing
-   like a grid. The page scrolls the way a page scrolls; there is no
-   second scroller and no snapping.
+   The blank space is divided into three columns. A photograph sits in
+   one of them and is the width of that column — so the column decides
+   the size and the choice of column decides the place. Her words:
+   *three columns within the blank space where we can sit one picture,
+   a display per column taken by the width of a picture, and the three
+   columns setting the limits of expression.*
 
-   ONE NUMBER DOES ALL OF IT, a custom property so the same stylesheet
-   serves a photograph she has sized by hand and one nobody has
-   touched:
+   ONE NUMBER DOES IT, declared per file in the folder's front matter
+   (see _place.html) and otherwise taken from the rhythm below:
 
-     --w   how wide, per cent of the page
+     --c   which column, 1, 2 or 3
 
-   Declared per file in the folder's front matter (see _place.html),
-   and otherwise taken from the rhythm below.
+   IT WAS A WIDTH BEFORE — `--w`, a percentage of the page — and
+   before that a width, an offset and a lean. The lean and the offset
+   were rejected; the free width went with this, because a column that
+   sets the width is the same idea with a limit on it, and the limit is
+   the point.
 
-   It was two: --x pushed a photograph off the centre line and --r
-   leant it. She asked for both gone — see the note further down and
-   specs/pages-and-the-road.md.
+   PLACEMENT IS SPARSE, which is the browser's default and is what
+   makes this a composition rather than a gallery. A photograph goes
+   into the next free row of its own column — so two in different
+   columns can share a row, and two in the same column cannot. Rows
+   therefore hold one, two or three pictures depending on the sequence,
+   and the gaps are where the eye rests.
 
-   THE RHYTHM exists so a folder nobody has sized still reads as
-   composed. Five steps, because four falls into an obvious
-   alternation and the repeat is then easy to see. Widths only: what
-   says "put here by a hand" is the change of scale, the rotations
-   that used to say it having been asked for and withdrawn. */
+   THE RHYTHM is 1, 3, 2, 1, 3 — five steps over three columns, so it
+   does not fall into a march and a row is rarely full. A folder nobody
+   has arranged still reads as composed. */
 .proj-route {
-  display: grid; justify-items: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: clamp(2.2rem, 6vh, 5rem);
   padding: clamp(2.5rem, 7vh, 5rem) var(--pad);
 }
-/* THE NUMBER IS UNITLESS, and that is what lets a phone keep her
-   widths instead of throwing them away. A percentage cannot be scaled
-   by CSS; a number can. So --w is 52, not 52%, and the unit is put on
-   here. */
-/* STRAIGHT, AND CENTRED. The offsets and the lean are gone by her ask:
-   the fridge was not what she wanted, here or on a phone. What is left
-   is a column of photographs down the middle, varying in width because
-   that is scale rather than scatter — and it is what her own portfolio
-   does.
-
-   A stop is a <figure> now, not a link, so there is no colour or
-   underline to inherit and nothing to click. */
+/* A stop fills the column it was put in. `margin: 0` because a
+   <figure> has one from the UA and the track does the spacing. */
 .stop {
-  /* margin, because a <figure> has one from the UA and this is a grid
-     item centred by the track, not by its own box. */
-  width: calc(var(--w, 46) * 1%);
+  grid-column: var(--c, auto);
+  width: 100%;
   margin: 0;
 }
 .stop img { display: block; width: 100%; height: auto; }
 
-/* The rhythm is widths only now — five steps so the column breathes
-   rather than marching. Nothing here moves a photograph off the line. */
-.stop:nth-child(5n+1) { --w: 58; }
-.stop:nth-child(5n+2) { --w: 42; }
-.stop:nth-child(5n+3) { --w: 50; }
-.stop:nth-child(5n+4) { --w: 36; }
-.stop:nth-child(5n+5) { --w: 64; }
+/* Five steps over three columns: 1, 3, 2, 1, 3. Not 1, 2, 3 — that
+   fills every row and the page becomes the gallery. */
+.stop:nth-child(5n+1) { --c: 1; }
+.stop:nth-child(5n+2) { --c: 3; }
+.stop:nth-child(5n+3) { --c: 2; }
+.stop:nth-child(5n+4) { --c: 1; }
+.stop:nth-child(5n+5) { --c: 3; }
 
 /* NO NAME ON A PHOTOGRAPH. The plate that carried the file's name on
    hover is gone with the links: this is somewhere to look, and a file
@@ -1066,8 +1062,9 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 
 /* 52rem — two columns become one, so the widths come together too.
    It lived at 46rem for no reason anybody wrote down. */
-/* 52rem — THE ROAD IS PLAIN ON A PHONE. Every photograph takes the
-   whole width, one after another, and you scroll.
+/* 52rem — ONE COLUMN ON A PHONE. Three columns of a 390px screen is
+   three slivers, so the three collapse into one and every photograph
+   takes the whole width, one after another.
 
    This went back and forth, so the history is worth having. It began
    as full width; that was called flattening and replaced by a squeeze
@@ -1085,7 +1082,11 @@ body.project .bar { color: var(--ink); text-shadow: none; }
    photograph at 70% and one at 100% differ by a margin, not by a
    composition. */
 @media (max-width: 52rem) {
-  .stop { width: 100%; }
+  .proj-route { grid-template-columns: 1fr; }
+  /* `grid-column: 1`, not `auto`: her declared column would otherwise
+     ask for a track that does not exist down here, and the grid would
+     grow an implicit second and third column to hold it. */
+  .stop { grid-column: 1; width: 100%; }
 }
 
 .proj-back {
