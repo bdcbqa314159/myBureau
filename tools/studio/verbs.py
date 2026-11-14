@@ -934,6 +934,9 @@ FRAMEABLE = {".mp4", ".m4v", ".mov"}
 # Smaller than this is not a film we can take a frame from, and trying
 # is how Quick Look gets handed something it will hang on.
 FILM_FLOOR = 10_000
+# And the same for a dossier. A PDF below this is not a document
+# anybody wants a cover of.
+DOC_FLOOR = 1_000
 # A real film answers in a tenth of a second; this is only here so a
 # broken one cannot hold the panel.
 FRAME_DEADLINE = 10
@@ -1025,6 +1028,64 @@ def first_frame(d: pathlib.Path, film: pathlib.Path, moves: list) -> "str | None
         shutil.rmtree(out, ignore_errors=True)
 
 
+def first_page(d: pathlib.Path, doc: pathlib.Path, moves: list) -> "str | None":
+    """The dossier's own first page, as its cover.
+
+    The same move as `first_frame` and the same reason. A dossier is
+    shown on its page AS A PHOTOGRAPH — one picture you click — and a
+    PDF is not a picture, so one has to be drawn. Quick Look
+    thumbnails a PDF in the Finder; it will do it here.
+
+    `cover.png` is OURS and is replaced when the dossier changes.
+    Anything else called `cover` she dropped herself and is left
+    alone — the same convention `poster` uses.
+
+    No qlmanage, no cover: the page then shows the dossier's own
+    photographs and nothing else, which is what it did before this
+    existed. A missing cover is honest; a wrong one is not.
+    """
+    hers = [f for f in sorted(d.iterdir())
+            if f.is_file() and f.stem.lower() == "cover"
+            and f.suffix.lower() != ".png"]
+    if hers:
+        return None
+    if not shutil.which("qlmanage"):
+        return None
+    # OURS GOES FIRST, drawn or not: it is the cover of the dossier
+    # being replaced, and leaving it would show one document and open
+    # another.
+    for old in sorted(d.iterdir()):
+        if old.is_file() and old.stem.lower() == "cover" \
+                and old.suffix.lower() == ".png":
+            TRASH.mkdir(parents=True, exist_ok=True)
+            bin_ = TRASH / str(int(time.time() * 1000))
+            bin_.mkdir(exist_ok=True)
+            shutil.move(str(old), str(bin_ / old.name))
+            moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
+    # The same two guards the film has, for the same reasons: a floor
+    # below which there is no document to look at, and a deadline,
+    # because this runs while the write lock is held.
+    if len(doc.read_bytes()[:DOC_FLOOR]) < DOC_FLOOR:
+        return None
+    out = d / "studio-cover"
+    try:
+        shutil.rmtree(out, ignore_errors=True)
+        out.mkdir()
+        if not quick_look(doc, out):
+            return None
+        drawn = [f for f in out.iterdir() if f.suffix.lower() == ".png"]
+        if not drawn:
+            return None
+        dest = d / "cover.png"
+        os.replace(str(drawn[0]), str(dest))
+        moves.append({"from": "", "to": rel(dest)})
+        return dest.name
+    except (OSError, subprocess.SubprocessError):
+        return None
+    finally:
+        shutil.rmtree(out, ignore_errors=True)
+
+
 def add_doc(item: str, name: str, data: bytes) -> dict:
     """The dossier itself — a PDF, shown in the project's own page.
 
@@ -1067,8 +1128,10 @@ def add_doc(item: str, name: str, data: bytes) -> dict:
     tmp.write_bytes(data)
     os.replace(tmp, dest)
     moves.append({"from": "", "to": rel(dest)})
+    # ITS FIRST PAGE, so the page has a photograph to show for it.
+    cover = first_page(d, dest, moves)
     record("add_doc", [], moves)
-    return {"doc": dest.name}
+    return {"doc": dest.name, "cover": cover}
 
 
 def set_poster(item: str, name: str, data: bytes) -> dict:

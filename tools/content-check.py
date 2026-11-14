@@ -498,6 +498,24 @@ def case_alt_text(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def jpeg_width(p: pathlib.Path) -> int:
+    """How wide a JPEG is, so a fixture can pick by size not by name."""
+    d = p.read_bytes()
+    i = 2
+    while i < len(d) - 9:
+        if d[i] != 0xFF:
+            i += 1
+            continue
+        m = d[i + 1]
+        if m in (0xC0, 0xC1, 0xC2, 0xC3):
+            return struct.unpack(">H", d[i + 7:i + 9])[0]
+        if m in (0xD8, 0xD9) or 0xD0 <= m <= 0xD7:
+            i += 2
+            continue
+        i += 2 + struct.unpack(">H", d[i + 2:i + 4])[0]
+    return 0
+
+
 def webp_width(p: pathlib.Path) -> int:
     """How wide the file on disk really is. 0 if it cannot be read.
 
@@ -731,6 +749,11 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
     doc.mkdir()
     (doc / "index.md").write_text(FRONT.format(title="le dossier.pdf", extra=""))
     (doc / "dossier.pdf").write_bytes(TINY_PDF)
+    # AND ITS COVER, or the page shows no dossier and nothing references
+    # the file — which is prune doing its job, not failing, and would
+    # have made the expectation below assert the opposite of what it
+    # says. A dossier reaches a page through its cover now.
+    shutil.copyfile(ROOT / "static/img/brand/youtube-white.png", doc / "cover.png")
 
     ok, log = build(d)
     pub = d / "public"
@@ -776,6 +799,9 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
         ("what the image pipeline made was never even a candidate",
          "generated file(s) never considered" in r.stdout
          and " 0 generated" not in r.stdout),
+        # The page reaches it through the dialog its cover opens, and
+        # the url carries `#toolbar=0&navpanes=0` — prune has to see
+        # past a fragment to know the file is wanted.
         ("a document the page shows survived, fragment in its url and all",
          survived("dossier/dossier.pdf")),
     ]
@@ -958,47 +984,85 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
     (plain / "index.md").write_text(FRONT.format(title="le dossier.pdf", extra=""))
     (plain / "dossier.pdf").write_bytes(TINY_PDF)
 
+    # A COVER, which is what the page shows for a dossier now: page one
+    # drawn by Quick Look when she drops the PDF. Written here as a
+    # plain PNG rather than drawn, because qlmanage is macOS and this
+    # suite runs on Linux in CI — what is being checked is the TEMPLATE
+    # given a cover, not the drawing of one.
+    shutil.copyfile(ROOT / "static/img/brand/youtube-white.png",
+                    plain / "cover.png")
+
     cover = bureau / "dossier-couverture"
     cover.mkdir()
     (cover / "index.md").write_text(FRONT.format(title="grocery.pdf", extra=""))
     (cover / "grocery.pdf").write_bytes(TINY_PDF)
     shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", cover / "01.jpg")
+    shutil.copyfile(ROOT / "static/img/brand/youtube-white.png",
+                    cover / "cover.png")
+
+    # AND ONE WITH NO COVER AT ALL — no qlmanage on the machine, or a
+    # PDF Quick Look could not read. The page must then show her
+    # photographs and nothing else rather than a broken picture or an
+    # empty dialog.
+    bare = bureau / "dossier-sans-couverture"
+    bare.mkdir()
+    (bare / "index.md").write_text(FRONT.format(title="nu.pdf", extra=""))
+    (bare / "nu.pdf").write_bytes(TINY_PDF)
+    shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", bare / "01.jpg")
 
     ok, log = build(d)
     desk = page(d, "da/index.html")
     nu = page(d, "da/dossier-nu/index.html")
     cv = page(d, "da/dossier-couverture/index.html")
+    sans = page(d, "da/dossier-sans-couverture/index.html")
     icons = re.findall(r'<a class="icon".*?</a>', desk, re.S)
     icon_of = lambda slug: next(
         (i for i in icons if 'data-vt="{}"'.format(slug) in i), "")
 
     # Nothing anywhere may LINK to the file — that is the download.
-    links = re.findall(r'<a [^>]*href="[^"]*\.pdf[^"]*"', desk + nu + cv)
+    links = re.findall(r'<a [^>]*href="[^"]*\.pdf[^"]*"', desk + nu + cv + sans)
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
 
     return [
         ("builds", ok),
-        # SHOWN THE WAY A PHOTOGRAPH IS SHOWN, 2026-11-14. What was
-        # rejected was the READER — a dark ground and a frame, a window
-        # from somewhere else sitting in her page — not the dossier.
-        # Her ask: *click as it was a photo, scroll it, without border,
-        # and not being able to download it.*
-        ("the page shows the dossier itself",
-         bool(re.search(r'<iframe[^>]*src="[^"]*dossier\.pdf', nu))),
-        ("with nothing drawn around it",
-         bool(re.search(r"\.proj-doc\s*\{[^}]*background:\s*none", css))
-         and bool(re.search(r"\.proj-doc iframe\s*\{[^}]*border:\s*0", css))),
-        ("and it is the same shape as a photograph on that page",
-         'class="proj-open proj-doc"' in nu),
+        # A PICTURE FIRST, THE DOCUMENT WHEN ASKED. 2026-11-14, third
+        # attempt and the one she described: *see it as a photo, then
+        # when clicking we can scroll without border, without pdf
+        # reader headlines.*
+        #
+        # A reader on the page was rejected twice — once with a dark
+        # ground and a frame, once with the frame taken off. It was
+        # still a reader.
+        ("the page shows page one as a picture",
+         'class="proj-open proj-cover"' in nu),
+        ("and that picture is the same shape as a photograph",
+         bool(re.search(r'class="proj-open proj-cover">\s*<a[^>]*>\s*<img', nu))),
+        ("clicking it opens the dossier, and nothing else does",
+         'href="#dossier-da-dossier-nu"' in nu
+         and 'id="dossier-da-dossier-nu"' in nu),
+        ("the document is in there, with the viewer's headlines asked off",
+         bool(re.search(r'<dialog[^>]*win-dossier.*?<iframe[^>]*src="[^"]*dossier\.pdf'
+                        r'[^"]*toolbar=0[^"]*navpanes=0', nu, re.S))),
+        ("and that dialog is the frameless one a photograph opens into",
+         'class="win win-preview win-dossier"' in nu
+         and bool(re.search(r"\.win-dossier iframe\s*\{[^}]*border:\s*0", css))),
+        ("nothing is drawn around the picture either",
+         bool(re.search(r"\.proj-cover a\s*\{[^}]*text-decoration:\s*none", css))),
         ("not through <object> or <embed>, which the CSP refuses",
          "<object" not in nu and "<embed" not in nu),
         ("and the CSP still refuses them, so that stays true",
          "object-src 'none'" in nu),
-        # NOT OURS TO OFFER. The viewer's own save button belongs to the
-        # browser; the fragment asks Chrome and Edge to drop the chrome
-        # it lives in, which is as far as this side reaches.
-        ("the viewer's chrome is asked for off, where a browser listens",
-         "toolbar=0" in nu and "navpanes=0" in nu),
+        # THE COVER IS OURS, not one of her photographs — the same rule
+        # `poster` has, and it is in config.toml with it.
+        ("the cover is not counted among her photographs",
+         "cover" in (d / "config.toml").read_text(encoding="utf-8")
+         and nu.count('class="proj-open"') == 0),
+        # NO COVER, NO PICTURE AND NO DIALOG. The honest fallback, and
+        # without this fixture the template could render a broken <img>
+        # on every machine without qlmanage and nothing would say so.
+        ("a dossier with no cover shows her photographs and nothing else",
+         "proj-cover" not in sans and "win-dossier" not in sans
+         and sans.count('class="proj-open"') == 1),
         ("nothing links to the file, so nothing offers to download it",
          links == []),
         ("nor asks for one with a download attribute",
@@ -1016,9 +1080,8 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
          'id="preview-da-dossier-couverture"' not in desk),
         ("but the cover is what the icon looks like",
          "processed_images" in icon_of("da-dossier-couverture")),
-        ("its page shows the dossier and its photographs both",
-         bool(re.search(r'<iframe[^>]*src="[^"]*grocery\.pdf', cv))
-         and 'class="proj-open"' in cv),
+        ("its page shows the cover and its photographs both",
+         "proj-cover" in cv and 'class="proj-open"' in cv),
         # NOT A LINK, which is what a download is. `links` above is the
         # same test over all three pages; this one is about `download`,
         # and <img> is stripped first because `decoding` is not it.
@@ -2007,9 +2070,8 @@ def _reads_the_config(d: pathlib.Path) -> bool:
     cfg = d / "config.toml"
     was = cfg.read_text(encoding="utf-8")
     try:
-        cfg.write_text(was.replace('not_photographs = ["icon", "poster",'
-                                   ' "wallpaper", "about"]',
-                                   'not_photographs = ["vignette"]'),
+        cfg.write_text(re.sub(r'not_photographs = \[[^\]]*\]',
+                              'not_photographs = ["vignette"]', was),
                        encoding="utf-8")
         return filetypes.spoken_for(d) == {"vignette"}
     finally:
@@ -2088,8 +2150,9 @@ def case_one_reader_for_the_file_types(d: pathlib.Path) -> list[tuple[str, bool]
          "filetypes." in (ROOT / "tools" / "look.py").read_text(encoding="utf-8")),
         ("the names that are ours live in the config as well",
          "not_photographs" in (d / "config.toml").read_text(encoding="utf-8")),
-        ("and the reader hands back all four",
-         filetypes.spoken_for(d) == {"icon", "poster", "wallpaper", "about"}),
+        ("and the reader hands back every one of them",
+         filetypes.spoken_for(d)
+         == {"icon", "poster", "wallpaper", "about", "cover"}),
         ("nothing in tools/ keeps a second list of them",
          name_copies == []),
         # THE CONTROL. Without it, a reader that returned an empty set
@@ -2858,15 +2921,24 @@ def case_a_photograph_opens_at_full_resolution(d: pathlib.Path) -> list[tuple[st
     every candidate in the srcset can be compared against it without
     this check needing its own image reader.
     """
-    photo = (ROOT / "content" / "pellicules" / "05.jpg").read_bytes()   # 1800 wide
-    narrow = (ROOT / "content" / "pellicules" / "11.jpg").read_bytes()  # 1000 wide
-    tall = (ROOT / "content" / "pellicules" / "01.jpg").read_bytes()    # 1200x1800
+    # CHOSEN BY MEASURING, never by filename. This named
+    # `pellicules/05.jpg` as "the 1800-wide one" — and she reorders her
+    # gallery from the panel, which RENAMES the files. One drag and 05
+    # was a 1400 square, so the expectation about an 1800-wide
+    # photograph was asking about a photograph that was no longer
+    # there. Her content is live; a fixture may not assume which of her
+    # files is which.
+    pool = sorted((jpeg_width(f), f) for f in
+                  (ROOT / "content" / "pellicules").glob("*.jpg"))
+    pool = [(w, f) for w, f in pool if w]
+    widest = pool[-1]
+    narrowest = pool[0]
     base = d / "content" / "da"
-    for name, blob in (("large", photo), ("petite", narrow), ("haute", tall)):
+    for name, (w, src) in (("large", widest), ("petite", narrowest)):
         q = base / name
         q.mkdir()
         (q / "index.md").write_text(FRONT.format(title=f"{name}.jpg", extra=""))
-        (q / "01.jpg").write_bytes(blob)
+        (q / "01.jpg").write_bytes(src.read_bytes())
     ok, log = build(d)
     desk = page(d, "da/index.html")
     shots = re.findall(r'<dialog[^>]*class="[^"]*win-preview[^"]*".*?</dialog>',
@@ -2894,7 +2966,6 @@ def case_a_photograph_opens_at_full_resolution(d: pathlib.Path) -> list[tuple[st
         return out
 
     every = [row for s in shots for row in imgs(s)]
-    wide = [row for row in every if row[0] == 1800]
 
     def srcset_of(slug: str) -> list:
         m = re.search(r'<dialog[^>]*id="preview-da-' + slug + r'".*?</dialog>',
@@ -2903,6 +2974,7 @@ def case_a_photograph_opens_at_full_resolution(d: pathlib.Path) -> list[tuple[st
 
     big_w, big_cands, big_tag = srcset_of("large")
     small_w, small_cands, small_tag = srcset_of("petite")
+    want_big, want_small = widest[0], narrowest[0]
 
     return [
         ("builds", ok),
@@ -2916,10 +2988,10 @@ def case_a_photograph_opens_at_full_resolution(d: pathlib.Path) -> list[tuple[st
         ("no full-screen picture is served above its own size",
          all(all(c <= w for c in cands) for w, cands, _ in every)),
         # AND NOTHING FAR BELOW IT on a screen that can show more.
-        ("an 1800-wide photograph offers all 1800 of itself",
-         big_cands != [] and max(big_cands) == 1800),
-        ("and a 1200-wide upright one is served at 1200, not stretched to 1600",
-         all(max(cands) <= 1200 for w, cands, _ in every if w == 1200 and cands)),
+        ("the widest photograph she has is offered in full",
+         big_cands != [] and max(big_cands) == min(want_big, 2400)),
+        ("and an upright one is served at its own width, not stretched",
+         all(max(cands) <= w for w, cands, _ in every if cands)),
         ("and says how much of the screen it fills, or the browser cannot choose",
          'sizes="100vw"' in big_tag),
         ("every full-screen picture offers all of itself it can",
@@ -2928,11 +3000,13 @@ def case_a_photograph_opens_at_full_resolution(d: pathlib.Path) -> list[tuple[st
         # source at its own width rather than a second that is the same
         # file under another name.
         ("one with nothing more to give carries a single source",
-         len(small_cands) == 1 and small_cands[0] == 1000 and small_w == 1000),
+         len(small_cands) == 1 and small_cands[0] == want_small
+         and small_w == want_small),
         # THE WIDE ONES ARE THE POINT: without this, a template serving
         # everything at 320px would satisfy "nothing above the
         # original" perfectly.
-        ("the wide ones really are in the fixture", len(wide) >= 2),
+        ("the fixture really holds a photograph wider than the base",
+         want_big > 1100),
     ]
 
 
