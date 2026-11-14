@@ -206,7 +206,7 @@ function wouldBe(intoPath, kind) {
   const into = model.desks.find((d) => d.path === intoPath);
   if (!into) return "";
   const here = into.titles.fr || into.name;
-  if (kind !== "bureau") {
+  if (kind !== "folder") {
     return `Dans <b>${esc(here)}</b>. ${esc(KINDS[kind] || "")}`;
   }
   const deep = (into.depth || 0) >= 1;
@@ -1197,7 +1197,7 @@ el("make").addEventListener("click", async () => {
   const into = el("into").value;            // said out loud, not inferred
   if (!into) return;
   const kind = el("kind").value;
-  const out = kind === "bureau"
+  const out = kind === "folder"
     ? await act({ verb: "new_bureau", into, name })
     : await act({ verb: "new_project", into, name, kind });
   if (out) {
@@ -1208,7 +1208,7 @@ el("make").addEventListener("click", async () => {
       if (o) select(o);
       // it has no place of its own yet: the loose grid put it somewhere.
       // Dragging it in the page is how it gets one.
-      tell(kind === "bureau"
+      tell(kind === "folder"
         ? "dossier créé — attrape-le dans la page pour le poser"
         : "créé — attrape-le dans la page pour le poser");
     }

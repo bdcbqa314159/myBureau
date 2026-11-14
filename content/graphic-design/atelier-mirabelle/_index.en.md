@@ -3,6 +3,7 @@ title = "Atelier Mirabelle"
 template = "page.html"
 
 [extra]
+kind = "page"
 icon = "img/icons/folder-slate.svg"
 x = 16
 y = 58

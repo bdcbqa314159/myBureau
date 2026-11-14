@@ -24,11 +24,14 @@
         <select id="into" aria-label="dans quel dossier"></select>
       </label>
       <select id="kind" aria-label="quoi créer">
-        <option value="photos">des photos</option>
-        <option value="film">un film</option>
-        <option value="document">un document (pages en images)</option>
+        <!-- THE FOUR TYPES, and nothing else. `des photos` and `une
+             page` were the same thing; `un document` was a page whose
+             name ended in .pdf, and a page takes PDFs now whatever it
+             is called. The value IS the type that gets written down. -->
+        <option value="photo">une photo</option>
+        <option value="video">un film</option>
         <option value="page">une page</option>
-        <option value="bureau">un dossier</option>
+        <option value="folder">un dossier</option>
       </select>
       <input type="text" id="newname" placeholder="nom" aria-label="nom">
       <button id="make">Créer</button>

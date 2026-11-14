@@ -186,15 +186,25 @@ def main() -> int:
           and (tmp / "content" / "da" / "theodora-01" / "index.md").exists())
 
     # ---- making things, and dressing them ----------------------------
-    out = verbs.new_project("content/da", "Mon Essai", "film")
+    out = verbs.new_project("content/da", "Mon Essai", "video")
     made = tmp / out["made"]
     check("a new project is a folder with a file per language",
           made.is_dir() and (made / "index.md").exists() and (made / "index.en.md").exists())
-    check("its name carries the extension that gives it a face",
-          out["title"] == "Mon Essai.mov", out["title"])
+    # REVERSED, 2026-11-14. A new thing used to get the type's
+    # extension bolted onto the name — `Mon Essai` became
+    # `Mon Essai.mov` — and that extension was then the ONLY record of
+    # what she had made. Rename it and the object changed type.
+    #
+    # The type is written into the file now, and the name is hers.
+    check("its name is exactly what she typed, and carries no type",
+          out["title"] == "Mon Essai", out["title"])
+    check("  while the file says what it is",
+          out["kind"] == "video"
+          and 'kind = "video"' in (tmp / out["made"] / "index.md")
+          .read_text(encoding="utf-8"))
     check("the folder name is a slug, whatever she typed",
           made.name == "mon-essai", made.name)
-    verbs.new_project("content/da", "Mon Essai", "photos")
+    verbs.new_project("content/da", "Mon Essai", "photo")
     check("asking twice does not collide",
           (tmp / "content" / "da" / "mon-essai-2").is_dir())
 
@@ -267,7 +277,7 @@ def main() -> int:
     # ---- a film can receive a film ----------------------------------
     clip = b"\x00\x00\x00\x18ftypmp42" + b"0" * 200
     pixels = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
-    out = verbs.new_project("content/da", "Nuit", "film")
+    out = verbs.new_project("content/da", "Nuit", "video")
     film = out["made"]
     verbs.add_video(film, "whatever.mp4", clip)
     check("a film project can be given a film",
@@ -487,10 +497,12 @@ def doc_cases(tmp: pathlib.Path) -> None:
             return str(why)
         return ""
 
-    made = verbs.new_project("content/da", "grocery", "document")
+    made = verbs.new_project("content/da", "grocery", "page")
     proj = made["made"]
-    check("a new document is named .pdf, so it has a face before it has a file",
-          made["title"].endswith(".pdf"))
+    # REVERSED with it: there is no `un document` type any more. A page
+    # takes PDFs whatever it is called, which is the whole point.
+    check("a new page is named what she typed, and is a page",
+          made["title"] == "grocery" and made["kind"] == "page")
 
     folder = tmp / proj
     if has_pop:
@@ -543,14 +555,21 @@ def doc_cases(tmp: pathlib.Path) -> None:
     # The undo above took the dossier away, and this needs one to be
     # there — a film is refused BECAUSE a PDF is beside it. So it needs
     # poppler, like every other landing.
+    # THE REFUSAL COMES FROM WHAT THE THING IS, not from what happens
+    # to be lying beside it. `proj` is a PAGE, so a video is refused
+    # whether or not a dossier is already there — it used to be refused
+    # only once a PDF had landed, which meant an empty page would take
+    # a video and become a film by accident.
     if has_pop:
         verbs.add_doc(proj, "brochure.pdf", REAL_PDF)
-        check("a film cannot also be a dossier",
-              "propre projet" in refused(verbs.add_video, proj, "film.mp4", clip))
-    film = verbs.new_project("content/da", "une bande", "film")["made"]
+    check("a page cannot take a video, being a page",
+          "une page" in refused(verbs.add_video, proj, "film.mp4", clip))
+    film = verbs.new_project("content/da", "une bande", "video")["made"]
     verbs.add_video(film, "clip.mp4", clip)
-    check("and a dossier cannot be added to a film",
-          "propre page" in refused(verbs.add_doc, film, "x.pdf", REAL_PDF))
+    check("and a film cannot take a dossier, being a film",
+          "un film" in refused(verbs.add_doc, film, "x.pdf", REAL_PDF))
+    check("  nor a photograph",
+          "un film" in refused(verbs.add_image, film, "01.jpg", pixels))
 
     # PHOTOGRAPHS ARE STILL WELCOME, and they land AFTER the pages.
     # "a brochure has a cover" was the reason this check existed; page
@@ -568,7 +587,7 @@ def doc_cases(tmp: pathlib.Path) -> None:
               [f for f in now if f.endswith(".png")] == was, str(now))
 
     check("a dossier cannot be made in a gallery",
-          refused(verbs.new_project, "content/pellicules", "x", "document") != "")
+          refused(verbs.new_project, "content/pellicules", "x", "page") != "")
 
     # ---- the one that ate her text ----------------------------------
     # The route defaulted a missing `body` to "", so a request that
@@ -609,7 +628,11 @@ def honesty_cases(tmp: pathlib.Path) -> None:
             return str(why)
         return ""
 
-    proj = "content/da/theodora-01"
+    # A PAGE, not `theodora-01`. That is a PHOTO and holds exactly one
+    # image, so every drop below would be refused for the right reason
+    # and tell us nothing about the thing being checked — which is what
+    # a file's BYTES are, not what a project will take.
+    proj = "content/graphic-design/grocery-list"
     # The one that broke the build: zola dies on get_image_metadata, so a
     # drag that said it worked left a site that would not compile.
     say = refused(verbs.add_image, proj, "cover.jpg", pdf)
@@ -625,8 +648,13 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     # builds it; refusing that would be a refusal she cannot act on.
     check("a PNG carrying a .jpg name is allowed, because the site reads it",
           refused(verbs.add_image, proj, "fine.jpg", png) == "")
+    # ON A FILM, because a page refuses a video now — and rightly: an
+    # empty page used to take one and quietly become a film. What is
+    # being checked here is the BYTES, so it needs a target that
+    # accepts a film at all.
+    reel = verbs.new_project("content/da", "vrai film", "video")["made"]
     check("a real film is still allowed",
-          refused(verbs.add_video, proj, "ok.mp4", mp4) == "")
+          refused(verbs.add_video, reel, "ok.mp4", mp4) == "")
     check("bytes we do not recognise are not refused on a guess",
           refused(verbs.add_image, proj, "odd.jpg", b"no idea what this is") == "")
 
@@ -660,8 +688,11 @@ def honesty_cases(tmp: pathlib.Path) -> None:
         got = (tmp / proj / f).read_text(encoding="utf-8")
         check("  it is in {}, under [extra.alt]".format(f),
               "[extra.alt]" in got and "Deux silhouettes sur une plage." in got)
+    # `grocery list` is at 64/40, not 32/12 — `proj` is a page now, and
+    # the point of this line is that the OTHER keys survive an alt
+    # write, whichever page it is.
     check("the front matter it already had is untouched",
-          "x = 32" in (tmp / proj / "index.md").read_text(encoding="utf-8"))
+          "x = 64" in (tmp / proj / "index.md").read_text(encoding="utf-8"))
     verbs.set_alt(proj, "01.jpg", "Deux silhouettes, au crépuscule.")
     got = (tmp / proj / "index.md").read_text(encoding="utf-8")
     check("writing it again replaces the line rather than adding a second",
@@ -808,6 +839,71 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("undo walks all of it back",
           (tmp / proj / "index.md").read_text(encoding="utf-8") == before)
 
+    # ---- four types, written down once ------------------------------
+    #
+    # AFTER the undo tally above: this block creates things and the
+    # tally counts a fixed number of undos back to a known file.
+    #
+    # THE BUG THIS CLOSES. The type she picked was used to append an
+    # extension to the title and then thrown away:
+    #
+    #     title = name + NEW_KINDS[kind]["suffix"]
+    #
+    # so three letters in a name she can rename were the only record of
+    # what she had made. `12 regards.pdf` had somewhere to drop a PDF
+    # and `logofolio` did not; renaming a thing changed what it WAS.
+    #
+    # It is written into the file now, under [extra] — Zola refuses an
+    # unknown key at the top level — and read from there for ever.
+    print()
+    pix = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
+    clip = b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 40
+    for kind in ("photo", "video", "page"):
+        made = verbs.new_project("content/da", "essai " + kind, kind)
+        d = tmp / made["made"]
+        check("a new {} says so in its own file".format(kind),
+              verbs.kind_of(d) == kind, verbs.kind_of(d))
+        check("  and its name is hers, with no type bolted on",
+              made["title"] == "essai " + kind, made["title"])
+    folder = verbs.new_bureau("content", "un vrai dossier")
+    check("a folder on the main desktop holds a desktop",
+          folder["kind"] == "folder"
+          and verbs.kind_of(tmp / folder["made"]) == "folder")
+    check("and one made inside a desktop is a page, not a third desk",
+          verbs.new_bureau("content/da", "pas un bureau")["kind"] == "page")
+
+    # EACH TYPE ACCEPTS WHAT IT IS FOR, AND REFUSES THE REST — read
+    # from the file, never from the name.
+    photo = verbs.new_project("content/da", "une seule", "photo")["made"]
+    verbs.add_image(photo, "01.jpg", pix)
+    check("a photo takes one photograph",
+          verbs.photographs_in(tmp / photo) == ["01.jpg"])
+    check("  and a second is refused — a photo is a photo",
+          "déjà" in refused(verbs.add_image, photo, "02.jpg", pix))
+    check("  a PDF is refused on it, and says to make a page",
+          "page" in refused(verbs.add_doc, photo, "x.pdf", TINY_PDF))
+    check("  and a video too",
+          "photo seule" in refused(verbs.add_video, photo, "x.mp4", clip))
+
+    page_ = verbs.new_project("content/da", "une vraie page", "page")["made"]
+    verbs.add_image(page_, "01.jpg", pix)
+    verbs.add_image(page_, "02.jpg", pix)
+    check("a page takes as many photographs as she likes",
+          len(verbs.photographs_in(tmp / page_)) == 2)
+    check("  and refuses a video, so it cannot become a film by accident",
+          "une page" in refused(verbs.add_video, page_, "x.mp4", clip))
+
+    # AND THE NAME DECIDES NOTHING. A page called `quelquechose.pdf`
+    # behaves exactly like a page called `quelquechose`.
+    verbs.retitle(page_, "fr", "quelquechose.pdf")
+    check("renaming a page .pdf does not change what it is",
+          verbs.kind_of(tmp / page_) == "page"
+          and refused(verbs.add_image, page_, "03.jpg", pix) == "")
+    verbs.retitle(page_, "fr", "quelquechose.mov")
+    check("and calling it .mov does not make it a film",
+          "une page" in refused(verbs.add_video, page_, "x.mp4", clip))
+
+
     # ---- no control for a place it has not got ----------------------
     #
     # AFTER the undo tally above, deliberately: these verbs write and
@@ -894,7 +990,7 @@ def dossier_cases(tmp: pathlib.Path) -> None:
             return str(why)
         return ""
 
-    made = verbs.new_project("content/da", "un dossier", "document")["made"]
+    made = verbs.new_project("content/da", "un dossier", "page")["made"]
     if has_pop:
         out = verbs.add_doc(made, "brochure.pdf", pdf)
         d = tmp / made
@@ -927,7 +1023,10 @@ def dossier_cases(tmp: pathlib.Path) -> None:
     # have been written over. Under `page-NN` they cannot collide, and
     # a dossier sits beside her photographs on one page: a miniature
     # each, and one more for the dossier.
-    busy = verbs.new_project("content/da", "deja des photos", "photos")["made"]
+    # A PAGE, not a photo: a photo is a photo and holds one image, so
+    # it refuses both a second image and a PDF. This fixture is about a
+    # page that already has pictures taking a dossier too.
+    busy = verbs.new_project("content/da", "deja des photos", "page")["made"]
     verbs.add_image(busy, "01.jpg", pix)
     if has_pop:
         got = verbs.add_doc(busy, "x.pdf", pdf)
@@ -961,7 +1060,7 @@ def affiche_cases(tmp: pathlib.Path) -> None:
     started = len([l for l in verbs.JOURNAL.read_text(encoding="utf-8").splitlines()
                    if l.strip()]) if verbs.JOURNAL.exists() else 0
 
-    made = verbs.new_project("content/da", "sans affiche", "film")["made"]
+    made = verbs.new_project("content/da", "sans affiche", "video")["made"]
     d = tmp / made
     out = verbs.add_video(made, "clip.mp4", clip)
 
@@ -1002,7 +1101,7 @@ def affiche_cases(tmp: pathlib.Path) -> None:
 
         # a truncated film hangs Quick Look for ever (measured), and this
         # runs with the write lock held
-        broken_proj = verbs.new_project("content/da", "corrompu", "film")["made"]
+        broken_proj = verbs.new_project("content/da", "corrompu", "video")["made"]
         t0 = time.perf_counter()
         got = verbs.add_video(broken_proj, "truncated.mp4",
                               b"\x00\x00\x00\x18ftypmp42" + b"\x00" * 40000)
@@ -1420,7 +1519,11 @@ def serve() -> None:
         # to it, so two threads chose the same number and one overwrote
         # the other — while both told her it had worked.
         import threading
-        P = "content/travail-selectionne/nocturne-01"
+        # A PAGE, not `nocturne-01`: that is a PHOTO and holds exactly
+        # one image, so three of the four would be refused for the
+        # right reason and this check is about the write LOCK, not
+        # about what a project will take.
+        P = "content/graphic-design/grocery-list"
         had = {f.name for f in (tmp / P).iterdir()}
         shot = (ROOT / "content/da/theodora-01/01.jpg").read_bytes()
         got = {}
