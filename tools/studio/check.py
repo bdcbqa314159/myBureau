@@ -640,6 +640,70 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("the panel reads back the description it wrote",
           seen.get("02.jpg") == "Un portrait de profil.", str(seen))
 
+    # ---- clearing one description and writing another ---------------
+    #
+    # THE SECOND BUG OF THE SAME CLASS, and it took a SEQUENCE: clear
+    # an entry, then add a different one. Clearing left the line empty
+    # rather than gone, and the pattern that found `[extra.alt]` used
+    # `\s*$`, which crosses lines — so it matched the header and the
+    # blank line under it, and the insert landed at the very end of the
+    # front matter, against the closing fence:
+    #
+    #     "02.jpg" = "C"+++
+    #
+    # Every single-call assertion above passed throughout. Nothing
+    # looked at the bytes around the fence until atomic() learnt to.
+    print()
+    seq = tmp / proj / "index.en.md"
+    held = seq.read_text(encoding="utf-8")
+    verbs.set_alt(proj, "01.jpg", "Une plage.")
+    verbs.set_alt(proj, "01.jpg", "")
+    verbs.set_alt(proj, "02.jpg", "Un portrait.")
+    got = seq.read_text(encoding="utf-8")
+    check("clearing one description and writing another keeps the file whole",
+          verbs._no_front_matter(got) == "", verbs._no_front_matter(got))
+    check("  the closing +++ is still alone on its line",
+          "\n+++\n" in got, repr(got[-60:]))
+    check("  and the description that was written is there",
+          '"02.jpg" = "Un portrait."' in got)
+    check("  while the cleared one is gone, blank line and all",
+          '"01.jpg"' not in got and "[extra.alt]\n\n" not in got)
+    seq.write_text(held, encoding="utf-8")
+    for _ in range(3):
+        verbs.undo()
+
+    # ---- a fence is a line of its own -------------------------------
+    #
+    # `retitle` ate the newline after the opening +++ for as long as
+    # this panel has existed: set_key anchored with `^\s*`, and `\s`
+    # matches a newline. The header it edits begins with that newline,
+    # so the pattern matched backwards over it.
+    #
+    # It bit whichever key is FIRST in a header, and that key is always
+    # `title` — so every rename was one, in whichever language she
+    # typed in. It is the unexplained breakage the gate was built for.
+    print()
+    home = tmp / "content" / "_index.en.md"
+    keep = home.read_text(encoding="utf-8")
+    verbs.retitle("content", "en", "myStudio")
+    got = home.read_text(encoding="utf-8")
+    check("a rename leaves the opening +++ alone on its line",
+          got.startswith("+++\n"), repr(got[:28]))
+    check("  and the new name is in there", 'title = "myStudio"' in got)
+    check("  and the rest of the header is byte for byte",
+          keep.split("\n", 2)[2] == got.split("\n", 2)[2])
+    home.write_text(keep, encoding="utf-8")
+    verbs.undo()
+    # THE GATE BEHIND IT. It asked whether the text started with +++,
+    # which `+++title = "x"` does — so it would have let the damage
+    # through even once somebody looked.
+    check("the gate refuses a +++ that is not alone on its line",
+          verbs._no_front_matter('+++title = "x"\n+++\n\nb\n') != "")
+    check("and a closing +++ that is not either",
+          verbs._no_front_matter('+++\ntitle = "x"\n+++ stuff\n\nb\n') != "")
+    check("while a well-formed file still passes",
+          verbs._no_front_matter('+++\ntitle = "x"\n+++\n\nb\n') == "")
+
     # ---- what a click opens, which she could not set at all ---------
     #
     # One photograph opens in place, and the preview carries no way to

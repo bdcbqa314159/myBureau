@@ -15,10 +15,15 @@ splitting on `+++` and each deciding for itself what a malformed file
 meant. None of them disagreed yet. They were nine chances to.
 
 It matters more here than duplication usually does: a content file
-turned up once with its header gone and the site stopped building, the
-cause was never found, and the gate that stands in for a fix is a
-guess about these exact bytes. Knowledge like that belongs in one
-module.
+turned up twice with its header gone and the site stopped building.
+The cause was found on 2026-11-14 — `verbs.set_key` anchored its
+pattern with `^\s*` and ate the newline after the opening fence — and
+the gate in verbs.atomic() now refuses a fence that is not alone on
+its line. Knowledge like that belongs in one module.
+
+NOTE WHAT parts() HANDS BACK, because it is what the bug turned on:
+pieces[1] BEGINS with the newline that follows the opening `+++`. A
+caller rewriting the header has to leave that newline alone.
 
 THE SPLIT IS DELIBERATELY NAIVE, and must stay so: `text.split("+++")`
 is what every caller already did, and a stricter parser would change
