@@ -277,7 +277,13 @@ const sandbox = {
               titles: { fr: "maison cosette", en: "maison cosette" },
               bodies: { fr: "Un texte.", en: "Some text." },
               x: "41", y: "57", opens: null, icon: null, wallpaper: null,
-              photographs: [], video: null, doc: null, languages: ["en", "fr"],
+              // PHOTOGRAPHS IN IT, because the description box only
+              // appears when there are some — and without them the
+              // "same as a project" checks pass on an empty pane.
+              // (They were added twice at first, and a duplicate key
+              // in an object literal is the LAST one, silently.)
+              photographs: ["01.jpg", "02.jpg"], alt: {},
+              video: null, doc: null, languages: ["en", "fr"],
             }, {
               // ONE photograph, no film, no dossier — the only shape
               // that gets a choice about what its icon opens, and the
@@ -296,7 +302,13 @@ const sandbox = {
               titles: { fr: "grocery.pdf", en: "grocery.pdf" },
               bodies: { fr: "", en: "" },
               x: "60", y: "40", opens: null, icon: null, wallpaper: null,
-              photographs: [], video: null, doc: null, languages: ["en", "fr"],
+              // TWO photographs, not one. With exactly one it trips the
+              // lone-photograph rule — a photograph lying on a desk is
+              // a photograph, not a page, and is offered no text — and
+              // the comparison below would then fail for a reason that
+              // has nothing to do with folders against projects.
+              photographs: ["01.jpg", "02.jpg"], alt: {},
+              video: null, doc: null, languages: ["en", "fr"],
             }],
           }, {
             // THE FOLDER-PAGE AS A DESK OF ITS OWN, which is what the
@@ -466,6 +478,50 @@ if (loaded) {
     choose("maison cosette") && !/data-drop="wallpaper"/.test(look.innerHTML));
   check("  but keeps its text, which its page does render",
     /data-body/.test(look.innerHTML));
+
+  // A PAGE IS A PAGE, WHATEVER IT IS CALLED.
+  //
+  // `un document`, `une page` and `un dossier` are the same object: a
+  // blank page with her content on it. `grocery list.png` could take
+  // photographs, a text and a description; `logofolio`, `atelier
+  // mirabelle` and `maison cosette` could take none of them — and the
+  // only difference was that one has an `index.md` and the others an
+  // `_index.md`, which she has never seen and cannot see.
+  //
+  // THE VERBS WERE ALWAYS WILLING. `add_image`, `set_alt` and
+  // `add_doc` all succeed on `logofolio` today, checked directly. Only
+  // the panel hid the controls — `isDesk && !gallery`, and a
+  // folder-page is in model.desks.
+  //
+  // So the fixture's folder-page is asked for everything a project is
+  // asked for, and the project is asked beside it, so neither can pass
+  // alone.
+  const SAME = [
+    ["a name to type", /data-title/],
+    ["a text to write", /data-body/],
+    ["somewhere to drop photographs", /data-drop="photos"/],
+    ["a description per photograph", /data-alt|hintline/],
+    ["somewhere to drop a dossier", /data-drop="doc"/],
+    ["and a way to throw it away", /id="binall"/],
+  ];
+  choose("maison cosette");
+  const folderPane = look.innerHTML;
+  choose("grocery");
+  const projectPane = look.innerHTML;
+  for (const [what, re_] of SAME) {
+    check("a folder-page is offered " + what,
+      re_.test(folderPane), folderPane.slice(0, 80));
+    check("  and so is a project, which is the same object",
+      re_.test(projectPane));
+  }
+  // A NAME IS A NAME. The dossier box used to need the title to end in
+  // `.pdf`; `maison cosette` has no extension at all and gets one.
+  check("and no extension in a name decides any of that",
+    !/\.pdf|\.png/i.test("maison cosette"));
+  // THE CONTROL: a real DESK is not a page and keeps none of it.
+  check("while a bureau is offered no photographs, holding icons not work",
+    choose("DA") && !/data-drop="photos"/.test(look.innerHTML));
+  if (daRow && daRow.__click) daRow.__click();
 
   // NO CONTROL FOR A PLACE IT HAS NOT GOT.
   //
@@ -640,8 +696,14 @@ if (loaded) {
   check("the dossier has a row to choose", await pick("grocery.pdf"));
   check("a dossier is offered somewhere to put its PDF",
     /data-drop="doc"/.test(look.innerHTML), look.innerHTML.slice(0, 200));
-  check("and is told that is what it is waiting for, not photographs",
-    /attend son PDF/.test(look.innerHTML)
+  // REVERSED, 2026-11-14. "Ce dossier attend son PDF" was announced
+  // because the TITLE ended in `.pdf` — and a name is a name. A page
+  // may hold a dossier whatever it is called, so saying it is waiting
+  // for one told her the three letters had committed her to something.
+  // They had not. What it says instead, while the folder is empty, is
+  // "Rien dedans pour l'instant", which is true of any empty page.
+  check("and is not told its name has committed it to a PDF",
+    !/attend son PDF/.test(look.innerHTML)
     && !/JPEG/i.test(look.innerHTML), look.innerHTML.slice(0, 300));
   check("and the panel says it will be shown, not downloaded",
     /téléchargement/.test(look.innerHTML));
