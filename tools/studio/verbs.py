@@ -712,11 +712,36 @@ def _languages_of(parent: pathlib.Path, stem: str) -> list:
     return sorted(out)
 
 
+def template_of(d: pathlib.Path) -> str:
+    """Which template renders this folder, from its own front matter.
+
+    The fact that decides what a folder can show. It was read only to
+    test for `gallery.html`, which left `page.html` — a folder that is
+    a PAGE rather than a desk — indistinguishable from `section.html`,
+    and both were given a wallpaper. See has_a_ground().
+    """
+    for f in sorted(d.glob("_index*.md")):
+        got = re.search(r'^\s*template\s*=\s*"([^"]*)"',
+                        frontmatter.header(f.read_text(encoding="utf-8",
+                                                       errors="replace")),
+                        re.M)
+        if got:
+            return got.group(1)
+    return ""
+
+
 def is_gallery(d: pathlib.Path) -> bool:
-    for f in d.glob("_index*.md"):
-        if 'template = "gallery.html"' in f.read_text(encoding="utf-8", errors="replace"):
-            return True
-    return False
+    return template_of(d) == "gallery.html"
+
+
+def has_a_ground(d: pathlib.Path) -> bool:
+    """Does anything render a wallpaper for this folder?
+
+    `section.html` is the only template that reads one, and
+    `index.html` extends it. `gallery.html` and `page.html` extend
+    base.html and read none at all.
+    """
+    return template_of(d) in ("section.html", "index.html")
 
 
 def new_project(into: str, name: str, kind: str = "photos") -> dict:
@@ -1184,6 +1209,17 @@ def set_wallpaper(item: str, name: str, data: bytes) -> dict:
     if is_gallery(d):
         raise Refused("une galerie est une chambre noire : elle n'a pas de"
                       " fond d'écran, ses photos sont le fond.")
+    # AND A FOLDER THAT IS A PAGE. The two tests above both pass for
+    # one: it has an `_index.md` and it is not a gallery. So
+    # `travail sélectionné`, `maison cosette`, `Atelier Mirabelle` and
+    # `Logofolio` all took a wallpaper, wrote it into her folder, and
+    # rendered nothing — `page.html` reads no wallpaper at all.
+    #
+    # The gallery clause above was the same rule discovered once and
+    # written as an exception. This is the rule.
+    if not has_a_ground(d):
+        raise Refused("ce dossier a sa propre page, pas un bureau :"
+                      " un fond d'écran ne s'y afficherait pas.")
     ext = pathlib.Path(name).suffix.lower()
     if ext in VIDEO:
         raise Refused("un fond d'écran est une image fixe, pas une vidéo.")

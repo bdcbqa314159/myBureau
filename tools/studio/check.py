@@ -672,6 +672,41 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     for _ in range(3):
         verbs.undo()
 
+    # ---- a wallpaper where there is a desk to put it on -------------
+    #
+    # Two tests guarded this: has an `_index.md`, is not a gallery. A
+    # FOLDER-PAGE passes both — `travail sélectionné`, `maison
+    # cosette`, `Atelier Mirabelle`, `Logofolio` — and `page.html`
+    # reads no wallpaper at all. So the file landed in her folder, had
+    # to be excluded from her photographs by name, and rendered
+    # nothing.
+    #
+    # The gallery clause was this same rule, found once and written as
+    # an exception.
+    print()
+    pix = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
+    check("a bureau still takes a wallpaper",
+          verbs.set_wallpaper("content/da", "fond.jpg", pix)["wallpaper"]
+          == "wallpaper.jpg")
+    verbs.undo()
+    check("a folder that is a page is refused, and told why",
+          "page" in refused(verbs.set_wallpaper,
+                            "content/da/maison-cosette", "fond.jpg", pix))
+    check("and so is the road, which is a page too",
+          refused(verbs.set_wallpaper,
+                  "content/travail-selectionne", "fond.jpg", pix) != "")
+    check("a gallery is still refused for its own reason",
+          "chambre noire" in refused(verbs.set_wallpaper,
+                                     "content/pellicules", "fond.jpg", pix))
+    check("and a project, which is not a folder at all",
+          refused(verbs.set_wallpaper, proj, "fond.jpg", pix) != "")
+    # THE READER BEHIND IT, since four refusals above would all hold if
+    # it answered "" to everything.
+    check("the template of a folder is read, not guessed",
+          verbs.template_of(tmp / "content" / "da") == "section.html"
+          and verbs.template_of(tmp / "content" / "pellicules") == "gallery.html"
+          and verbs.template_of(tmp / "content" / "da" / "maison-cosette") == "page.html")
+
     # ---- a fence is a line of its own -------------------------------
     #
     # `retitle` ate the newline after the opening +++ for as long as

@@ -548,7 +548,28 @@ function inspect(o) {
   // inspectAbout. Here, it put a photograph and a text box underneath the
   // home desk's OWN name and text, and the hint meant to tell them apart
   // pointed at the wrong ones.
-  const wall = (isDesk && !o.gallery) ? `
+  // A WALLPAPER WHERE THERE IS A DESK TO PUT IT ON.
+  //
+  // `section.html` is the only template that renders one, and
+  // `index.html` extends it — so the home desk and the two bureaux
+  // have a ground, and nothing else does. `gallery.html` and
+  // `page.html` extend base.html directly and read no wallpaper at
+  // all.
+  //
+  // This said `isDesk && !o.gallery`, and `isDesk` is true of a
+  // FOLDER-PAGE as well: `travail sélectionné`, `maison cosette`,
+  // `Atelier Mirabelle` and `Logofolio` were all offered a ground they
+  // cannot show. Four of the seven offers did nothing — and worse than
+  // nothing, because the file lands in her folder and then needs
+  // `not_photographs` to keep it out of her work. Checked by dropping
+  // one beside maison cosette's `_index.md` and building: no wallpaper
+  // in its HTML.
+  //
+  // The gallery was excluded by hand, one case of the rule written out
+  // as an exception. look.py already says a wallpaper declared on a
+  // gallery is a line that does nothing.
+  const hasAGround = o.template === "section.html" || o.template === "index.html";
+  const wall = hasAGround ? `
     <label>fond d'écran
       <div class="wall" id="wall">${o.wallpaper
         ? `<img src="${q("/media/" + o.path + "/" + o.wallpaper)}" alt="">`
