@@ -3090,6 +3090,64 @@ def case_a_photograph_opens_at_full_resolution(d: pathlib.Path) -> list[tuple[st
     ]
 
 
+def case_every_cursor_is_one_we_drew(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """No page quietly wears the system's own pointer.
+
+    The whole look rests on four drawn cursors — arrow, point, open,
+    grab. They are given to `body`, to `a, button, summary,
+    [role="button"]`, and to `.icon, .win-bar`, which is every element
+    that is pointed at or picked up.
+
+    AND ANY RULE WITH A CLASS IN IT BEATS THEM. `.grid .shot` is an
+    <a>, and it carried `cursor: pointer` — so the gallery, the one
+    page that is nothing but photographs to click, showed the system
+    arrow instead of the drawn hand. The client found it.
+    `.win-film.is-mini .win-bar` had the same line and nobody did,
+    because a minimised film is a corner of one page.
+
+    So: every `cursor` declaration in the stylesheet names one of our
+    files, with ONE exception written down here rather than left to be
+    rediscovered — a text field, for which nothing was drawn.
+    """
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    bare = (d / "static" / "img" / "cursors")
+    # every `cursor:` declaration, with the selector it sits under
+    rules = []
+    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        for decl in re.findall(r"cursor\s*:([^;}]*)", body):
+            rules.append((sel.strip().splitlines()[-1].strip(), decl.strip()))
+    ALLOWED_PLAIN = {"input, textarea"}
+    naked = [(s, v) for s, v in rules
+             if "cursors/" not in v and s not in ALLOWED_PLAIN]
+    return [
+        ("the drawn cursors are all there",
+         bare.is_dir()
+         and {f.stem for f in bare.glob("*.png")}
+         >= {"arrow", "point", "open", "grab", "no"}),
+        ("every cursor rule names one of them: " + (str(naked) or "none bare"),
+         naked == []),
+        # THE CONTROL: a stylesheet with no cursor rules at all would
+        # satisfy the line above perfectly.
+        ("and there are really cursor rules to check",
+         len(rules) >= 8),
+        ("a text field is the one exception, and it is spelled out",
+         any(s == "input, textarea" for s, _ in rules)),
+        # AND THE TWO THAT WERE WRONG, named so a reader knows which
+        # pages to look at if this ever fails again.
+        ("the gallery's photographs wear the drawn hand",
+         not re.search(r"\.grid \.shot\s*\{[^}]*cursor\s*:\s*pointer", css)),
+        # THE PLAIN DECLARATION, not the @supports twin. A first
+        # version searched the whole file and matched the image-set
+        # copy, so putting `cursor: pointer` back in the plain rule
+        # left it passing — the general check above was the only thing
+        # that caught it.
+        ("and so does a minimised film's bar",
+         bool(re.search(r"\.win-film\.is-mini \.win-bar\s*\{[^}]*cursors/point",
+                        re.sub(r"@supports[^{]*\{(?:[^{}]|\{[^{}]*\})*\}",
+                               "", css)))),
+    ]
+
+
 def case_a_dead_click(d: pathlib.Path) -> list[tuple[str, bool]]:
     """An icon that names a window nobody rendered.
 
@@ -3219,6 +3277,7 @@ CASES = [
     ("what the panel writes, zola reads", case_what_the_panel_writes_zola_reads),
     ("a body is shown, or not offered", case_a_body_is_shown_or_not_offered),
     ("a photograph opens at full resolution", case_a_photograph_opens_at_full_resolution),
+    ("every cursor is one we drew", case_every_cursor_is_one_we_drew),
     ("a dead click", case_a_dead_click),
     ("a photograph can ask for its page", case_a_photograph_can_ask_for_its_page),
     ("a preview is one picture", case_a_preview_is_one_picture),
