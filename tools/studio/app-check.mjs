@@ -116,12 +116,48 @@ const rawNode = (id = "") => ({
 // ask the question that was never asked: when the panel hooks the frame
 // BEFORE the tree has arrived — which is what happens on the very first
 // load — does it still stop a click reaching the site?
+// THE FRAMED SITE, with icons on it.
+//
+// It used to serve no icons at all, so nothing the panel does to a real
+// desk icon could be checked — including what a double-click opens,
+// which is how the panel came to show her a page where the site shows a
+// photograph in place.
+//
+// `data-window` is the site's own answer to "what does this open?", so
+// each icon carries what _icon.html would have written for it.
+function frameIcon(vt, windowId) {
+  const el = {
+    dataset: windowId ? { vt, window: windowId } : { vt },
+    classList: { add() {}, remove() {}, contains: () => false },
+    style: { setProperty() {}, removeProperty() {} },
+    on: {},
+    addEventListener(kind, fn) { (this.on[kind] ||= []).push(fn); },
+    closest: (sel) => (/a\.icon/.test(sel) ? el : null),
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 160, height: 180 }),
+  };
+  return el;
+}
+const frameIcons = [
+  frameIcon("da"),                                   // a bureau: no window
+  frameIcon("da-theodora", "preview-da-theodora"),   // a photograph: in place
+  frameIcon("about-me-txt", "about"),                // the window she edits
+];
+const frameDialogs = {
+  "preview-da-theodora": { opened: false, showModal() { this.opened = true; } },
+  about: { opened: false, showModal() { this.opened = true; } },
+};
+const frameDesk = { contains: () => true,
+                    getBoundingClientRect: () => ({ left: 0, top: 0, width: 900, height: 600 }) };
 const frameDoc = {
   heard: [],
   addEventListener(kind) { this.heard.push(kind); },
-  querySelector: (s) => (s === ".desk" ? {} : null),
-  querySelectorAll: () => [],
-  getElementById: () => null,
+  querySelector: (s) => (s === ".desk" ? frameDesk : null),
+  querySelectorAll: (s) => (/a\.icon/.test(s) ? frameIcons : []),
+  getElementById: (id) => frameDialogs[id] || null,
+  // mark() paints an outline into the real page, which means a <style>
+  // element and a head to put it in
+  createElement: () => ({ id: "", textContent: "" }),
+  head: { append() {} },
 };
 
 const markup = readFileSync(new URL("./app.html", import.meta.url), "utf8");
@@ -589,6 +625,44 @@ if (loaded) {
     /addEventListener\("click"[\s\S]{0,260}stopImmediatePropagation/.test(src2));
   check("and double-click is how she goes in on purpose",
     /addEventListener\("dblclick"/.test(src2));
+
+  // WHAT A DOUBLE-CLICK OPENS, asked of the behaviour.
+  //
+  // The panel suppresses the site's own click — it must, or choosing
+  // anything on a desk navigates — and then has to reproduce what the
+  // site would have done. It did not: `about me.txt` was special-cased
+  // to open its window and everything else was sent to its page. So a
+  // photograph, which opens IN PLACE on the site, opened a page with a
+  // white ground and a paragraph on it. The editor was showing her
+  // something the site does not do.
+  //
+  // `data-window` is the engine's answer, written by _icon.html and
+  // acted on by desk.js. The panel reads it now instead of deciding.
+  if (typeof sandbox.hook === "function") sandbox.hook();
+  const fire = (icon) => (icon.on.dblclick || []).forEach(
+    (fn) => fn({ preventDefault() {}, stopImmediatePropagation() {} }));
+  const srcWas = byId.get("view").src;
+
+  fire(frameIcons[1]);
+  check("a photograph opens in place, as it does on the site",
+    frameDialogs["preview-da-theodora"].opened === true);
+  // NOT "and the frame did not move". That was tried: setMode("page")
+  // navigates to whatever is CHOSEN, and firing a dblclick here does
+  // not go through the pointerup that chooses — so the assertion
+  // passed with the bug in place. The dialog being opened is the thing
+  // that distinguishes the two outcomes, so it is the thing asserted.
+
+  fire(frameIcons[2]);
+  check("about me.txt opens its window — the case that was hardcoded",
+    frameDialogs.about.opened === true);
+
+  // THE CONTROL. A panel that opened a dialog for everything would
+  // satisfy both of those and break going into a bureau.
+  fire(frameIcons[0]);
+  check("while a bureau, which opens nothing, still goes in",
+    byId.get("view").src !== srcWas,
+    "frame stayed at " + byId.get("view").src);
+  byId.get("view").src = srcWas;
   check("what she chose is outlined in the real page",
     /studio-chosen/.test(src2));
   check("throwing a thing away lands her on the desk it was on, not nowhere",

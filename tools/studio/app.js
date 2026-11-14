@@ -919,16 +919,31 @@ function hook() {
       e.stopImmediatePropagation();
       const o = find(path);
       if (!o) return;
-      // about me.txt: show her the window she is editing. Opening the
-      // <dialog> directly rather than letting the site's click through,
-      // because the click is suppressed by arm() — and it has to stay
-      // suppressed, or choosing anything on the desk navigates.
-      if (o.kind === "about") {
-        const win = doc.getElementById("about");
-        if (win && win.showModal && !win.open) win.showModal();
+      // WHAT THE SITE DOES, read off the icon the site rendered.
+      //
+      // `data-window` is the engine's own answer to "what does this
+      // open?", written by _icon.html and acted on by desk.js. The
+      // panel suppresses the site's click in arm() — it has to, or
+      // choosing anything on a desk navigates — so it opens the dialog
+      // itself, which is the site's behaviour arriving by another road.
+      //
+      // IT USED TO DECIDE FOR ITSELF, and got it wrong: `about me.txt`
+      // was special-cased to open its window and EVERYTHING ELSE went
+      // to its page. So a photograph, which opens in place on the site,
+      // opened a page with a white ground, a title and a paragraph in
+      // the editor. She was being shown something the site does not do.
+      //
+      // The about case was never special. It carries
+      // `data-window="about"` like any other, and this is that one
+      // branch written for all of them.
+      const id = icon.dataset.window;
+      const win = id ? doc.getElementById(id) : null;
+      if (win && win.showModal) {
+        if (!win.open) win.showModal();
         return;
       }
-      // going in: a bureau becomes the desk shown, anything else is looked at
+      // nothing to open: a bureau becomes the desk shown, anything else
+      // is a page, which is what its icon is a plain link to
       if (isBureau(o)) { mode = "desk"; setPressed(); chosen = o.path; view.src = urlOf(o); paint(); }
       else setMode("page");
     }, true);
