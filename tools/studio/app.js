@@ -159,7 +159,7 @@ function kindOf(o) {
   if (o.video) return "film";
   if (o.doc) return "dossier · page";
   if (o.opens === "page") return "projet · page";
-  if (o.photographs.length === 1) return "projet · une photo";
+  if (o.photographs.length === 1) return "une photo";
   if (o.photographs.length) return "projet · photos";
   return "projet · sans image";
 }
@@ -570,30 +570,32 @@ function inspect(o) {
              placeholder="ce qu'on voit sur cette photo">
     </li>`).join("");
 
-  // WHAT A CLICK DOES, offered only where there is a choice to make.
-  //
-  // One photograph on a desk opens in place: the picture alone, which
-  // is what she asked for. The page behind it holds the same picture
-  // AND whatever she wrote under the +++ — and nothing on the site
-  // links to that page, so a paragraph written about a photograph
-  // could be read by nobody at all.
-  //
-  // Everything else already has one answer: a film opens its window, a
-  // dossier and several photographs open the page, a folder is a page.
-  // Offering a switch there would be a setting that does nothing.
-  const lone = !isDesk && !o.video && !o.doc && o.photographs.length === 1;
-  const opens = lone ? `
-    <fieldset class="opens">
-      <legend>en cliquant sur l'icône</legend>
-      <label><input type="radio" name="opens" value="image"
-             ${o.opens === "page" ? "" : "checked"}> la photo, par-dessus le bureau</label>
-      <label><input type="radio" name="opens" value="page"
-             ${o.opens === "page" ? "checked" : ""}> la page, avec le texte</label>
-      <p class="hintline">Le texte écrit plus haut ne se voit que sur la
-        page. Tant que l'icône ouvre la photo, personne ne le lit.</p>
-    </fieldset>` : "";
-
   const canBin = o.path !== "content";
+  // A PHOTOGRAPH IS A PHOTOGRAPH.
+  //
+  // One photograph lying on a desk, with no film and no dossier beside
+  // it. It opens as itself, its miniature IS itself, and it has
+  // nothing to say in words — so it is offered what a photograph has:
+  // a name, the picture, what the picture shows, and the bin.
+  //
+  // What it is NOT offered, and why each one was there:
+  //
+  //   a text box      every content file has a body, so every object
+  //                   got one. On a photograph that body appears on a
+  //                   page nothing links to, so it was a box that did
+  //                   nothing.
+  //   what it opens   a switch that existed only to rescue that text.
+  //                   With no text there is nothing to rescue, and the
+  //                   verb behind it is gone with it.
+  //   an appearance   the miniature of a photograph is the photograph.
+  //                   Offering a different face is offering a lie.
+  //
+  // DESKS ONLY, deliberately. The gallery and `travail sélectionné`
+  // hold photographs that behave differently — a grid, a road — and
+  // this is about the ones dropped alone on DA and graphic design.
+  const lonePhoto = !isDesk && !o.gallery && !o.video && !o.doc
+    && o.photographs.length === 1;
+
   look.innerHTML = `
     <h2>${esc(o.titles.fr || o.name)}</h2>
     <p class="what">${kindOf(o)}${o.gallery ? ` · ${o.photographs.length} photos`
@@ -601,7 +603,7 @@ function inspect(o) {
        o.x !== null ? ` · ${o.x}% / ${o.y}%` : " · pas encore posé"}</p>
     ${isDesk ? `<p class="what">${folderSays(o)}</p>` : ""}
     ${waitingFor(o) ? `<p class="waiting">${esc(waitingFor(o))}</p>` : ""}
-    ${titles}${bodies}${bandeau}${face}${wall}${opens}
+    ${titles}${lonePhoto ? "" : bodies + bandeau + face}${wall}
     ${isDesk && !o.gallery ? "" : dossier(o) + reel(o) + `<ul class="shots">${shots}</ul>
       <p class="drop" data-drop="photos">${o.gallery
         ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."
@@ -628,14 +630,6 @@ function wire(o) {
     el("who").addEventListener("change", send);
     el("studio").addEventListener("change", send);
   }
-  look.querySelectorAll('input[name="opens"]').forEach((r) => {
-    r.addEventListener("change", async () => {
-      if (!r.checked) return;
-      const out = await act({ verb: "set_opens", item: o.path, how: r.value });
-      if (out) tell(r.value === "page" ? "l'icône ouvre la page"
-                                       : "l'icône ouvre la photo");
-    });
-  });
   look.querySelectorAll("[data-alt]").forEach((i) => {
     i.addEventListener("change", async () => {
       const out = await act({ verb: "set_alt", item: o.path,

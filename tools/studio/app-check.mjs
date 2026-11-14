@@ -356,26 +356,39 @@ if (loaded) {
   check("one box per language, not one for both",
     (look.innerHTML.match(/data-title="/g) || []).length >= 2);
 
-  // WHAT A CLICK OPENS. One photograph on a desk opens in place, and
-  // the preview has no way to the page — so the text she writes about
-  // it is reachable by nobody unless she says `opens = "page"`, which
-  // the panel reported and could not write.
+  // A PHOTOGRAPH IS A PHOTOGRAPH.
+  //
+  // One lying alone on a desk is offered what a photograph has: a
+  // name, the picture, what the picture shows, and the bin. Not a text
+  // box — its words would appear on a page nothing links to — not a
+  // choice about what a click opens, and not a different face, because
+  // the face of a photograph is the photograph.
+  //
+  // REVERSED from "a lone photograph is offered a choice of what its
+  // icon opens", 2026-11-14. That switch existed only to rescue the
+  // text box; with no text box there is nothing to rescue, and the
+  // verb behind it is gone.
   const choose = (name) => {
     const row = tree.children.find((r) => new RegExp(name).test(r.innerHTML));
     if (row && row.__click) row.__click();
     return row !== undefined;
   };
   check("the fixture has a lone photograph to choose", choose("seule"));
-  check("a lone photograph is offered a choice of what its icon opens",
-    /name="opens"[^>]*value="page"/.test(look.innerHTML)
-    && /name="opens"[^>]*value="image"/.test(look.innerHTML),
-    look.innerHTML.slice(0, 80));
-  check("and the choice is wired to the verb that writes it",
-    /name="opens"/.test(look.innerHTML));
-  // THE CONTROL. A switch shown where the engine has only one answer
-  // would be saved, read back, and do nothing.
-  check("a film is offered no such choice, having only one answer",
-    choose("theodora") && !/name="opens"/.test(look.innerHTML));
+  check("a lone photograph is offered no text to write",
+    !/data-body/.test(look.innerHTML));
+  check("  nor a choice about what clicking it does",
+    !/name="opens"/.test(look.innerHTML));
+  check("  nor a face other than itself",
+    !/data-drop="icon"/.test(look.innerHTML));
+  check("  while its name is still hers to change",
+    /data-title/.test(look.innerHTML));
+  check("  and what it shows is still hers to describe",
+    /data-alt/.test(look.innerHTML));
+  check("  and she can still throw it away", /id="binall"/.test(look.innerHTML));
+  // THE CONTROL. Hiding those three from EVERYTHING would satisfy all
+  // of the above and leave her unable to write a word anywhere.
+  check("a project that is not a lone photograph keeps its text",
+    choose("theodora") && /data-body/.test(look.innerHTML));
   // back to the desk the checks below are written against — this block
   // moved the selection, and the wallpaper and folder-says checks are
   // asked of a bureau

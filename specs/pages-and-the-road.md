@@ -56,20 +56,33 @@ to the page, by her own decision, and the icon's own link is
 intercepted. So **the paragraph she writes about a photograph is
 reachable by nothing on the site.**
 
-`opens = "page"` is the way out, and the panel reported the key
-without being able to write it. It can now — *en cliquant sur
-l'icône: la photo / la page* — offered only where there is a choice
-to make. A film always opens its window, a dossier and several
-photographs always open the page, and a switch there would be a
-setting that does nothing.
+`opens = "page"` was made writable from the panel for exactly that
+reason — and **that was the wrong answer, withdrawn two days later.**
 
-The panel writes `opens = "image"` rather than removing the line: an
-absent key and that value mean the same to the templates, and only one
-of them lets the panel show the switch without guessing.
+**A photograph is a photograph** (2026-11-14, from the client via
+Bernardo). One lying alone on a desk is offered what a photograph has:
+a name, the picture, what the picture shows, and the bin. Not a text
+box, not a choice about what a click opens, not a face other than
+itself.
 
-**What would change this:** a preview that carries her words, or a way
-from a preview to the page. Both were taken off on her say-so, so the
-key is the route today.
+The text box was the root of it. Every content file has a body, so
+every object got one — and on a photograph that body appears on a page
+nothing links to. The switch existed only to rescue it. With no text
+there is nothing to rescue, so the switch and the `set_opens` verb are
+gone with it: two controls for one decision, and the decision was
+"a photograph should not have had words in the first place".
+
+**Desks only.** The gallery and `travail sélectionné` hold photographs
+that behave differently — a grid, a road — and this is about the ones
+dropped alone on DA and graphic design.
+
+**The engine still honours `opens = "page"`** written by hand, which
+`grocery list` uses. What went is the panel's ability to write it.
+
+**What would change this:** she asks to say something about a single
+photograph. Then the question is not a switch — it is where a
+photograph's words belong, and the honest answers are a caption under
+the picture in the preview, or the desk's own page.
 
 **What this withdrew** (2026-11-13). Two photographs behind one icon
 used to be an error: the second was reachable only by opening the

@@ -135,19 +135,9 @@ button:disabled { color: #9a9aa2; cursor: default; }
 .landed { margin: .3rem 0 .55rem; font-size: 11px; color: #2c7a3f; line-height: 1.4; }
 .landed b { color: #1f5c2e; }
 
-.about,
-.opens { margin: 0 0 .9rem; padding: .5rem .6rem .6rem; border: 1px solid #dcdce2;
+.about { margin: 0 0 .9rem; padding: .5rem .6rem .6rem; border: 1px solid #dcdce2;
          border-radius: 6px; background: #fafafc; }
-.about legend,
-.opens legend { padding: 0 .3rem; font-size: 11px; color: #6b6b74; }
-/* a radio and its words on one line, which the shared rule stacks —
-   that one is written for a caption above a field.
-   `.look .opens`, not `.opens`: `.look label` is the same specificity
-   and comes later in this file, so it would win and the radios would
-   sit above their own words. */
-.look .opens label { display: flex; align-items: center; gap: .4rem;
-                     margin: 0 0 .25rem; font-size: 12px; color: #2b2b30; }
-.look .opens input { width: auto; margin: 0; }
+.about legend { padding: 0 .3rem; font-size: 11px; color: #6b6b74; }
 .hintline { margin: .35rem 0 0; font-size: 11px; color: #9a9aa2; line-height: 1.35; }
 .waiting { margin: 0 0 .75rem; padding: .45rem .55rem; font-size: 12px;
            line-height: 1.4; color: #6a4a12; background: #fdf6e3;

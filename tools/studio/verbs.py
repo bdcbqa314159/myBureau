@@ -528,57 +528,6 @@ def retitle(item: str, lang: str, title: str) -> dict:
     return {"title": title, "lang": lang}
 
 
-def set_opens(item: str, how: str) -> dict:
-    """What a single photograph does when somebody clicks it.
-
-    One photograph on a desk opens IN PLACE — the picture alone, no
-    frame, no title bar, which is what she asked for. The page behind
-    it holds the same picture and whatever she wrote under the +++,
-    and nothing on the site links to it: the preview carries no way
-    out by her own decision, and the icon's own link is intercepted.
-
-    So a paragraph written about a photograph could be read by nobody.
-    `opens = "page"` is the way out and the panel could not write it —
-    model.py reported the key and nothing set it.
-
-    TWO VALUES, BOTH WRITTEN. "image" is the default and says so, which
-    is what lets the panel show the switch in the right position
-    without guessing: an absent key and `opens = "image"` mean the same
-    to the templates, and only one of them means it out loud.
-
-    Every language file, like every other verb here. A photograph that
-    opens in place in French and as a page in English is a bug.
-    """
-    if how not in ("image", "page"):
-        raise Refused("un clic ouvre soit l'image, soit la page.")
-    d = a_project(item)
-    # NOT ON A FOLDER, A FILM OR A DOSSIER. Those never preview, so the
-    # key would be written, saved, shown in the panel and do nothing —
-    # the sort of setting that teaches her the panel lies.
-    files = [f for f in d.iterdir() if f.is_file()]
-    if any(f.suffix.lower() in VIDEO for f in files):
-        raise Refused("un film s'ouvre toujours dans sa fenêtre.")
-    if any(f.suffix.lower() in DOC for f in files):
-        raise Refused("un dossier PDF s'ouvre toujours sur sa page.")
-    stills = [f for f in files if f.suffix.lower() in IMAGE
-              and f.stem.lower() not in SPOKEN_FOR]
-    if len(stills) != 1:
-        raise Refused("ce choix n'existe que pour une photo seule :"
-                      " plusieurs photos s'ouvrent toujours sur la page.")
-    planned = []
-    for f in language_files(d):
-        before = f.read_text(encoding="utf-8")
-        planned.append((f, before, set_key(before, "opens", how, rel(f))))
-    texts = []
-    for f, before, after in planned:
-        if after != before:
-            texts.append({"path": rel(f), "before": before})
-            atomic(f, after)
-    if texts:
-        record("set_opens", texts, [])
-    return {"opens": how, "files": len(texts)}
-
-
 def set_alt(item: str, name: str, text: str) -> dict:
     """What a photograph shows, for somebody who cannot see it.
 
