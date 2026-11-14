@@ -872,6 +872,22 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("and one made inside a desktop is a page, not a third desk",
           verbs.new_bureau("content/da", "pas un bureau")["kind"] == "page")
 
+    # AND THE PANEL IS TOLD. The model reports her type beside its own
+    # structural `kind`, and the panel shows one set of controls per
+    # type from it — so if this stopped being reported, every control
+    # would fall back to counting files, which is the bug.
+    the_model.ROOT, the_model.CONTENT = tmp, tmp / "content"
+    seen = {}
+    for dk in the_model.tree()["desks"]:
+        seen[dk["path"]] = dk.get("type")
+        for c in dk["on"]:
+            seen.setdefault(c["path"], c.get("type"))
+    check("the model reports what she made, beside what the tree calls it",
+          seen.get("content/da/theodora-01") == "photo"
+          and seen.get("content/da/junes-cry") == "video"
+          and seen.get("content/graphic-design/logofolio") == "page"
+          and seen.get("content/da") == "folder", str(sorted(seen.items())[:4]))
+
     # EACH TYPE ACCEPTS WHAT IT IS FOR, AND REFUSES THE REST — read
     # from the file, never from the name.
     photo = verbs.new_project("content/da", "une seule", "photo")["made"]

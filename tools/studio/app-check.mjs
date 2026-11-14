@@ -233,7 +233,7 @@ const sandbox = {
             about: "about.jpg",
             photographs: [], video: null, doc: null, languages: ["en", "fr"],
             on: [{
-              kind: "folder", path: "content/da", name: "da", template: "section.html",
+              kind: "folder", path: "content/da", name: "da", template: "section.html", type: "folder",
               titles: { fr: "DA", en: "art direction" }, bodies: { fr: "", en: "" },
               x: "66", y: "66", opens: null, icon: null, wallpaper: "wallpaper.jpg",
               photographs: [], video: null, languages: ["en", "fr"],
@@ -252,19 +252,40 @@ const sandbox = {
             }],
           }, {
             kind: "desk", path: "content/da", name: "da", gallery: false,
-            depth: 1, empty: false, template: "section.html",
+            depth: 1, empty: false, template: "section.html", type: "folder",
             titles: { fr: "DA", en: "art direction" },
             bodies: { fr: "Un texte.", en: "Some text." },
             x: "66", y: "66", opens: null, icon: null, wallpaper: "wallpaper.jpg",
             photographs: [], video: null, languages: ["en", "fr"],
             on: [{
-              kind: "project", path: "content/da/theodora", name: "theodora", template: "",
+              // A VIDEO, and nothing else — which is what the type
+              // means. It used to be a film carrying two photographs
+              // and a dossier's worth of boxes, an object the engine
+              // now forbids: `add_image` on a video is refused.
+              //
+              // The photograph-description checks moved to `cosette`,
+              // which is a page and is where photographs live.
+              kind: "project", path: "content/da/theodora", name: "theodora",
+              template: "", type: "video",
               titles: { fr: "theodora.jpeg", en: "theodora.jpeg" },
               bodies: { fr: "", en: "" },
               x: "32", y: "12", opens: null, icon: null, wallpaper: null,
-              photographs: ["01.jpg", "02.jpg"], video: "film.mp4",
-              poster: "poster.png", doc: null, languages: ["en", "fr"],
-              alt: { "01.jpg": "Deux silhouettes sur une plage." },
+              photographs: [], video: "film.mp4",
+              poster: "poster.png", doc: null, languages: ["en", "fr"], alt: {},
+            }, {
+              // A PHOTO SHE HAS NOT FILLED YET — type photo, no image.
+              // This is the one shape where reading the TYPE and
+              // counting the files disagree: counting says "not one
+              // picture, so it must be a page" and offers it a text
+              // box and a dossier, which is the whole bug. Without
+              // this row the two rules are indistinguishable.
+              kind: "project", path: "content/da/vide", name: "vide",
+              template: "", type: "photo",
+              titles: { fr: "à venir", en: "to come" },
+              bodies: { fr: "", en: "" },
+              x: "8", y: "8", opens: null, icon: null, wallpaper: null,
+              photographs: [], video: null, doc: null,
+              languages: ["en", "fr"], alt: {},
             }, {
               // A FOLDER THAT IS A PAGE, which the fixture had none of.
               // It is `kind: "folder"` with `depth >= 1` exactly like a
@@ -272,7 +293,7 @@ const sandbox = {
               // template — so without one of these, every rule about
               // "a desk, but not a folder-page" was unexercised and
               // passed by finding nothing to be false about.
-              kind: "folder", path: "content/da/cosette", name: "cosette",
+              kind: "folder", path: "content/da/cosette", type: "page", name: "cosette",
               template: "page.html", gallery: false, depth: 2, empty: true,
               titles: { fr: "maison cosette", en: "maison cosette" },
               bodies: { fr: "Un texte.", en: "Some text." },
@@ -282,14 +303,15 @@ const sandbox = {
               // "same as a project" checks pass on an empty pane.
               // (They were added twice at first, and a duplicate key
               // in an object literal is the LAST one, silently.)
-              photographs: ["01.jpg", "02.jpg"], alt: {},
+              photographs: ["01.jpg", "02.jpg"],
+              alt: { "01.jpg": "Deux silhouettes sur une plage." },
               video: null, doc: null, languages: ["en", "fr"],
             }, {
               // ONE photograph, no film, no dossier — the only shape
               // that gets a choice about what its icon opens, and the
               // shape the fixture had none of. `theodora` above holds
               // two and a video, so the switch must not appear on it.
-              kind: "project", path: "content/da/seule", name: "seule", template: "",
+              kind: "project", path: "content/da/seule", type: "photo", name: "seule", template: "",
               titles: { fr: "seule.jpg", en: "seule.jpg" },
               bodies: { fr: "Un texte.", en: "Some text." },
               x: "20", y: "70", opens: null, icon: null, wallpaper: null,
@@ -298,7 +320,7 @@ const sandbox = {
             }, {
               // a dossier that has not had its PDF yet — the state the
               // panel used to answer by asking for photographs
-              kind: "project", path: "content/da/grocery", name: "grocery", template: "",
+              kind: "project", path: "content/da/grocery", type: "page", name: "grocery", template: "",
               titles: { fr: "grocery.pdf", en: "grocery.pdf" },
               bodies: { fr: "", en: "" },
               x: "60", y: "40", opens: null, icon: null, wallpaper: null,
@@ -307,7 +329,8 @@ const sandbox = {
               // a photograph, not a page, and is offered no text — and
               // the comparison below would then fail for a reason that
               // has nothing to do with folders against projects.
-              photographs: ["01.jpg", "02.jpg"], alt: {},
+              photographs: ["01.jpg", "02.jpg"],
+              alt: { "01.jpg": "Deux silhouettes sur une plage." },
               video: null, doc: null, languages: ["en", "fr"],
             }],
           }, {
@@ -318,7 +341,7 @@ const sandbox = {
             // (`isDesk && !gallery`) withheld the wallpaper for the
             // wrong reason and the check could not fail on the bug it
             // was written for.
-            kind: "desk", path: "content/da/cosette", name: "cosette",
+            kind: "desk", path: "content/da/cosette", type: "page", name: "cosette",
             gallery: false, depth: 2, empty: true, template: "page.html",
             titles: { fr: "maison cosette", en: "maison cosette" },
             bodies: { fr: "Un texte.", en: "Some text." },
@@ -330,7 +353,7 @@ const sandbox = {
             // and no position — and the fixture had nothing in this
             // position, so none of that could be checked.
             on: [{
-              kind: "project", path: "content/da/cosette/nocturne",
+              kind: "project", path: "content/da/cosette/nocturne", type: "photo",
               name: "nocturne", template: "",
               titles: { fr: "nocturne 01.jpg", en: "nocturne 01.jpg" },
               bodies: { fr: "", en: "" },
@@ -479,6 +502,60 @@ if (loaded) {
   check("  but keeps its text, which its page does render",
     /data-body/.test(look.innerHTML));
 
+  // EACH TYPE IS OFFERED ITS OWN CONTROLS, AND NOT THE OTHERS'.
+  //
+  // One table, read both ways: every type must have what its row says
+  // and must NOT have what another row has and it does not. Without
+  // the second half a pane that showed everything would pass.
+  //
+  // What this replaces: every one of these was worked out from the
+  // folder's contents or the title's extension, so a thing she had not
+  // filled in yet was offered the wrong boxes — an empty film had
+  // nowhere to put its film unless she had typed `.mov`.
+  const OFFERS = {
+    photo: { want: [/data-title/, /data-alt|n'en tient qu'une/],
+             deny: [/data-body/, /data-drop="doc"/, /data-drop="video"/] },
+    video: { want: [/data-title/, /data-drop="video"/, /data-drop="poster"/],
+             deny: [/data-drop="photos"/, /data-drop="doc"/] },
+    page:  { want: [/data-title/, /data-body/, /data-drop="photos"/,
+                    /data-drop="doc"/],
+             deny: [/data-drop="video"/, /data-drop="poster"/] },
+  };
+  // `seule`, not `nocturne`: both are photos, but `nocturne` is a stop
+  // on a route and a route stop has no name box — nothing shows its
+  // name, so there is nothing to type. That is #149 and it is right;
+  // it just makes it the wrong pane for comparing TYPES.
+  const PANE = { photo: "seule", video: "theodora", page: "maison cosette" };
+  for (const [type, rules] of Object.entries(OFFERS)) {
+    choose(PANE[type]);
+    const pane = look.innerHTML;
+    check("a " + type + " is offered what a " + type + " holds",
+      rules.want.every((re_) => re_.test(pane)),
+      rules.want.filter((re_) => !re_.test(pane)).join(" "));
+    check("  and nothing another type holds",
+      rules.deny.every((re_) => !re_.test(pane)),
+      rules.deny.filter((re_) => re_.test(pane)).join(" "));
+  }
+  // AND IT SAYS WHAT IT IS, in her words, from the type rather than
+  // from what is in the folder: a film with no video yet is still a
+  // film.
+  choose("theodora");
+  check("a film says it is a film", /un film/.test(look.innerHTML));
+  choose("seule");
+  check("and a photo says it is a photo", /une photo/.test(look.innerHTML));
+  // AN EMPTY PHOTO IS STILL A PHOTO. Counting files would call this a
+  // page and offer it a text box and a dossier; the type knows better.
+  choose("à venir");
+  check("a photo with no image yet is still a photo",
+    /une photo, vide/.test(look.innerHTML), look.innerHTML.slice(0, 120));
+  check("  offered its image, and no text and no dossier",
+    /data-drop="photos"/.test(look.innerHTML)
+    && !/data-body/.test(look.innerHTML)
+    && !/data-drop="doc"/.test(look.innerHTML));
+  check("  and told what it is waiting for",
+    /attend son image/.test(look.innerHTML));
+  if (daRow && daRow.__click) daRow.__click();
+
   // A PAGE IS A PAGE, WHATEVER IT IS CALLED.
   //
   // `un document`, `une page` and `un dossier` are the same object: a
@@ -536,8 +613,14 @@ if (loaded) {
     !/34% \/ 43%/.test(look.innerHTML) && !/pas encore posé/.test(look.innerHTML));
   check("  and it says so, rather than just showing less",
     /dans l'ordre de son nom/.test(look.innerHTML));
+  // A PHOTO HOLDS ONE, and `nocturne` has it — so there is nowhere to
+  // drop a second, by design: `add_image` would refuse it. What is
+  // offered is the picture itself, with its description and its ✕.
   check("  while its photograph and its description are still hers",
-    /data-drop="photos"/.test(look.innerHTML) && /data-alt/.test(look.innerHTML));
+    /data-alt/.test(look.innerHTML) && /class="shot"/.test(look.innerHTML)),
+  check("  and nowhere to drop a second, which would be refused",
+    !/data-drop="photos"/.test(look.innerHTML)
+    && /n'en tient qu'une/.test(look.innerHTML));
   check("  and she can still throw it away", /id="binall"/.test(look.innerHTML));
 
   // THE HOME DESK is drawn as no icon either — but its name IS read,
@@ -643,21 +726,35 @@ if (loaded) {
     return zones;
   };
 
+  // ON A FILM, whose boxes are its video, its affiche and its icon.
+  // There is no photographs box on a film any more — a video holds its
+  // video and nothing else, and `add_image` refuses one — so the old
+  // assertions about `z.photos` here were about an object the engine
+  // now forbids.
   let z = drag("video/quicktime");
   check("dragging a video lights the film box",
     z.video === "can", JSON.stringify(z));
-  check("and tells the image boxes they cannot have it",
-    z.photos === "cannot" && z.poster === "cannot", JSON.stringify(z));
-
+  check("and tells the affiche it cannot have it",
+    z.poster === "cannot", JSON.stringify(z));
   z = drag("image/jpeg");
-  check("dragging a photograph lights the photographs and the affiche",
-    z.photos === "can" && z.poster === "can", JSON.stringify(z));
-  check("and not the film", z.video === "cannot", JSON.stringify(z));
-
+  check("dragging a photograph onto a film lights only its affiche",
+    z.poster === "can" && z.video === "cannot", JSON.stringify(z));
   z = drag("");
   check("a file whose type the browser will not say lights everything,"
     + " rather than guiding wrong",
     Object.values(z).every((v) => v === "can"), JSON.stringify(z));
+
+  // AND ON A PAGE, which is where photographs and dossiers go.
+  choose("maison cosette");
+  z = drag("image/jpeg");
+  check("dragging a photograph onto a page lights the photographs",
+    z.photos === "can", JSON.stringify(z));
+  check("and tells the dossier it cannot have it",
+    z.doc === "cannot", JSON.stringify(z));
+  z = drag("application/pdf");
+  check("dragging a PDF lights the dossier, and only that",
+    z.doc === "can" && z.photos === "cannot", JSON.stringify(z));
+  await pick("theodora.jpeg");
 
   for (const fn of listeners.get("look:dragleave") || []) fn({});
   const after = {};
@@ -670,6 +767,12 @@ if (loaded) {
   // Every photograph on the site carried alt="", which tells a screen
   // reader there was nothing there. It was writable by hand in the .md
   // and nowhere in the panel.
+  //
+  // ON A PAGE. These ran on `theodora`, which was a film carrying two
+  // photographs — an object the engine now forbids, since a video
+  // holds its video and its affiche and nothing else. Photographs live
+  // on a page, so that is where they are described.
+  choose("maison cosette");
   check("each photograph has a box for what it shows",
     (look.innerHTML.match(/data-alt="/g) || []).length === 2,
     look.innerHTML.slice(0, 300));
@@ -686,7 +789,8 @@ if (loaded) {
   for (const fn of listeners.get("alt:02.jpg:change") || []) await fn();
   sandbox.fetch = keepFetch;
   check("typing one sends it for THAT photograph",
-    saidAlt && saidAlt.verb === "set_alt" && saidAlt.item === "content/da/theodora"
+    saidAlt && saidAlt.verb === "set_alt"
+      && saidAlt.item === "content/da/cosette"
       && saidAlt.name === "02.jpg", JSON.stringify(saidAlt));
 
   // ---- the dossier -------------------------------------------------

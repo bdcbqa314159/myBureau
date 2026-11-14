@@ -120,7 +120,19 @@ def thing(folder: pathlib.Path, stem: str, kind: str) -> dict:
     fm = {code: front(f) for code, f in files.items()}
     first = fm.get("fr", "")
     return {
+        # `kind` here is the MODEL's own word for where a row came from
+        # — "desk", "folder", "project", "about" — and it is about
+        # structure, not about what she made.
         "kind": kind,
+        # `type` is HERS: photo, video, page, folder, written into the
+        # file when she made it. See specs/the-four-types.md. Empty for
+        # anything that predates it, and for the home desk, which is
+        # not a thing she made.
+        #
+        # The two are deliberately separate words. Merging them is
+        # tempting and wrong: the model's `kind` says a folder appears
+        # twice in the tree, hers says what the folder IS.
+        "type": key(first, "kind") or "",
         "path": str(folder.relative_to(ROOT)),
         "name": folder.name,
         "titles": {code: (key(t, "title") or folder.name) for code, t in fm.items()},
@@ -219,7 +231,7 @@ def tree() -> dict:
             if k is None:
                 continue                      # a project: not a desk anywhere
             for field in ("gallery", "depth", "empty", "holds",
-                          "can_receive", "template"):
+                          "can_receive", "template", "type"):
                 child[field] = k[field]
 
     # ---- about me.txt ------------------------------------------------
@@ -250,7 +262,7 @@ def tree() -> dict:
             # it is a <dialog> on the home page, not a template of its
             # own; the panel keys off `kind` for this row, and the field
             # is here so every row carries the same set
-            "template": "",
+            "template": "", "type": "",
         })
     return {"desks": desks, "identity": identity()}
 

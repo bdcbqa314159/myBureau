@@ -1,7 +1,7 @@
 # The four types
 
-**Status:** stored and enforced at the verbs. The panel still shows
-some controls by other means — that is the next slice.
+**Status:** stored, enforced at the verbs, and the panel offers one set
+of controls per type.
 **Date:** 2026-11-14
 
 ## What a thing is
@@ -112,8 +112,30 @@ re-derives it.
 | 5 | a photo holds one photograph | a second is refused |
 | 6 | renaming decides nothing | `.pdf` and `.mov` on a page change neither |
 
-1–6 hold. The panel's half does not yet: it still derives some of what
-it shows from the folder's contents rather than from `kind`.
+| 7 | the panel offers each type its own controls, and no others | one table read both ways in app-check |
+| 8 | it says what a thing is from its type, not its contents | an empty film is still a film |
+
+1–8 hold.
+
+## What the panel offers
+
+| type | name | text | photographs | a film | an affiche | a dossier |
+|---|---|---|---|---|---|---|
+| **photo** | ✓ | — | one, then nowhere to drop a second | — | — | — |
+| **video** | ✓ | ✓ | — | ✓ | ✓ | — |
+| **page** | ✓ | ✓ | ✓ | — | — | ✓ |
+| **folder** | ✓ | — | — | — | — | — |
+
+Every one of those used to be worked out from the folder's contents or
+the title's extension, so **a thing she had not filled in yet was
+offered the wrong boxes**: an empty film had nowhere to put its film
+unless she had typed `.mov`, and a photo with no image was treated as a
+page.
+
+A photo that already holds its photograph has **no drop zone** — the
+verb would refuse a second — and says so instead: *"une photo seule
+n'en tient qu'une. Jette celle-ci pour en mettre une autre, ou fais-en
+une page."*
 
 ## What would change this
 
