@@ -3,6 +3,7 @@ title = "maison cosette"
 template = "page.html"
 
 [extra]
+kind = "page"
 icon = "img/icons/folder-rust.svg"
 x = 41
 y = 57

@@ -2,6 +2,7 @@
 title = "june's cry.mov"
 
 [extra]
+kind = "video"
 x = 10
 y = 32
 +++

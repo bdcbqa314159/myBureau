@@ -3,6 +3,7 @@ title = "Logofolio"
 template = "page.html"
 
 [extra]
+kind = "page"
 icon = "img/icons/folder-olive.svg"
 x = 82
 y = 72

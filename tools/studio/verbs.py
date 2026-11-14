@@ -682,6 +682,15 @@ def add_image(item: str, name: str, data: bytes) -> dict:
     if not data:
         raise Refused("ce fichier est vide.")
     must_really_be(name, data)
+    # WHAT THIS THING IS decides what may go in it. Read from its own
+    # front matter, never from its name — see TYPES.
+    must_accept(d, "image")
+    # A PHOTO IS A PHOTO. One image, and a second is refused rather
+    # than quietly turning it into something else: an object that
+    # changes type under her is how all of this went wrong.
+    if kind_of(d) == "photo" and photographs_in(d):
+        raise Refused("c'est une photo seule, et elle en a déjà une."
+                      " Pour en montrer plusieurs, fais-en une page.")
     dest = d / "{:02d}{}".format(_next_number(d), ext)
     tmp = dest.with_name(dest.name + ".studio-tmp")
     tmp.write_bytes(data)
@@ -693,12 +702,101 @@ def add_image(item: str, name: str, data: bytes) -> dict:
 # What a new thing is called before she renames it, and what the engine
 # will draw for it. The extension is not decoration: it is how a project
 # with no photograph yet gets a face at all — see _icon.html.
-NEW_KINDS = {
-    "photos":  {"suffix": ".jpg", "what": "des photos"},
-    "film":    {"suffix": ".mov", "what": "un film"},
-    "document": {"suffix": ".pdf", "what": "un dossier PDF"},
-    "page":    {"suffix": "",     "what": "une page"},
+# ---------------------------------------------------------------------
+# WHAT A THING IS
+# ---------------------------------------------------------------------
+# Four types, chosen when she makes it, WRITTEN DOWN, and read from
+# there for ever after. Nothing is ever inferred from a name or from
+# what happens to be in the folder.
+#
+# That inference is the bug this replaces, and it was everywhere. The
+# type she picked was used to append an extension to the TITLE and then
+# thrown away:
+#
+#     title = name + NEW_KINDS[kind]["suffix"]     # "x" + ".mov"
+#
+# After that, three letters in a name she can rename were the only
+# record of her choice. So `12 regards.pdf` had somewhere to drop a PDF
+# and `logofolio` did not; renaming a thing changed what it WAS; and a
+# page could not be told from a photograph except by counting files.
+#
+# THE RULES EACH TYPE CARRIES. A type is not a label — it is what may
+# go in and what a click does, and anything else is refused with a
+# sentence she can act on.
+#
+#   photo   one photograph. A photo is a photo: a second file is
+#           refused, because silently becoming something else is how
+#           this went wrong in the first place.
+#   video   a film and its affiche. Its own mechanics, unchanged.
+#   page    a title, her words, photographs and PDFs — as many as she
+#           likes. `un document`, `une page` and `un dossier` were all
+#           this, told apart only by their names.
+#   folder  only on the main desktop, where it holds a desktop of its
+#           own. Inside a desktop a folder picture is an ICON and
+#           nothing more.
+#
+# THE NAME IS FREE FOREVER. She may call a page `something.pdf`.
+TYPES = ("photo", "video", "page", "folder")
+
+# What each type accepts, by the role a file plays rather than by its
+# extension — `add_image`, `add_video`, `add_doc` each name their role.
+ACCEPTS = {
+    "photo":  ("image",),
+    "video":  ("video", "poster"),
+    "page":   ("image", "doc"),
+    "folder": (),
 }
+
+# In her words, for a refusal that says what to do instead.
+TYPE_IS = {
+    "photo":  "une photo seule",
+    "video":  "un film",
+    "page":   "une page",
+    "folder": "un dossier",
+}
+
+NEW_KINDS = {
+    "photo": {"what": "une photo"},
+    "video": {"what": "un film"},
+    "page":  {"what": "une page"},
+}
+
+
+def kind_of(d: pathlib.Path) -> str:
+    """What this thing IS, from its own front matter.
+
+    `kind = "photo"` and so on, written at creation. Empty when the
+    folder predates this — see tools/label-types.py, which wrote it
+    into the eleven that did.
+    """
+    for f in sorted(d.glob("index*.md")) + sorted(d.glob("_index*.md")):
+        got = re.search(r'^\s*kind\s*=\s*"([^"]*)"',
+                        frontmatter.header(f.read_text(encoding="utf-8",
+                                                       errors="replace")),
+                        re.M)
+        if got:
+            return got.group(1)
+    return ""
+
+
+def must_accept(d: pathlib.Path, role: str) -> None:
+    """Refuse a file this thing cannot hold, and say what can."""
+    kind = kind_of(d)
+    if not kind:
+        return                     # nothing declared: the old behaviour
+    if role in ACCEPTS.get(kind, ()):
+        return
+    raise Refused("c'est {} — {} ne va pas là. {}".format(
+        TYPE_IS.get(kind, kind),
+        {"image": "une image", "video": "une vidéo",
+         "doc": "un PDF", "poster": "une affiche"}.get(role, "ce fichier"),
+        {"photo": "Une photo seule ne tient qu'une image :"
+                  " fais-en une page.",
+         "video": "Un film tient sa vidéo et son affiche :"
+                  " fais-en une page.",
+         "page":  "Une page tient des images et des PDF.",
+         "folder": "Un dossier tient des choses, pas des fichiers."}
+        .get(kind, "")))
 
 
 def _free_folder(parent: pathlib.Path, wanted: str) -> pathlib.Path:
@@ -793,15 +891,21 @@ def new_project(into: str, name: str, kind: str = "photos") -> dict:
         raise Refused("donne-lui un nom, sans guillemets.")
     folder = _free_folder(d, name)
     folder.mkdir()
-    title = name + NEW_KINDS[kind]["suffix"]
+    # THE NAME IS HERS AND NOTHING ELSE. It used to get the type's
+    # extension bolted on — `x` became `x.mov` — and that extension was
+    # then the only record of what she had made.
+    title = name
     moves = []
     for lang in _languages_of(d, "_index"):
         f = folder / ("index.md" if not lang else "index.{}.md".format(lang))
-        atomic(f, '+++\ntitle = "{}"\n+++\n\n\n'.format(title))
+        # UNDER [extra]: Zola refuses an unknown key at the top level
+        # of front matter, and everything of ours lives there already.
+        atomic(f, '+++\ntitle = "{}"\n\n[extra]\nkind = "{}"\n+++\n\n\n'
+               .format(title, kind))
         moves.append({"from": "", "to": rel(f)})
     moves.append({"from": "", "to": rel(folder)})
     record("new_project", [], moves)
-    return {"made": rel(folder), "title": title}
+    return {"made": rel(folder), "title": title, "kind": kind}
 
 
 def new_bureau(into: str, name: str) -> dict:
@@ -822,15 +926,22 @@ def new_bureau(into: str, name: str) -> dict:
     # bandeau. A folder anywhere else is a piece of work and opens the
     # project page — title, description, photographs. Getting this wrong
     # builds perfectly and gives her a desk where she asked for a page.
-    template = "section.html" if d == CONTENT.resolve() else "page.html"
+    on_the_main_desk = d == CONTENT.resolve()
+    template = "section.html" if on_the_main_desk else "page.html"
+    # AND WHAT IT IS, written down. On the main desktop a folder holds a
+    # desktop; anywhere else it is a page, whatever picture she gives
+    # its icon. Position decides, and then the file remembers — nothing
+    # reads it back out of the name or the template again.
+    kind = "folder" if on_the_main_desk else "page"
     moves = []
     for lang in _languages_of(d, "_index"):
         f = folder / ("_index.md" if not lang else "_index.{}.md".format(lang))
-        atomic(f, '+++\ntitle = "{}"\ntemplate = "{}"\n+++\n\n\n'.format(name, template))
+        atomic(f, '+++\ntitle = "{}"\ntemplate = "{}"\n\n[extra]\nkind = "{}"\n+++\n\n\n'
+               .format(name, template, kind))
         moves.append({"from": "", "to": rel(f)})
     moves.append({"from": "", "to": rel(folder)})
     record("new_bureau", [], moves)
-    return {"made": rel(folder)}
+    return {"made": rel(folder), "kind": kind}
 
 
 def move(item: str, into: str) -> dict:
@@ -909,6 +1020,7 @@ def add_video(item: str, name: str, data: bytes) -> dict:
     if not data:
         raise Refused("ce fichier est vide.")
     must_really_be(name, data)
+    must_accept(d, "video")
     # the other half of the rule in add_doc: a film's icon opens the film
     # window, which never shows a dossier
     if any(f.suffix.lower() in DOC for f in d.iterdir() if f.is_file()):
@@ -1131,6 +1243,7 @@ def add_doc(item: str, name: str, data: bytes) -> dict:
     if not data:
         raise Refused("ce fichier est vide.")
     must_really_be(name, data)
+    must_accept(d, "doc")
     # A project holding a video IS a film, and its icon opens the film
     # window — which never shows a dossier. The PDF would be built,
     # copied, and reachable from nowhere.
@@ -1190,6 +1303,7 @@ def set_poster(item: str, name: str, data: bytes) -> dict:
     if not data:
         raise Refused("ce fichier est vide.")
     must_really_be(name, data)
+    must_accept(d, "poster")
     moves = []
     for old in sorted(d.iterdir()):
         if old.is_file() and old.stem.lower() == "poster":

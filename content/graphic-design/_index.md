@@ -3,6 +3,7 @@ title = "graphic design"
 template = "section.html"
 
 [extra]
+kind = "folder"
 icon = "img/icons/folder-olive.svg"
 x = 14
 y = 52
