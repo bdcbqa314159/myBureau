@@ -135,7 +135,7 @@ content-check refuses a fifth.
 |---|---|
 | `56rem` | the top bar runs out of room for its secondary wordmark |
 | `52rem` | **two columns become one** — pairs, the film's spread, the gallery, the road's pinning |
-| `40rem` | **the desk stops being a surface** and becomes a list |
+| `40rem` | **the desk stops being a surface** and becomes a list — and nothing on it leans, since 2026-11-14 |
 | `30rem` **height** | a phone lying down: the icons shrink |
 
 The road's straightening moved from `46rem` to `52rem` — it is a

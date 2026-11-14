@@ -6,7 +6,7 @@
                  page alike, where `assets` is not: a section spells
                  them as urls with the language in front.
       pl_assets  its files
-      pl_extra   its [extra], for the width below
+      pl_extra   its [extra], for the column below
       pl_alt     its [extra.alt], so a photograph can still be described
 
     A PLACE TO LOOK, AND NOTHING ELSE. These were links carrying the
@@ -37,9 +37,26 @@
     {%- set src = pl_here ~ leaf -%}
     {%- set shape = get_image_metadata(path=src) -%}
     {%- set small = resize_image(path=src, width=900, op="fit_width", format="webp", quality=78) -%}
+    {#- WHICH COLUMN, 1, 2 or 3. The blank space is three columns wide
+        and a photograph fills one of them, so this is both where it
+        sits and how big it is.
+
+        ONLY 1, 2 OR 3 reach the stylesheet. `grid-column: 5` in a
+        three-column grid does not fail — the browser grows implicit
+        columns to hold it, and the whole route silently becomes five
+        columns wide. A number she cannot use is dropped, and the
+        rhythm places the photograph instead.
+
+        It was `[extra.width]`, a percentage, and before that a width,
+        an offset and an angle. The column replaces the width because a
+        column that sets the size is the same idea with a limit on it,
+        and the limit is what she asked for. -#}
     {%- set_global pin = "" -%}
-    {%- if pl_extra.width and pl_extra.width[leaf] -%}
-      {%- set_global pin = "--w:" ~ pl_extra.width[leaf] ~ ";" -%}
+    {%- if pl_extra.column and pl_extra.column[leaf] -%}
+      {%- set col = pl_extra.column[leaf] -%}
+      {%- if col == 1 or col == 2 or col == 3 -%}
+        {%- set_global pin = "--c:" ~ col ~ ";" -%}
+      {%- endif -%}
     {%- endif -%}
     <figure class="stop"{% if pin %} style="{{ pin }}"{% endif %}>
       <img src="{{ small.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
