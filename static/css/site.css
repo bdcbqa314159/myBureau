@@ -939,54 +939,43 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 /* A film opening a project page gets the same ceiling as a photograph,
    and a black ground so letterboxing is the film's own edge rather than
    a cream gap nobody meant. */
-/* A PAGE OF MINIATURES.
+/* A DOSSIER WHERE A PHOTOGRAPH WOULD BE, SCROLLING ITS OWN PAGES.
    --------------------------------------------------------------------
-   Everything she dropped, as a thumbnail, and full screen when
-   clicked. One per photograph, one per dossier — a dossier's is its
-   first page, drawn when she drops it and chosen by nobody.
+   It stands in the same column as her photographs and at the same
+   width — `.proj-open` above gives it that, and the margin with it —
+   but it is BOUNDED in height and its pages scroll inside it. Her ask:
+   *the pdf should have a photo appearance, a smaller display on front
+   that is scrollable.*
 
-   It was FULL-WIDTH figures down the page, which was right while a
-   page held one body of work and wrong once a page holds several
-   things each of which opens.
+   The pages are pictures, so there is no viewer, no toolbar, nothing
+   to hide, and Firefox behaves like every other browser.
 
-   `auto-fill` with a floor rather than a fixed count: three across on
-   a laptop, two on a tablet, one on a phone, and no breakpoint of its
-   own to keep in step with the rest. The rows do not stretch — a
-   portrait and a landscape keep their own proportions, which is what
-   `align-items: start` and the intrinsic ratio on the <img> give. */
-.proj-things {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
-  gap: clamp(1.4rem, 4vw, 3rem);
-  align-items: start;
-  padding: clamp(2.5rem, 7vh, 5rem) var(--pad);
-}
-.thing { margin: 0; }
-.thing a { display: block; text-decoration: none; color: inherit; }
-.thing img { display: block; width: 100%; height: auto; }
-/* A DOSSIER'S MINIATURE SAYS IT IS ONE. A page of a document is white
-   to its edges, so without a hairline it floats on a white page with
-   nothing saying where it ends. The same one the chrome uses. */
-.thing-doc img { box-shadow: 0 0 0 1px var(--dim); }
+   `overscroll-behavior: contain` so reaching the last page does not
+   carry on and scroll the page behind it — the thing that makes a
+   scroll box inside a scrolling page feel broken.
 
-/* ALL THE PAGES, IN ONE SCROLLING COLUMN. This is the whole of
-   "scroll it without the pdf reader": they are pictures, so there is
-   no viewer, no toolbar and nothing to hide — and Firefox behaves
-   like every other browser, which a PDF in an <iframe> never did. */
-.win-dossier[open] { place-items: stretch; }
+   `tabindex="0"` in the markup, because a scroll container that only a
+   pointer can reach is unreachable from a keyboard. The outline is the
+   site's own focus style.
+
+   75vh, not the full screen: it reads as one thing on the page among
+   the photographs rather than taking the page over. Four other shapes
+   were tried — two readers, a cover opening a full-screen viewer, and
+   a grid of miniatures that replaced her photographs' own display. */
+.proj-doc { background: none; }
 .doc-scroll {
   overflow-y: auto; overscroll-behavior: contain;
-  display: flex; flex-direction: column; align-items: center;
-  gap: clamp(.6rem, 2vh, 1.4rem);
-  width: 100%; height: 100%;
-}
-.doc-scroll img {
-  display: block;
+  max-height: 75vh;
   width: auto; max-width: 100%;
-  /* bounded by the WIDTH, not the height: a page is to be read, and
-     one that fits the screen vertically is too small to read. */
-  height: auto;
+  margin-inline: auto;
+  display: flex; flex-direction: column; align-items: center;
+  gap: clamp(.5rem, 1.5vh, 1rem);
+  /* the hairline says where a white page of a document ends on a white
+     page of a site — the same one the chrome uses */
+  box-shadow: 0 0 0 1px var(--dim);
 }
+.doc-scroll img { display: block; width: 100%; height: auto; }
+@media (max-width: 40rem) { .doc-scroll { max-height: 68vh; } }
 
 /* Everything after the opener used to sit two across with cream
    around it — `.proj-pairs` and `.proj-fig`, gone 2026-11-13 with the
