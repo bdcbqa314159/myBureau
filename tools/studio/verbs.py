@@ -250,10 +250,17 @@ def atomic(p: pathlib.Path, text: str) -> None:
 
     It exists because a content file turned up with its front matter
     gone and the site stopped building: "Couldn't find front matter in
-    `_index.en.md`". Nothing in the journal explained it, so rather than
-    guess at a cause, the class is closed here. Whatever reaches this
-    function with the wrong bytes now gets a refusal naming the file
-    instead of a site that will not build.
+    `_index.en.md`". Nothing in the journal explained it, so rather
+    than guess at a cause, the class was closed here.
+
+    THE CAUSE IS KNOWN NOW, 2026-11-14, and it was `retitle`:
+    `set_key` anchored with `^\s*`, `\s` matches a newline, and the
+    header it edits begins with the newline after the opening fence.
+    Every rename ate it. The same file, both times.
+
+    And this gate let it through — it asked whether the text STARTED
+    with `+++`, which `+++title = "x"` does. A fence has to be alone on
+    its line, which is what _no_front_matter() asks now.
 
     The temp name carries the pid, because preview.sh hunts for a free
     port and will happily start a SECOND panel on the same repository.
@@ -287,8 +294,19 @@ def _no_front_matter(text: str) -> str:
         return "le fichier serait vide"
     if not text.startswith("+++"):
         return "il ne commencerait pas par +++"
+    # A FENCE IS A LINE OF ITS OWN. `+++title = "x"` starts with +++
+    # and holds two of them, so the two tests above let it through —
+    # and that is exactly the file that broke the site, twice, with
+    # nothing in the journal to explain it. zola wants the delimiter
+    # alone on its line; so do we, now.
+    first = text.split("\n", 1)[0].rstrip("\r")
+    if first != "+++":
+        return "il y aurait autre chose que +++ sur la première ligne"
     if text.count("+++") < 2:
         return "l'en-tête ne serait pas fermée par un second +++"
+    rest = text.split("\n", 1)[1] if "\n" in text else ""
+    if not any(l.rstrip("\r") == "+++" for l in rest.split("\n")):
+        return "le second +++ ne serait pas seul sur sa ligne"
     return ""
 
 
@@ -327,11 +345,22 @@ def set_key(text: str, name: str, value, where: str = "ce fichier") -> str:
     fm = parts[1]
     line = "{} = {}".format(name, value if isinstance(value, int)
                             else '"{}"'.format(value))
-    pattern = re.compile(r'^\s*' + re.escape(name) + r'\s*=.*$', re.M)
+    # `[ \t]*`, NEVER `\s*`. `\s` matches a newline, and the header
+    # handed over by parts() BEGINS with the one that follows the
+    # opening +++. With re.M the ^ already anchors to a line start, so
+    # `\s*` was free to match backwards over that newline and the
+    # replacement did not put it back:
+    #
+    #     +++\ntitle = "myBureau"   ->   +++title = "myStudio"
+    #
+    # which zola reads as no front matter at all. It bit whichever key
+    # sits on the FIRST line of a header, and in every content file on
+    # this site that key is `title` — so every rename was one.
+    pattern = re.compile(r'^[ \t]*' + re.escape(name) + r'[ \t]*=.*$', re.M)
     if pattern.search(fm):
         fm = pattern.sub(line, fm, count=1)
-    elif re.search(r'^\[extra\]\s*$', fm, re.M):
-        fm = re.sub(r'^(\[extra\]\s*)$', r'\1\n' + line, fm, count=1, flags=re.M)
+    elif re.search(r'^\[extra\][ \t]*$', fm, re.M):
+        fm = re.sub(r'^(\[extra\][ \t]*)$', r'\1\n' + line, fm, count=1, flags=re.M)
     else:
         fm = fm.rstrip("\n") + "\n\n[extra]\n" + line + "\n"
     parts[1] = fm
@@ -608,10 +637,30 @@ def set_alt_key(text: str, file: str, value: str,
                       " qu'il faut réparer.".format(where))
     fm = parts[1]
     line = '"{}" = "{}"'.format(file, value)
-    here = re.compile(r'^\s*"' + re.escape(file) + r'"\s*=.*$', re.M)
-    block = re.search(r'^\[extra\.alt\]\s*$', fm, re.M)
+    # `[ \t]*` for the same reason as set_key above. A key under
+    # [extra.alt] always has its table header above it, so this one was
+    # never first and never bit — which is luck, not design.
+    here = re.compile(r'^[ \t]*"' + re.escape(file) + r'"[ \t]*=.*$', re.M)
+    # `[ \t]*$`, NOT `\s*$`. `\s` crosses lines, so this matched the
+    # table header AND every blank line under it, and `block.end()`
+    # landed past them — the insert below then put its line at the very
+    # end of the header, where the closing fence is, and produced
+    #
+    #     "02.jpg" = "C"+++
+    #
+    # which is a file zola will not read. It needed a cleared entry
+    # first to leave the blank line, so it hid behind a sequence rather
+    # than a single call. Found by the gate in atomic(), the day the
+    # gate learnt that a fence is a line of its own.
+    block = re.search(r'^\[extra\.alt\][ \t]*$', fm, re.M)
     if block and here.search(fm):
-        fm = here.sub(line, fm, count=1) if value else here.sub("", fm, count=1)
+        if value:
+            fm = here.sub(line, fm, count=1)
+        else:
+            # THE LINE AND ITS NEWLINE. Substituting "" left the line
+            # empty rather than gone, which is the blank line the bug
+            # above needed.
+            fm = re.sub(here.pattern + r'\n?', "", fm, count=1, flags=re.M)
     elif not value:
         pass                                  # nothing there to clear
     elif block:

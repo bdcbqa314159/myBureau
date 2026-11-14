@@ -2627,6 +2627,85 @@ def case_a_photograph_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, b
     ]
 
 
+def case_what_the_panel_writes_zola_reads(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Rename something in the panel; the site must still build.
+
+    THIS IS THE ONE THAT WAS MISSING. The panel's own suite checks what
+    a verb WRITES; nothing ever handed the result to zola. So a verb
+    could produce a file that looked right to every assertion we had
+    and that zola refused, and the first to find out was Bernardo with
+    a broken preview.
+
+    What it found the day it was written: `retitle` ate the newline
+    after the opening `+++`.
+
+        +++\ntitle = "myBureau"   ->   +++title = "myStudio"
+
+    `set_key` anchored its pattern with `^\s*`, and `\s` matches a
+    newline. The header handed over by frontmatter.parts() BEGINS with
+    the newline that follows the opening fence, so the pattern matched
+    backwards over it and the replacement did not put it back. With
+    re.M the `^` was already doing the anchoring; the `\s*` was pure
+    damage.
+
+    It bit whichever key sits on the FIRST line of a header — and in
+    every content file here that key is `title`, so every rename was
+    one. `content/_index.en.md` is the file it was found on, twice,
+    which is the file the comment in verbs.atomic() names as the
+    unexplained one. This is the explanation.
+
+    Renaming is the first thing anybody does with a panel like this.
+    """
+    import importlib.util
+
+    def load(name: str, path: pathlib.Path):
+        spec = importlib.util.spec_from_file_location(name, path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return mod
+
+    sys.path.insert(0, str(d / "tools"))
+    try:
+        verbs = load("verbs_under_test", d / "tools" / "studio" / "verbs.py")
+    finally:
+        sys.path.pop(0)
+    verbs.ROOT, verbs.CONTENT = d, d / "content"
+    verbs.CONFIG = d / "config.toml"
+    verbs.STUDIO = d / ".studio"
+    verbs.JOURNAL = verbs.STUDIO / "journal.jsonl"
+    verbs.TRASH = verbs.STUDIO / "trash"
+    verbs.TRASH.mkdir(parents=True, exist_ok=True)
+
+    # EVERY FILE WHOSE FIRST HEADER LINE IS A KEY A VERB WRITES, which
+    # is every content file on the site: `title` is always first.
+    renamed, refused_by_gate = [], []
+    for lang in ("fr", "en"):
+        try:
+            verbs.retitle("content", lang, "myStudio" if lang == "en" else "monBureau")
+            renamed.append(lang)
+        except verbs.Refused as exc:
+            refused_by_gate.append(str(exc))
+    home = (d / "content" / "_index.en.md").read_text(encoding="utf-8")
+    ok, log = build(d)
+
+    return [
+        ("the rename goes through at all", renamed == ["fr", "en"],),
+        ("and nothing was refused on the way", refused_by_gate == []),
+        # THE SHAPE, named rather than inferred from the build: a build
+        # can fail for a hundred reasons and this says which one.
+        ("the opening fence still has its own line",
+         home.startswith("+++\n")),
+        ("the new name is really in the file", 'title = "myStudio"' in home),
+        ("the keys below it are untouched",
+         'template = "index.html"' in home),
+        ("the load-bearing comments in that header survive",
+         "Folders and files come from the filesystem" in home),
+        # AND THE ORACLE. Everything above can hold while zola still
+        # refuses the file; only zola's opinion settles it.
+        ("and zola reads what the panel wrote", ok, ),
+    ]
+
+
 def case_a_dead_click(d: pathlib.Path) -> list[tuple[str, bool]]:
     """An icon that names a window nobody rendered.
 
@@ -2753,6 +2832,7 @@ CASES = [
     ("a .DS_Store does not stop the preview", case_finder_droppings),
     ("a picture opens plain, a film keeps its frame", case_a_picture_opens_plain),
     ("a project inside a folder that is a page", case_film_in_a_folder),
+    ("what the panel writes, zola reads", case_what_the_panel_writes_zola_reads),
     ("a dead click", case_a_dead_click),
     ("a photograph can ask for its page", case_a_photograph_can_ask_for_its_page),
     ("a preview is one picture", case_a_preview_is_one_picture),
