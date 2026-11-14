@@ -628,10 +628,8 @@ def case_second_level_page(d: pathlib.Path) -> list[tuple[str, bool]]:
          'class="project"' in own and '<main class="desk"' not in own),
         ("it carries no wallpaper", "--wallpaper" not in own),
         ("its description is on it", "Une description, deux lignes." in own),
-        # REVERSED: a page is MINIATURES now, each opening full screen,
-        # not a column of full-width figures. 2026-11-14.
-        ("and its photographs are, every one of them a miniature",
-         own.count('class="thing"') == 2 and "proj-pairs" not in own),
+        ("and its photographs are, every one of them at full width",
+         own.count("proj-open") == 2 and "proj-pairs" not in own),
         ("no dangling window reference", dangling(desk) == []),
     ]
 
@@ -807,7 +805,7 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
         # photographs and survive as any photograph does.
         ("a PDF nothing shows is not published",
          not survived("dossier/dossier.pdf")),
-        # NOT `survived("dossier/01.png")`, which was tried: the page
+        # NOT `survived("dossier/page-01.png")`, which was tried: the page
         # loads the RESIZED copy out of processed_images, so the
         # colocated original is unreferenced and prune is right to drop
         # it. "the images the pages actually load survived" above is
@@ -992,11 +990,10 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
     (plain / "index.md").write_text(FRONT.format(title="le dossier.pdf", extra=""))
     (plain / "dossier.pdf").write_bytes(TINY_PDF)
 
-    # ITS PAGES, under the reserved `page-NN` prefix `pages_of` writes.
-    # Plain PNGs rather than rasterised, because pdftoppm is not on CI
-    # and what is checked here is the TEMPLATE given a dossier's pages,
-    # not the drawing of them — verbs' own suite checks that, where the
-    # tool is.
+    # ITS PAGES, as `pages_of` writes them. Plain PNGs rather than
+    # rasterised, because pdftoppm is not on CI and what is checked
+    # here is the TEMPLATE given a dossier's pages, not the drawing of
+    # them — verbs' own suite checks the drawing, where pdftoppm is.
     for n in ("page-01.png", "page-02.png"):
         shutil.copyfile(ROOT / "static/img/brand/youtube-white.png", plain / n)
 
@@ -1005,11 +1002,11 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
     (cover / "index.md").write_text(FRONT.format(title="grocery.pdf", extra=""))
     (cover / "grocery.pdf").write_bytes(TINY_PDF)
     shutil.copyfile(ROOT / "content/da/theodora-01/01.jpg", cover / "01.jpg")
-    # AND ITS PAGES, so this fixture is the combination `add_doc` used
-    # to refuse: a dossier AND her own photographs in one project. The
-    # pages took `01`, `02` and would have written over hers; under the
-    # `page-NN` prefix they cannot, so the page shows a miniature for
-    # each of her pictures and one for the dossier.
+    # AND ITS PAGES, so this fixture is the combination that used to be
+    # impossible: a dossier AND her own photographs in one project. The
+    # pages were named `01.png` and took her pictures' names; under
+    # `page-NN` they cannot, so the page shows her photograph full
+    # width and the dossier beside it.
     shutil.copyfile(ROOT / "static/img/brand/youtube-white.png",
                     cover / "page-01.png")
 
@@ -1033,6 +1030,11 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
     # Nothing anywhere may LINK to the file — that is the download.
     links = re.findall(r'<a [^>]*href="[^"]*\.pdf[^"]*"', desk + nu + cv + sans)
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
+    # searched the whole file for `.doc-scroll { … max-height }` and
+    # found the PHONE rule — so deleting the desktop bound entirely
+    # left the expectation passing.
+    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
 
     return [
         ("builds", ok),
@@ -1042,28 +1044,37 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
         #
         # A browser cannot show a PDF without its viewer, so the PDF
         # stopped being what the page shows. verbs.pages_of rasterises
-        # it on the way in and writes 01.png, 02.png — photograph
-        # names — and the page shows them as it shows any photograph.
+        # it on the way in and writes `page-NN.png` — a RESERVED
+        # prefix, so they are never mistaken for her photographs — and
+        # the page gives the dossier ONE figure where a photograph
+        # would be, bounded in height, its pages scrolling inside it.
         #
-        # Three readers were tried and rejected: framed, frameless, and
-        # a cover opening the viewer full screen. Each was a window
-        # from somewhere else inside her page.
+        # Four shapes were tried and rejected: a framed reader, a
+        # frameless reader, a cover opening the browser's viewer full
+        # screen, and a grid of miniatures that replaced her
+        # photographs' own display. The last was the worst: it broke
+        # something that was already right.
         ("no page puts a PDF reader inside itself",
-         "<iframe" not in nu and "proj-doc" not in nu and "proj-cover" not in nu),
-        ("nor through <object> or <embed>, which the CSP refuses anyway",
-         "<object" not in nu and "<embed" not in nu),
-        ("and the CSP still refuses them, so that stays true",
+         "<iframe" not in nu and "<object" not in nu and "<embed" not in nu),
+        ("and the CSP still refuses the other two, so that stays true",
          "object-src 'none'" in nu),
-        # ONE MINIATURE FOR THE DOSSIER, not one per page: its first
-        # page, chosen by nobody, and the pages live in the dialog it
-        # opens.
-        ("the dossier is one miniature, and it is its first page",
-         nu.count('class="thing thing-doc"') == 1 and "page-01" in nu),
-        ("every page of it is inside what that miniature opens",
+        ("the dossier is ONE figure, where a photograph would be",
+         nu.count('class="proj-open proj-doc"') == 1),
+        ("its pages are inside it, every one of them",
          len(re.findall(r"<img", re.search(
-             r'class="doc-scroll">.*?</div>', nu, re.S).group(0))) == 2),
-        ("and no page of it is a miniature of its own",
-         nu.count('class="thing"') == 0),
+             r'class="doc-scroll"[^>]*>.*?</div>', nu, re.S).group(0))) == 2),
+        ("and none of them is a photograph of hers",
+         nu.count('<figure class="proj-open">') == 0),
+        # IT SCROLLS WHERE IT STANDS — bounded, not the whole screen,
+        # and it does not carry the page behind it when it reaches the
+        # end.
+        ("it is bounded in height and scrolls inside itself",
+         bool(re.search(r"\.doc-scroll\s*\{[^}]*overflow-y:\s*auto", plain_css))
+         and bool(re.search(r"\.doc-scroll\s*\{[^}]*max-height", plain_css))),
+        ("and reaching its end does not scroll the page behind it",
+         bool(re.search(r"\.doc-scroll\s*\{[^}]*overscroll-behavior:\s*contain", css))),
+        ("a keyboard can reach it, which a scroll box must be",
+         'class="doc-scroll" tabindex="0"' in nu),
         ("nothing on the page points at the PDF at all",
          re.search(r'(?:src|href)="[^"]*\.pdf', nu) is None),
         ("nothing links to the file, so nothing offers to download it",
@@ -1084,9 +1095,8 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("but the cover is what the icon looks like",
          "processed_images" in icon_of("da-dossier-couverture")),
         ("a project with a PDF and her own photographs shows both",
-         cv.count('class="thing"') == 1
-         and cv.count('class="thing thing-doc"') == 1
-         and "<iframe" not in cv),
+         cv.count('<figure class="proj-open">') == 1
+         and cv.count('class="proj-open proj-doc"') == 1),
         # NOT A LINK, which is what a download is. `links` above is the
         # same test over all three pages; this one is about `download`,
         # and <img> is stripped first because `decoding` is not it.
@@ -1167,13 +1177,12 @@ def case_the_project_page_is_a_column(d: pathlib.Path) -> list[tuple[str, bool]]
 
     return [
         ("builds", ok),
-        ("every photograph is a miniature that opens",
-         four.count('class="thing"') == 4
-         and len(re.findall(r'<dialog[^>]*id="thing-', four)) == 4),
+        ("every photograph takes the whole width",
+         four.count('class="proj-open"') == 4),
         ("and none of them is half a page",
          "proj-pairs" not in four and "proj-fig" not in four),
         ("a project of one photograph is the same page as a project of four",
-         one.count('class="thing"') == 1 and "proj-pairs" not in one),
+         one.count('class="proj-open"') == 1 and "proj-pairs" not in one),
         ("every container the template opens is closed",
          all(balanced(s) for s in (one, four, none))),
         ("a project with no photographs still renders its text",
@@ -1182,17 +1191,13 @@ def case_the_project_page_is_a_column(d: pathlib.Path) -> list[tuple[str, bool]]
         # the same as none marked urgent, and that is how the subfolder
         # page became the heaviest on the site. The rhythm went; the
         # rule that only the top one is urgent did not.
-        # STILL ONE EAGER IMAGE, and now it is the first MINIATURE.
-        # What the dialogs hold is all lazy: nothing is open until she
-        # clicks, so none of it is urgent.
-        ("only the first miniature is fetched eagerly",
-         four.count('fetchpriority="high"') == 1),
-        ("and what the dialogs hold waits to be asked for",
-         four.count('loading="lazy"') >= 4),
-        ("a full-screen picture still says how much of the screen it fills",
-         four.count('sizes="100vw"') >= 1),
-        ("every picture carries its real proportions, miniature and full alike",
-         len(re.findall(r'<img[^>]*width="\d+" height="\d+"', four)) == 8),
+        ("only the first image is fetched eagerly, however many there are",
+         four.count('fetchpriority="high"') == 1
+         and four.count('loading="lazy"') == 3),
+        ("and every one of them asks for the full width",
+         four.count('sizes="100vw"') == 4),
+        ("every photograph still carries its real proportions",
+         len(re.findall(r'<img[^>]*width="\d+" height="\d+"', four)) == 4),
     ]
 
 
@@ -1311,7 +1316,7 @@ def case_a_film_can_ask_for_its_page(d: pathlib.Path) -> list[tuple[str, bool]]:
         # container it landed in.
         ("the film's own still is its poster, not a photograph underneath it",
          bool(main) and "poster=" in main.group(0)
-         and main.group(0).count('class="thing"') == 1),
+         and main.group(0).count('class="proj-open"') == 1),
         ("a film page works without JavaScript too — the video is in the page",
          "<video" in normal_html),
         ("nothing dangles", dangling(desk) == []),
@@ -1345,14 +1350,11 @@ def case_only_the_opener_is_urgent(d: pathlib.Path) -> list[tuple[str, bool]]:
     eager = [x for x in tags if 'loading="lazy"' not in x]
     return [
         ("builds", ok),
-        # MINIATURES, and the dialogs double the <img> count — so the
-        # eager/lazy tally below counts the MINIATURES only, which is
-        # what this case is about: one urgent picture, not four.
-        ("all four photographs are on the page", html.count('class="thing"') == 4),
+        ("all four photographs are on the page", html.count("proj-open") == 4),
         ("exactly one of them is fetched eagerly", len(eager) == 1),
         ("and only that one is called urgent",
          sum('fetchpriority="high"' in x for x in tags) == 1),
-        ("the rest wait", sum('loading="lazy"' in x for x in tags) >= 3),
+        ("the rest wait", sum('loading="lazy"' in x for x in tags) == 3),
     ]
 
 
@@ -1529,6 +1531,11 @@ def case_a_picture_fits_the_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     and nowhere else.
     """
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
+    # searched the whole file for `.doc-scroll { … max-height }` and
+    # found the PHONE rule — so deleting the desktop bound entirely
+    # left the expectation passing.
+    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
     css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
     rules = {}
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
@@ -1584,6 +1591,11 @@ def case_the_road_is_plain_on_a_phone(d: pathlib.Path) -> list[tuple[str, bool]]
     """
     ok, log = build(d)
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
+    # searched the whole file for `.doc-scroll { … max-height }` and
+    # found the PHONE rule — so deleting the desktop bound entirely
+    # left the expectation passing.
+    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
     css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
     rules = {}
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
@@ -1695,6 +1707,11 @@ def case_a_phone_desk_is_not_a_file_list(d: pathlib.Path) -> list[tuple[str, boo
     into every position on a phone.
     """
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
+    # searched the whole file for `.doc-scroll { … max-height }` and
+    # found the PHONE rule — so deleting the desktop bound entirely
+    # left the expectation passing.
+    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
     css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
     rules = {}
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
@@ -1774,6 +1791,11 @@ def case_a_phone_desk_can_grow(d: pathlib.Path) -> list[tuple[str, bool]]:
     pins the grown height before making the icons absolute.
     """
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
+    # searched the whole file for `.doc-scroll { … max-height }` and
+    # found the PHONE rule — so deleting the desktop bound entirely
+    # left the expectation passing.
+    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
     css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
     rules = {}
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
@@ -1823,6 +1845,11 @@ def case_one_set_of_breakpoints(d: pathlib.Path) -> list[tuple[str, bool]]:
     are nobody's accident.
     """
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
+    # searched the whole file for `.doc-scroll { … max-height }` and
+    # found the PHONE rule — so deleting the desktop bound entirely
+    # left the expectation passing.
+    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
     named = {"56rem", "52rem", "40rem"}
     tall = {"30rem"}
 
@@ -2052,6 +2079,11 @@ def case_the_form_can_be_filled_on_a_phone(d: pathlib.Path) -> list[tuple[str, b
     what puts the @ on it.
     """
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
+    # searched the whole file for `.doc-scroll { … max-height }` and
+    # found the PHONE rule — so deleting the desktop bound entirely
+    # left the expectation passing.
+    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
     css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
     rules = {}
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
@@ -2235,8 +2267,8 @@ def case_a_subfolder_page_is_one_column(d: pathlib.Path) -> list[tuple[str, bool
     project = page(d, "graphic-design/grocery-list/index.html")
     return [
         ("builds", ok),
-        ("every photograph on a subfolder page is a miniature",
-         sub.count('class="thing"') == 3),
+        ("every photograph on a subfolder page takes the whole width",
+         sub.count('class="proj-open"') == 3),
         ("so there is no pairs container on it at all",
          "proj-pairs" not in sub),
         ("and nothing on it is pinned — that is the road's business",
@@ -2249,7 +2281,7 @@ def case_a_subfolder_page_is_one_column(d: pathlib.Path) -> list[tuple[str, bool
         # hold ten tomorrow. What is asserted is the SHAPE — the same
         # shape the subfolder above has.
         ("and a PROJECT is the very same page, not a second rhythm",
-         'class="thing"' in project
+         'class="proj-open"' in project
          and "proj-pairs" not in project and "proj-fig" not in project),
         ("the route is on travail sélectionné and on nothing else",
          'class="proj-route"' in page(d, "travail-selectionne/index.html")
@@ -2278,6 +2310,11 @@ def case_the_sheet_has_buttons(d: pathlib.Path) -> list[tuple[str, bool]]:
                       win.group(0) if win else "", re.S)
 
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
+    # searched the whole file for `.doc-scroll { … max-height }` and
+    # found the PHONE rule — so deleting the desktop bound entirely
+    # left the expectation passing.
+    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
     css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
     rules = {}
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
@@ -2350,6 +2387,11 @@ def case_about_is_read_as_a_text_file(d: pathlib.Path) -> list[tuple[str, bool]]
     win = re.search(r'<dialog class="win win-about".*?</dialog>', home, re.S)
 
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
+    # searched the whole file for `.doc-scroll { … max-height }` and
+    # found the PHONE rule — so deleting the desktop bound entirely
+    # left the expectation passing.
+    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
     css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
     rules = {}
     for sel, bodytext in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
@@ -2400,6 +2442,11 @@ def case_a_closed_dialog_stays_closed(d: pathlib.Path) -> list[tuple[str, bool]]
             dialogs.update(cls.split())
 
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
+    # searched the whole file for `.doc-scroll { … max-height }` and
+    # found the PHONE rule — so deleting the desktop bound entirely
+    # left the expectation passing.
+    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
     css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
     # INNERMOST BLOCKS ONLY, which is what reaches inside @media: an
     # @media's own body still contains braces, so it never matches as a
@@ -2587,6 +2634,11 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     folder = page(d, "da/maison-cosette/index.html")
     own = page(d, "da/maison-cosette/un-film/index.html")
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    # WITHOUT THE MEDIA QUERIES, for the bound below. A first version
+    # searched the whole file for `.doc-scroll { … max-height }` and
+    # found the PHONE rule — so deleting the desktop bound entirely
+    # left the expectation passing.
+    plain_css = re.sub(r"@media[^{]*\{(?:[^{}]|\{[^{}]*\})*\}", "", css)
     css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
     rules = {}
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
@@ -2709,7 +2761,7 @@ def case_a_preview_is_one_picture(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("and so do six", window_of("da-six") == ""),
         ("no icon names a dialog that was not written", dangling(desk) == []),
         ("and the page they go to shows every one of them",
-         page(d, "da/six/index.html").count('class="thing"') == 6),
+         page(d, "da/six/index.html").count('class="proj-open"') == 6),
     ]
 
 

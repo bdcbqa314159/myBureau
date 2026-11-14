@@ -65,33 +65,26 @@
     {% if leaf | split(pat=".") | last | lower in config.extra.video_types %}{% set_global reel = a %}{% endif %}
     {% if leaf | split(pat=".") | first == "poster" %}{% set_global sheet = a %}{% endif %}
   {% endfor %}
-  {#- EVERY THING SHE DROPPED, AS A MINIATURE, AND FULL SCREEN WHEN
-      CLICKED.
+  {#- A DOSSIER LOOKS LIKE A PHOTOGRAPH, AND SCROLLS WHERE IT STANDS.
       --------------------------------------------------------------
-      Her words, 2026-11-14: *we can drop images or pdf, it shows in
-      miniature, automatically taken from the front page, not one has
-      to be selected, and when we click we have the front with the
-      requirements.*
+      Her words, 2026-11-14: *restore how the photos were displayed,
+      the pdf should have a photo appearance, a smaller display on
+      front that is scrollable.*
 
-      So the page is: title, description, and a row of miniatures. One
-      per photograph, one per dossier — and a dossier's miniature is
-      its FIRST PAGE, drawn by pdftoppm when she drops it, chosen by
-      nobody.
+      So it takes a photograph's place in the same column, at a
+      photograph's width, bounded in height — and its pages are stacked
+      inside it and scroll there. It does not open, it does not fill
+      the screen, and there is no reader anywhere near it.
 
-      Clicking a miniature opens the frameless full-screen dialog: a
-      photograph as itself, a dossier as all of its pages in one
-      scrolling column. No border, no title bar, no reader chrome, and
-      the same in every browser because the pages are pictures. The
-      dialogs are at the foot of this file.
+      FOUR SHAPES WERE TRIED AND REJECTED before this one: a framed
+      reader, a frameless reader, a cover opening the browser's viewer
+      full screen, and a grid of miniatures that replaced her
+      photographs' own display. The grid was the worst of them, because
+      it broke something that was already right.
 
-      IT USED TO BE FULL-WIDTH FIGURES, one after another down the
-      page. That was right while a page held one body of work; it is
-      wrong now that a page holds several things each of which opens.
-
-      THE DOSSIER'S PAGES ARE NOT HER PHOTOGRAPHS. They are
-      `page-NN.png`, which is a reserved prefix — see verbs.pages_of —
-      so this loop skips them and shows one miniature for the dossier
-      instead of four for its pages. -#}
+      THE PAGES ARE PICTURES, drawn by pdftoppm when she drops the PDF,
+      which is the whole of why there is no viewer and why Firefox
+      behaves like everything else. -#}
   {% if reel %}
     <figure class="proj-open proj-reel">
       <video controls playsinline preload="metadata"
@@ -101,77 +94,94 @@
     </figure>
     {% set_global shown = 1 %}
   {% endif %}
+  {# every image in the folder, in filename order. icon.* is the desktop
+     icon and poster.* is the film's still — neither is one of the
+     project's photographs, and showing the poster under the film it
+     belongs to is showing the same frame twice. #}
   {#- A SECTION AND A PAGE DO NOT SPELL THEIR ASSETS THE SAME. A page's
       are paths under content/; a section's are urls, language prefix and
       all — and `/en/…/01.jpg` is not a file anybody can resize.
       `colocated_path` is the folder each of them actually sits in, and
       it means the same thing for both. -#}
   {% set here = w.colocated_path %}
-  {#- PAGE ONE OF THE DOSSIER, if there is one. Found by looping the
-      assets rather than collecting them into a list: this Tera has no
-      `concat`, and the dialog at the foot loops them again for the
-      rest. Two short loops beat one clever one. -#}
-  {% set_global doc_first = "" %}
   {% for asset in w.assets %}
     {% set file = asset | split(pat="/") | last %}
-    {% if doc_first == "" and file | split(pat=".") | first | split(pat="-") | first == "page" %}
-      {% set_global doc_first = here ~ file %}
+    {% set asset = here ~ file %}
+    {#- `wallpaper` joins icon and poster here the moment a FOLDER can
+        be a page: the wallpaper is the desk's ground, and a folder that
+        used to be a desk still has the file sitting beside its
+        _index.md. Without this it is rendered as one of her
+        photographs — full width, first on the page. -#}
+    {% set stem = file | split(pat=".") | first %}
+    {#- `page-NN` is a dossier's page — see verbs.pages_of. The dossier
+        gets ONE figure of its own further down; without this skip,
+        every page of it arrived as a photograph of hers. -#}
+    {% if file | split(pat=".") | last | lower in config.extra.image_types
+          and not (stem in config.extra.not_photographs)
+          and stem | split(pat="-") | first != "page" %}
+      {# the first picture is the page; everything below it can arrive later.
+         Resized at build time, with the original proportions declared so
+         nothing shifts as each one lands. #}
+{# Alt text, when there is any. A photograph in a portfolio is the
+         content, not decoration, so alt="" tells a screen-reader user
+         nothing was there — but inventing a description for someone
+         else's photograph is worse than silence. So: an optional map in
+         the page's front matter, keyed by file name, empty when absent.
+
+             [extra.alt]
+             "01.jpg" = "Deux silhouettes sur une plage, au crepuscule."
+
+         It lives in the content file, so it is already per-language. #}
+      {% set alt = "" %}
+      {% if w.extra.alt and w.extra.alt[file] %}{% set alt = w.extra.alt[file] %}{% endif %}
+            {% set shape = get_image_metadata(path=asset) %}
+      {% set one = resize_image(path=asset, width=900, op="fit_width", format="webp", quality=78) %}
+      {% set two = resize_image(path=asset, width=1800, op="fit_width", format="webp", quality=78) %}
+      <figure class="proj-open"><img src="{{ one.url }}"
+          srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
+          sizes="100vw"
+          width="{{ shape.width }}" height="{{ shape.height }}" alt="{{ alt }}"
+          decoding="async"
+          {#- ONLY THE FIRST ONE IS URGENT. This branch was written for
+              the opener — one photograph, at the top, worth fetching
+              before anything else. A subfolder page sends EVERY
+              photograph through it, so nine of them arrived marked
+              `high`, which tells the browser nothing is urgent because
+              everything is. That page was 544 KB on arrival, the
+              heaviest on the site, on the device we have been fixing. -#}
+          {% if shown == 0 %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}></figure>
+      {% set_global shown = shown + 1 %}
     {% endif %}
   {% endfor %}
 
-  <div class="proj-things">
-    {% for asset in w.assets %}
-      {% set file = asset | split(pat="/") | last %}
-      {% set asset = here ~ file %}
-      {% set stem = file | split(pat=".") | first %}
-      {#- `wallpaper` joins icon and poster here the moment a FOLDER can
-          be a page: the wallpaper is the desk's ground, and a folder
-          that used to be a desk still has the file sitting beside its
-          _index.md. Without this it is rendered as one of her
-          photographs. -#}
-      {% if file | split(pat=".") | last | lower in config.extra.image_types
-            and not (stem in config.extra.not_photographs)
-            and stem | split(pat="-") | first != "page" %}
-        {#- Alt text, when there is any. A photograph in a portfolio is
-            the content, not decoration, so alt="" tells a screen-reader
-            user nothing was there — but inventing a description for
-            someone else's photograph is worse than silence. So: an
-            optional map in the page's front matter, keyed by file name.
-
-                [extra.alt]
-                "01.jpg" = "Deux silhouettes sur une plage."
-
-            It lives in the content file, so it is already
-            per-language. -#}
-        {% set alt = "" %}
-        {% if w.extra.alt and w.extra.alt[file] %}{% set alt = w.extra.alt[file] %}{% endif %}
-        {% set shape = get_image_metadata(path=asset) %}
-        {% set thumb = resize_image(path=asset, width=700, op="fit_width", format="webp", quality=76) %}
-        <figure class="thing">
-          <a href="#thing-{{ w.path | slugify }}-{{ stem | slugify }}">
-            <img src="{{ thumb.url }}"
-                 width="{{ shape.width }}" height="{{ shape.height }}" alt="{{ alt }}"
-                 decoding="async"
-                 {% if shown == 0 %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}>
-          </a>
-        </figure>
-        {% set_global shown = shown + 1 %}
-      {% endif %}
-    {% endfor %}
-    {#- THE DOSSIER, as one miniature: its first page. Nobody picks it. -#}
-    {% if doc_first %}
-      {% set pshape = get_image_metadata(path=doc_first) %}
-      {% set pthumb = resize_image(path=doc_first, width=700, op="fit_width", format="webp", quality=76) %}
-      <figure class="thing thing-doc">
-        <a href="#dossier-{{ w.path | slugify }}">
-          <img src="{{ pthumb.url }}"
-               width="{{ pshape.width }}" height="{{ pshape.height }}"
-               alt="{{ trans(key='doc_open', lang=lang) }}"
-               loading="lazy" decoding="async">
-        </a>
-      </figure>
+  {#- The dossier itself, after her photographs: one figure, scrolling
+      its own pages. `shown` is not touched — the eager/lazy rule is
+      about her photographs, and nothing in here is urgent. -#}
+  {% set_global has_pages = false %}
+  {% for asset in w.assets %}
+    {% set file = asset | split(pat="/") | last %}
+    {% if file | split(pat=".") | first | split(pat="-") | first == "page" %}
+      {% set_global has_pages = true %}
     {% endif %}
-  </div>
+  {% endfor %}
+  {% if has_pages %}
+    <figure class="proj-open proj-doc">
+      <div class="doc-scroll" tabindex="0" aria-label="{{ w.title }}">
+        {% for asset in w.assets %}
+          {% set file = asset | split(pat="/") | last %}
+          {% if file | split(pat=".") | first | split(pat="-") | first == "page" %}
+            {% set pg = here ~ file %}
+            {% set psh = get_image_metadata(path=pg) %}
+            {%- set_global pw = 1600 -%}
+            {%- if psh.width < 1600 -%}{%- set_global pw = psh.width -%}{%- endif -%}
+            {% set pim = resize_image(path=pg, width=pw, op="fit_width", format="webp", quality=80) %}
+            <img src="{{ pim.url }}" width="{{ psh.width }}" height="{{ psh.height }}"
+                 alt="" loading="lazy" decoding="async">
+          {% endif %}
+        {% endfor %}
+      </div>
+    </figure>
+  {% endif %}
 
   {#- WHAT IS INSIDE, when this page is a folder.
 
@@ -208,69 +218,6 @@
         {% include "_place.html" %}
       {% endfor %}
     </div>
-  {% endif %}
-
-  {#- WHAT A MINIATURE OPENS.
-      --------------------------------------------------------------
-      `win-preview` is the frameless full-screen dialog a photograph on
-      a desk opens into: no border, no title bar, no close box. Escape
-      closes it — a modal dialog does that itself — and desk.js closes
-      every `.win-preview` on a click that lands off the content.
-
-      A PHOTOGRAPH is itself, bounded by the screen in both directions.
-      Two sources and a `sizes`, the same as every other full-screen
-      picture here, so a retina screen is not shown an upscale.
-
-      A DOSSIER is all of its pages, stacked in one scrolling column.
-      That is the whole of "scroll it without the pdf reader": they are
-      pictures, so there is no viewer, no toolbar, and Firefox behaves
-      like everything else. -#}
-  {% for asset in w.assets %}
-    {% set file = asset | split(pat="/") | last %}
-    {% set asset = here ~ file %}
-    {% set stem = file | split(pat=".") | first %}
-    {% if file | split(pat=".") | last | lower in config.extra.image_types
-          and not (stem in config.extra.not_photographs)
-          and stem | split(pat="-") | first != "page" %}
-      {% set alt = "" %}
-      {% if w.extra.alt and w.extra.alt[file] %}{% set alt = w.extra.alt[file] %}{% endif %}
-      {% set shape = get_image_metadata(path=asset) %}
-      {%- set_global big = 2400 -%}
-      {%- if shape.width < 2400 -%}{%- set_global big = shape.width -%}{%- endif -%}
-      {%- set_global base = 1100 -%}
-      {%- if shape.width < 1100 -%}{%- set_global base = shape.width -%}{%- endif -%}
-      {% set one = resize_image(path=asset, width=base, op="fit_width", format="webp", quality=78) %}
-      {% set two = resize_image(path=asset, width=big, op="fit_width", format="webp", quality=78) %}
-      <dialog class="win win-preview" id="thing-{{ w.path | slugify }}-{{ stem | slugify }}"
-              aria-label="{{ file }}">
-        <div class="preview-body">
-          <img src="{{ one.url }}"
-               {%- if two.width > one.width %} srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"
-               sizes="100vw"{% endif %}
-               width="{{ shape.width }}" height="{{ shape.height }}"
-               alt="{{ alt }}" loading="lazy" decoding="async">
-        </div>
-      </dialog>
-    {% endif %}
-  {% endfor %}
-  {% if doc_first %}
-    <dialog class="win win-preview win-dossier" id="dossier-{{ w.path | slugify }}"
-            aria-label="{{ w.title }}">
-      <div class="doc-scroll">
-        {% for asset in w.assets %}
-          {% set file = asset | split(pat="/") | last %}
-          {% if file | split(pat=".") | first | split(pat="-") | first == "page" %}
-            {% set pg = here ~ file %}
-            {% set psh = get_image_metadata(path=pg) %}
-            {%- set_global pbig = 2000 -%}
-            {%- if psh.width < 2000 -%}{%- set_global pbig = psh.width -%}{%- endif -%}
-            {% set pim = resize_image(path=pg, width=pbig, op="fit_width", format="webp", quality=80) %}
-            <img src="{{ pim.url }}" width="{{ psh.width }}" height="{{ psh.height }}"
-                 alt="" loading="lazy" decoding="async">
-          {% endif %}
-        {% endfor %}
-      </div>
-    </dialog>
   {% endif %}
 
   {# ancestors gives a FILE PATH — get_section turns it into a URL.
