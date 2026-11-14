@@ -94,7 +94,24 @@
     {% set alt = "" %}
     {% if section.extra.alt and section.extra.alt[file] %}{% set alt = section.extra.alt[file] %}{% endif %}
     {% set shape = get_image_metadata(path=asset) %}
-    {% set big = resize_image(path=asset, width=1600, op="fit_width", format="webp", quality=78) %}
+    {#- THE SAME AS THE DESKS' PREVIEW, and for the same reason: this
+        dialog is the whole screen. One source at 1600 was less wrong
+        than their 1100 and wrong the same way.
+
+        And 1600 was being asked of a 1200-wide PORTRAIT — every
+        upright photograph in this gallery was upscaled at build time,
+        paying bytes for pixels that were invented. The base never
+        exceeds the original now. -#}
+    {%- set_global sh_base = 1600 -%}
+    {%- if shape.width < 1600 -%}{%- set_global sh_base = shape.width -%}{%- endif -%}
+    {%- set_global sh_top = 2400 -%}
+    {%- if shape.width < 2400 -%}{%- set_global sh_top = shape.width -%}{%- endif -%}
+    {% set big = resize_image(path=asset, width=sh_base, op="fit_width", format="webp", quality=78) %}
+    {%- set_global sh_set = "" -%}
+    {%- if sh_top > sh_base -%}
+      {%- set full = resize_image(path=asset, width=sh_top, op="fit_width", format="webp", quality=78) -%}
+      {%- set_global sh_set = big.url ~ " " ~ big.width ~ "w, " ~ full.url ~ " " ~ full.width ~ "w" -%}
+    {%- endif -%}
     <dialog class="win win-preview win-shot" id="shot-{{ loop.index }}-{{ file | slugify }}">
       {#- NO CLOSE BOX. It was the third way out of a window that
           already had two: Escape, which a modal dialog does for
@@ -106,7 +123,9 @@
           same frameless picture the desks already open. -#}
       <div class="win-bar"><span>{{ file }}</span></div>
       <div class="win-body preview-body">
-        <img src="{{ big.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
+        <img src="{{ big.url }}"
+             {%- if sh_set %} srcset="{{ sh_set }}" sizes="100vw"{% endif %}
+             width="{{ shape.width }}" height="{{ shape.height }}"
              alt="{{ alt }}" loading="lazy" decoding="async">
       </div>
     </dialog>

@@ -24,6 +24,7 @@ import json
 import pathlib
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
@@ -495,6 +496,33 @@ def case_alt_text(d: pathlib.Path) -> list[tuple[str, bool]]:
         ("the one with no description stays alt=\"\" rather than inventing one",
          h.count('alt=""') >= 1),
     ]
+
+
+def webp_width(p: pathlib.Path) -> int:
+    """How wide the file on disk really is. 0 if it cannot be read.
+
+    The check needs this because a picture served from ONE source has
+    no `srcset` to inspect, and the filename is a hash. Comparing the
+    served pixels against the intrinsic `width=` is the only way to
+    see an UPSCALE — the gallery was asking 1600 of photographs 1100
+    and 1200 wide, and the markup looked perfectly correct.
+    """
+    d = p.read_bytes()
+    if d[:4] != b"RIFF" or d[8:12] != b"WEBP":
+        return 0
+    i, end = 12, len(d)
+    while i + 8 <= end:
+        tag = d[i:i + 4]
+        n = struct.unpack("<I", d[i + 4:i + 8])[0]
+        b = d[i + 8:i + 8 + n]
+        if tag == b"VP8X":
+            return (int.from_bytes(b[4:7], "little") & 0xFFFFFF) + 1
+        if tag == b"VP8 ":
+            return struct.unpack("<HH", b[6:10])[0] & 0x3FFF
+        if tag == b"VP8L":
+            return (struct.unpack("<I", b[1:5])[0] & 0x3FFF) + 1
+        i += 8 + n + (n & 1)
+    return 0
 
 
 def _uncommented(src: str) -> str:
@@ -2794,6 +2822,106 @@ def case_a_body_is_shown_or_not_offered(d: pathlib.Path) -> list[tuple[str, bool
     ]
 
 
+def case_a_photograph_opens_at_full_resolution(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """Clicking a photograph must not make it worse.
+
+    The preview and the gallery's shot are the only FULL-SCREEN
+    pictures on the site — `width: 100vw; height: 100dvh`, with the
+    image filling it. Both were served from ONE source: 1100 for the
+    desks, 1600 for the gallery, with no `srcset` and no `sizes`.
+
+    Her photographs are 1800 wide. So 1100 threw away 39 per cent of
+    one, and a retina laptop then drew what was left across about 2800
+    device pixels. The client found it in a minute: drop a photograph
+    in, the preview looks right, click it and the quality falls over.
+
+    AND THE OTHER DIRECTION. The gallery asked 1600 of photographs
+    1100, 1200 and 1400 wide — nine of its twelve — so every upright
+    one was upscaled at build time, paying bytes for invented pixels.
+
+    THE TEST IS THE MARKUP AGAINST ITSELF. `width=` on the img is the
+    original's intrinsic width, written from get_image_metadata, so
+    every candidate in the srcset can be compared against it without
+    this check needing its own image reader.
+    """
+    photo = (ROOT / "content" / "pellicules" / "05.jpg").read_bytes()   # 1800 wide
+    narrow = (ROOT / "content" / "pellicules" / "11.jpg").read_bytes()  # 1000 wide
+    tall = (ROOT / "content" / "pellicules" / "01.jpg").read_bytes()    # 1200x1800
+    base = d / "content" / "da"
+    for name, blob in (("large", photo), ("petite", narrow), ("haute", tall)):
+        q = base / name
+        q.mkdir()
+        (q / "index.md").write_text(FRONT.format(title=f"{name}.jpg", extra=""))
+        (q / "01.jpg").write_bytes(blob)
+    ok, log = build(d)
+    desk = page(d, "da/index.html")
+    shots = re.findall(r'<dialog[^>]*class="[^"]*win-preview[^"]*".*?</dialog>',
+                       desk + page(d, "pellicules/index.html"), re.S)
+
+    def served(url: str) -> int:
+        f = d / "public" / "processed_images" / url.split("/")[-1]
+        return webp_width(f) if f.is_file() else 0
+
+    def imgs(html: str) -> list:
+        """(intrinsic width, [served widths], tag) for every img in it.
+
+        The served widths are READ FROM THE FILES, not from the
+        srcset's own claims — and the `src` counts too, which is what
+        catches a single source that was upscaled.
+        """
+        out = []
+        for tag in re.findall(r"<img[^>]*>", html, re.S):
+            w = re.search(r'width="(\d+)"', tag)
+            if not w:
+                continue
+            urls = re.findall(r'(\S+\.webp)', tag)
+            cands = sorted({served(u) for u in urls} - {0})
+            out.append((int(w.group(1)), cands, tag))
+        return out
+
+    every = [row for s in shots for row in imgs(s)]
+    wide = [row for row in every if row[0] == 1800]
+
+    def srcset_of(slug: str) -> list:
+        m = re.search(r'<dialog[^>]*id="preview-da-' + slug + r'".*?</dialog>',
+                      desk, re.S)
+        return imgs(m.group(0))[0] if m else (0, [], "")
+
+    big_w, big_cands, big_tag = srcset_of("large")
+    small_w, small_cands, small_tag = srcset_of("petite")
+
+    return [
+        ("builds", ok),
+        ("there are full-screen pictures to check at all", len(every) >= 12),
+        # NOTHING ABOVE THE ORIGINAL, anywhere. This is the upscaling
+        # half, and it is the one that was silently costing bytes.
+        # EVERY FILE IT POINTS AT, src included, measured on disk. The
+        # first version of this read the srcset's own `w` claims, so a
+        # single upscaled source — exactly what the gallery had — was
+        # invisible to it and the break passed.
+        ("no full-screen picture is served above its own size",
+         all(all(c <= w for c in cands) for w, cands, _ in every)),
+        # AND NOTHING FAR BELOW IT on a screen that can show more.
+        ("an 1800-wide photograph offers all 1800 of itself",
+         big_cands != [] and max(big_cands) == 1800),
+        ("and a 1200-wide upright one is served at 1200, not stretched to 1600",
+         all(max(cands) <= 1200 for w, cands, _ in every if w == 1200 and cands)),
+        ("and says how much of the screen it fills, or the browser cannot choose",
+         'sizes="100vw"' in big_tag),
+        ("every full-screen picture offers all of itself it can",
+         all(max(cands) == min(w, 2400) for w, cands, _ in every if cands)),
+        # A 1000-WIDE ONE HAS NOTHING MORE TO GIVE, so it carries one
+        # source at its own width rather than a second that is the same
+        # file under another name.
+        ("one with nothing more to give carries a single source",
+         len(small_cands) == 1 and small_cands[0] == 1000 and small_w == 1000),
+        # THE WIDE ONES ARE THE POINT: without this, a template serving
+        # everything at 320px would satisfy "nothing above the
+        # original" perfectly.
+        ("the wide ones really are in the fixture", len(wide) >= 2),
+    ]
+
+
 def case_a_dead_click(d: pathlib.Path) -> list[tuple[str, bool]]:
     """An icon that names a window nobody rendered.
 
@@ -2922,6 +3050,7 @@ CASES = [
     ("a project inside a folder that is a page", case_film_in_a_folder),
     ("what the panel writes, zola reads", case_what_the_panel_writes_zola_reads),
     ("a body is shown, or not offered", case_a_body_is_shown_or_not_offered),
+    ("a photograph opens at full resolution", case_a_photograph_opens_at_full_resolution),
     ("a dead click", case_a_dead_click),
     ("a photograph can ask for its page", case_a_photograph_can_ask_for_its_page),
     ("a preview is one picture", case_a_preview_is_one_picture),
