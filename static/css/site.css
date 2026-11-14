@@ -939,27 +939,35 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 /* A film opening a project page gets the same ceiling as a photograph,
    and a black ground so letterboxing is the film's own edge rather than
    a cream gap nobody meant. */
-/* A DOSSIER ON THE PAGE, with nothing around it.
+/* A DOSSIER, AS A PICTURE AND THEN AS A DOCUMENT.
    --------------------------------------------------------------------
-   It had a dark ground and a frame, which made it a reader sitting in
-   her page rather than part of it. Her ask: *scroll it, without
-   border*. So: the page's own width, no border, no background of its
-   own, and it scrolls inside itself.
+   On the page it is `page one`, drawn by Quick Look, wearing exactly
+   what a photograph wears: `.proj-open` gives it the margin and the
+   column, and the link around it carries no colour and no underline,
+   so it reads as the picture it is rather than as a link.
 
-   `.proj-open` above already gives it the margin every photograph on
-   the page gets, so a dossier and a photograph are the same shape in
-   the same column.
+   Clicking opens `.win-dossier`, which is a `.win-preview` — the
+   frameless full-screen dialog a photograph opens into. The only
+   difference is what is inside: an iframe rather than an img, so it
+   needs a size of its own and no border.
 
-   The height is a guess and has to be — nothing at build time knows
-   whether a PDF is A4 upright or a landscape spread. Tall enough that
-   a page of it is readable without being the whole screen, and it
-   scrolls from there. */
-.proj-doc { background: none; }
-.proj-doc iframe {
-  display: block; border: 0;
-  width: 100%; height: min(92vh, 1300px);
+   It had two earlier shapes, both wrong and both rejected: a reader on
+   the page with a dark ground and a frame, then the same reader with
+   the frame removed. What was wanted was a picture, and the document
+   only once asked for. */
+.proj-cover a { display: block; text-decoration: none; color: inherit; }
+.proj-cover img {
+  display: block;
+  width: auto; max-width: 100%;
+  max-height: 92vh;
+  margin-inline: auto;
 }
-@media (max-width: 40rem) { .proj-doc iframe { height: 78vh; } }
+.win-dossier[open] { padding: 0; }
+.win-dossier iframe {
+  display: block; border: 0;
+  width: 100%; height: 100%;
+  background: #fff;
+}
 
 .proj-reel { background: #000; }
 .proj-reel video {

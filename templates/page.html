@@ -65,43 +65,56 @@
     {% if leaf | split(pat=".") | last | lower in config.extra.video_types %}{% set_global reel = a %}{% endif %}
     {% if leaf | split(pat=".") | first == "poster" %}{% set_global sheet = a %}{% endif %}
   {% endfor %}
-  {#- A DOSSIER, SHOWN THE WAY A PHOTOGRAPH IS SHOWN.
+  {#- A DOSSIER IS SHOWN AS A PHOTOGRAPH, AND OPENS WHEN YOU CLICK IT.
       --------------------------------------------------------------
-      Her words, 2026-11-14: *click as it was a photo, scroll it,
-      without border, and not being able to download it.*
+      Her words, 2026-11-14: *see it as a photo, then when clicking we
+      can scroll without border, without pdf reader headlines.*
 
-      It used to be a READER: a dark ground, a frame, and the browser's
-      viewer sitting in a box of its own at the top of the page — a
-      window from somewhere else inside her page. That is what was
-      rejected, not the dossier.
+      Two tries before this one. First a READER on the page — a dark
+      ground and a frame, a browser's viewer sitting inside her page.
+      Then the same reader with the frame taken off, which was still a
+      reader. What she asked for is a PICTURE on the page, and the
+      document only once she has asked for it.
 
-      So: full width, no frame, no ground of its own, white like the
-      page it is on, and it scrolls inside itself. The same shape every
-      photograph on this page has, so the page reads as one thing.
+      THE PICTURE IS PAGE ONE, drawn by Quick Look when she drops the
+      PDF — the same machinery and the same convention a film's affiche
+      uses (`cover.png` is ours, anything else called `cover` is hers).
+      See verbs.first_page.
 
-      NOT OFFERED FOR DOWNLOAD. Nothing links to the file — no <a>, no
-      `download` — and `#toolbar=0&navpanes=0` asks Chrome and Edge to
-      drop the viewer chrome, which is where their save button lives.
-      Firefox shows its own toolbar and we cannot take it away: that
-      button is the browser's, not ours, and it is the honest limit of
-      "on montre, on ne télécharge pas" from our side.
+      No cover — no qlmanage on the machine, or a PDF Quick Look could
+      not read — and the page shows her photographs and nothing else,
+      which is what it did before any of this. A missing cover is
+      honest; inventing one is not.
 
-      An <iframe>, because the meta CSP carries `object-src 'none'` and
-      refuses both <object> and <embed>. See base.html.
-
-      ponytail: ONE height for every dossier — a PDF has no aspect
-      ratio anything can read at build time, so an A4 upright and a
-      landscape spread get the same tall box and scroll inside it.
-      Reading page one as an image would give the real shape and needs
-      a PDF rasteriser this repo does not have. -#}
+      THE DOCUMENT ITSELF is in the dialog below, and that dialog is
+      the frameless full-screen one a photograph opens into: no border,
+      no title bar, no close box, Escape or a click off it to leave.
+      `#toolbar=0&navpanes=0` is what asks a browser to drop its own
+      viewer headlines inside it. -#}
   {% set_global dossier = "" %}
+  {% set_global cover = "" %}
   {% for a in w.assets %}
-    {% if a | split(pat=".") | last | lower in config.extra.doc_types %}{% set_global dossier = a %}{% endif %}
+    {% set leaf = a | split(pat="/") | last %}
+    {% if leaf | split(pat=".") | last | lower in config.extra.doc_types %}{% set_global dossier = a %}{% endif %}
+    {% if leaf | split(pat=".") | first == "cover" %}{% set_global cover = a %}{% endif %}
   {% endfor %}
-  {% if dossier %}
-    <figure class="proj-open proj-doc">
-      <iframe src="{{ get_url(path=dossier) }}#toolbar=0&amp;navpanes=0"
-              title="{{ w.title }}" loading="lazy"></iframe>
+  {% if dossier and cover %}
+    {% set cshape = get_image_metadata(path=cover) %}
+    {% set csmall = resize_image(path=cover, width=900, op="fit_width", format="webp", quality=78) %}
+    {% set cbig = resize_image(path=cover, width=1800, op="fit_width", format="webp", quality=78) %}
+    <figure class="proj-open proj-cover">
+      {#- A LINK TO THE DIALOG, which is how every window on this site
+          is opened: desk.js turns an href="#id" pointing at a <dialog>
+          into a showModal(). Written as a link so it is focusable and
+          says where it goes. -#}
+      <a href="#dossier-{{ w.path | slugify }}">
+        <img src="{{ csmall.url }}"
+             srcset="{{ csmall.url }} {{ csmall.width }}w, {{ cbig.url }} {{ cbig.width }}w"
+             sizes="100vw"
+             width="{{ cshape.width }}" height="{{ cshape.height }}"
+             alt="{{ trans(key='doc_open', lang=lang) }}"
+             loading="eager" fetchpriority="high" decoding="async">
+      </a>
     </figure>
     {% set_global shown = 1 %}
   {% endif %}
@@ -204,6 +217,28 @@
         {% include "_place.html" %}
       {% endfor %}
     </div>
+  {% endif %}
+
+  {#- THE DOSSIER, FULL SCREEN AND BARE.
+      --------------------------------------------------------------
+      `win-preview` is the frameless full-screen dialog a photograph
+      opens into: no border, no title bar, no close box. Escape closes
+      it, because a modal dialog does that itself, and desk.js closes
+      every `.win-preview` on a click that lands off the content.
+
+      `#toolbar=0&navpanes=0` is the part that answers "without pdf
+      reader headlines": Chrome and Edge drop their viewer chrome,
+      which is also where their save button lives. Firefox keeps its
+      own and we cannot reach it from inside the page.
+
+      Nothing links to the file. The only way to it is this dialog, and
+      the only way in is the picture above. -#}
+  {% if dossier and cover %}
+    <dialog class="win win-preview win-dossier" id="dossier-{{ w.path | slugify }}"
+            aria-label="{{ w.title }}">
+      <iframe src="{{ get_url(path=dossier) }}#toolbar=0&amp;navpanes=0"
+              title="{{ w.title }}" loading="lazy"></iframe>
+    </dialog>
   {% endif %}
 
   {# ancestors gives a FILE PATH — get_section turns it into a URL.
