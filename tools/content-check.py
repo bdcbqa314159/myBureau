@@ -776,7 +776,7 @@ def case_prune_keeps_what_the_site_asks_for(d: pathlib.Path) -> list[tuple[str, 
         ("what the image pipeline made was never even a candidate",
          "generated file(s) never considered" in r.stdout
          and " 0 generated" not in r.stdout),
-        ("a framed document survived, fragment in its url and all",
+        ("a document the page shows survived, fragment in its url and all",
          survived("dossier/dossier.pdf")),
     ]
 
@@ -974,17 +974,31 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
 
     # Nothing anywhere may LINK to the file — that is the download.
     links = re.findall(r'<a [^>]*href="[^"]*\.pdf[^"]*"', desk + nu + cv)
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
 
     return [
         ("builds", ok),
-        ("the file reaches the build at all",
-         (d / "public" / "da" / "dossier-nu" / "dossier.pdf").is_file()),
-        ("the page shows it in a frame",
+        # SHOWN THE WAY A PHOTOGRAPH IS SHOWN, 2026-11-14. What was
+        # rejected was the READER — a dark ground and a frame, a window
+        # from somewhere else sitting in her page — not the dossier.
+        # Her ask: *click as it was a photo, scroll it, without border,
+        # and not being able to download it.*
+        ("the page shows the dossier itself",
          bool(re.search(r'<iframe[^>]*src="[^"]*dossier\.pdf', nu))),
+        ("with nothing drawn around it",
+         bool(re.search(r"\.proj-doc\s*\{[^}]*background:\s*none", css))
+         and bool(re.search(r"\.proj-doc iframe\s*\{[^}]*border:\s*0", css))),
+        ("and it is the same shape as a photograph on that page",
+         'class="proj-open proj-doc"' in nu),
         ("not through <object> or <embed>, which the CSP refuses",
          "<object" not in nu and "<embed" not in nu),
         ("and the CSP still refuses them, so that stays true",
          "object-src 'none'" in nu),
+        # NOT OURS TO OFFER. The viewer's own save button belongs to the
+        # browser; the fragment asks Chrome and Edge to drop the chrome
+        # it lives in, which is as far as this side reaches.
+        ("the viewer's chrome is asked for off, where a browser listens",
+         "toolbar=0" in nu and "navpanes=0" in nu),
         ("nothing links to the file, so nothing offers to download it",
          links == []),
         ("nor asks for one with a download attribute",
@@ -1002,14 +1016,14 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
          'id="preview-da-dossier-couverture"' not in desk),
         ("but the cover is what the icon looks like",
          "processed_images" in icon_of("da-dossier-couverture")),
-        ("its page shows the document",
-         bool(re.search(r'<iframe[^>]*src="[^"]*grocery\.pdf', cv))),
-        # The cover used to be below the document BECAUSE it fell into
-        # the pairs block. There is no pairs block now, so the order is
-        # what the template writes: document first, photographs after.
-        ("and the cover below it, not competing with it",
-         'class="proj-open"' in cv
-         and cv.index("grocery.pdf") < cv.index('class="proj-open"')),
+        ("its page shows the dossier and its photographs both",
+         bool(re.search(r'<iframe[^>]*src="[^"]*grocery\.pdf', cv))
+         and 'class="proj-open"' in cv),
+        # NOT A LINK, which is what a download is. `links` above is the
+        # same test over all three pages; this one is about `download`,
+        # and <img> is stripped first because `decoding` is not it.
+        ("and offers no way to save it",
+         "download" not in re.sub(r'<img[^>]*>', '', cv)),
     ]
 
 

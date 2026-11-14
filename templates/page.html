@@ -60,30 +60,44 @@
       rather than competing with it. -#}
   {% set_global reel = "" %}
   {% set_global sheet = "" %}
-  {% set_global dossier = "" %}
   {% for a in w.assets %}
     {% set leaf = a | split(pat="/") | last %}
     {% if leaf | split(pat=".") | last | lower in config.extra.video_types %}{% set_global reel = a %}{% endif %}
-    {% if leaf | split(pat=".") | last | lower in config.extra.doc_types %}{% set_global dossier = a %}{% endif %}
     {% if leaf | split(pat=".") | first == "poster" %}{% set_global sheet = a %}{% endif %}
   {% endfor %}
-  {#- THE DOCUMENT, where there is one. SHOWN, not offered — there is no
-      link to the file anywhere on this page, which is the whole of what
-      "on montre, on ne télécharge pas" can mean from our side. A
-      browser's built-in viewer may still have a save button; that is the
-      browser's, and the page cannot take it away.
+  {#- A DOSSIER, SHOWN THE WAY A PHOTOGRAPH IS SHOWN.
+      --------------------------------------------------------------
+      Her words, 2026-11-14: *click as it was a photo, scroll it,
+      without border, and not being able to download it.*
 
-      An <iframe>, because the meta CSP carries `object-src 'none'` —
-      <object> and <embed> are both refused by it, and a frame falls under
-      `default-src 'self'`. See the CSP comment in base.html.
+      It used to be a READER: a dark ground, a frame, and the browser's
+      viewer sitting in a box of its own at the top of the page — a
+      window from somewhere else inside her page. That is what was
+      rejected, not the dossier.
 
-      `#toolbar=0&navpanes=0` asks Chrome and Edge to show the pages
-      without their viewer chrome, which is where their download button
-      lives. Firefox ignores it and shows its own toolbar. Scrolling works
-      either way, so a browser that ignores the hint loses nothing.
+      So: full width, no frame, no ground of its own, white like the
+      page it is on, and it scrolls inside itself. The same shape every
+      photograph on this page has, so the page reads as one thing.
 
-      It opens the page, like the film, so the photographs below it fall
-      into the pairs rather than one of them competing for the top. -#}
+      NOT OFFERED FOR DOWNLOAD. Nothing links to the file — no <a>, no
+      `download` — and `#toolbar=0&navpanes=0` asks Chrome and Edge to
+      drop the viewer chrome, which is where their save button lives.
+      Firefox shows its own toolbar and we cannot take it away: that
+      button is the browser's, not ours, and it is the honest limit of
+      "on montre, on ne télécharge pas" from our side.
+
+      An <iframe>, because the meta CSP carries `object-src 'none'` and
+      refuses both <object> and <embed>. See base.html.
+
+      ponytail: ONE height for every dossier — a PDF has no aspect
+      ratio anything can read at build time, so an A4 upright and a
+      landscape spread get the same tall box and scroll inside it.
+      Reading page one as an image would give the real shape and needs
+      a PDF rasteriser this repo does not have. -#}
+  {% set_global dossier = "" %}
+  {% for a in w.assets %}
+    {% if a | split(pat=".") | last | lower in config.extra.doc_types %}{% set_global dossier = a %}{% endif %}
+  {% endfor %}
   {% if dossier %}
     <figure class="proj-open proj-doc">
       <iframe src="{{ get_url(path=dossier) }}#toolbar=0&amp;navpanes=0"
