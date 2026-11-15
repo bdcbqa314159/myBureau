@@ -1462,6 +1462,68 @@ if (loaded) {
   check("after an edit it waits for the page before reloading the frame",
     polled, JSON.stringify(fetched.slice(mark)));
 
+  // ---- a photo has no page to look at ------------------------------
+  //
+  // zola builds one for every thing in content/, but NOTHING ON THE
+  // SITE LINKS TO A PHOTOGRAPH'S. Its icon carries `data-window`, so a
+  // click opens the picture big, in place, over the desk. "regarder"
+  // took her to the page behind it instead — a white sheet with the
+  // photograph in the middle and a paragraph nobody wrote — which is
+  // the same mistake the double-click handler already names: she was
+  // being shown something the site does not do.
+  // DRIVEN THROUGH THE BUTTON SHE PRESSES. `setMode` is a `const`
+  // arrow and a `const` at the top of a script is not a property of
+  // the vm context, so there is nothing to call — and the paths below
+  // must be ones the FIXTURE really holds, because setPressed looks
+  // the chosen thing up in the model to ask whether it is a photo.
+  const press = (id) => {
+    for (const fn of listeners.get(id + ":click") || []) fn({});
+  };
+  // THE FIXTURE'S OWN ROWS, not literals written here: `select` hands
+  // the thing to `inspect`, which reads languages, titles, bodies and
+  // the rest — a half-made object throws before the check runs. And
+  // setPressed looks the chosen path up in the model, so it has to be
+  // a path the model really holds.
+  const everyRow = [];
+  {
+    const answer = await (await sandbox.fetch("/api/tree")).json();
+    const walk = (x) => { everyRow.push(x); (x.on || []).forEach(walk); };
+    (answer.tree.desks || []).forEach(walk);
+  }
+  const seule = everyRow.find((r) => r.path === "content/da/seule");
+  const page_ = everyRow.find((r) => r.path === "content/da/grocery");
+  if (typeof sandbox.select === "function" && seule && page_
+      && (listeners.get("aspage:click") || []).length) {
+    const view2 = byId.get("view");
+
+    sandbox.select(page_);
+    press("aspage");
+    sandbox.select(page_);
+    check("a page looked at is its own page",
+      /\/site\/da\/grocery\/$/.test(view2.src), view2.src);
+
+    // THE ONE THAT WAS WRONG. Same mode, a photo chosen, and the frame
+    // must stay on the desk it sits on.
+    sandbox.select(seule);
+    check("a photo looked at is the desk it sits on, not a blank page",
+      /\/site\/da\/$/.test(view2.src), view2.src);
+    check("  and the button that asks for a page is turned off",
+      byId.get("aspage").disabled === true);
+    check("  and says why, rather than just refusing",
+      /pas de page/.test(byId.get("aspage").title || ""),
+      byId.get("aspage").title);
+
+    // AND IT COMES BACK. Disabled for the photograph, not for good.
+    sandbox.select(page_);
+    check("choosing something with a page offers it again",
+      byId.get("aspage").disabled === false);
+    check("  and her choice of view was not thrown away",
+      /\/site\/da\/grocery\/$/.test(view2.src), view2.src);
+    press("asdesk");
+  } else {
+    check("the fixture holds a photo and a page to drive this with", false);
+  }
+
   // ---- placing a picture on the canvas ----------------------------
   //
   // travail sélectionné holds photographs now, like pellicules, and
