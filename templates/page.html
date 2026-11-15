@@ -104,9 +104,22 @@
       `colocated_path` is the folder each of them actually sits in, and
       it means the same thing for both. -#}
   {% set here = w.colocated_path %}
+  {#- THE ORDER SHE ARRANGED — see the long note in _place.html, and
+      verbs.reorder for why `[extra.place]` exists at all rather than
+      living in the file names. One turn per rank; the last turn takes
+      every photograph she has never arranged.
+
+      The RHYTHM below reads `shown`, which counts what has been put on
+      the page so far — so her order decides which photograph is the
+      wide one and which fall into pairs. That is the point of it. -#}
+  {% set turns = w.assets | length + 1 %}
+  {% for turn in range(start=1, end=turns + 1) %}
   {% for asset in w.assets %}
     {% set file = asset | split(pat="/") | last %}
     {% set asset = here ~ file %}
+    {% set rank = 0 %}
+    {% if w.extra.place and w.extra.place[file] %}{% set rank = w.extra.place[file] %}{% endif %}
+    {% if rank != turn and not (rank == 0 and turn == turns) %}{% continue %}{% endif %}
     {#- `wallpaper` joins icon and poster here the moment a FOLDER can
         be a page: the wallpaper is the desk's ground, and a folder that
         used to be a desk still has the file sitting beside its
@@ -152,6 +165,7 @@
           {% if shown == 0 %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}></figure>
       {% set_global shown = shown + 1 %}
     {% endif %}
+  {% endfor %}
   {% endfor %}
 
   {#- THE DOSSIER ON THE PAGE: ITS FIRST PAGE, AS A PHOTOGRAPH.

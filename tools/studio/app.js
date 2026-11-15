@@ -939,11 +939,18 @@ function wire(o) {
  * photograph has no x and y to be dropped at, and the only thing that
  * decides where it lands is its PLACE IN THE ORDER.
  *
- * Which is what she already has a verb for. `reorder` renames the
- * files to 01, 02, 03 … in the order it is given, and the columns
- * reflow around the result — "drop it here and the engine adjusts",
- * exactly. The panel's side list has done this by drag for a while;
- * this is the same gesture where the photographs actually are.
+ * Which is what she already has a verb for. `reorder` writes down
+ * which photograph is first, second, third — a RANK, in
+ * `[extra.place]`, touching none of the files — and the columns reflow
+ * around the result: "drop it here and the engine adjusts", exactly.
+ * The panel's side list has done this by drag for a while; this is the
+ * same gesture where the photographs actually are.
+ *
+ * It renamed the files to 01, 02, 03 … until 2026-11-15, and that is
+ * why a drag here looked like it worked and sprang back: zola names a
+ * resized image from the source path, so a renamed photograph was
+ * served from the cache under the name it had been given. See
+ * verbs.reorder.
  *
  * NOT free placement. That would mean absolute positions, and then
  * adding a photograph would not reflow around the others — which is

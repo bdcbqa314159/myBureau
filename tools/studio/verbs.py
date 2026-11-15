@@ -608,19 +608,32 @@ def drop_key(text: str, name: str) -> str:
 
 def set_alt_key(text: str, file: str, value: str,
                 where: str = "ce fichier") -> str:
-    """One line inside `[extra.alt]`, leaving every other byte alone.
+    """One line inside `[extra.alt]` — a description, in quotes."""
+    return set_map_key(text, file, '"{}"'.format(value) if value else "",
+                       "extra.alt", where)
 
-    `[extra.alt]` is appended at the END of the front matter when it is
-    not there, which is the only safe place for a TOML sub-table: any
-    bare key written after it would silently belong to it instead of to
-    `[extra]`.
+
+def set_map_key(text: str, file: str, value: str, table: str,
+                where: str = "ce fichier") -> str:
+    """One line inside a per-file table, leaving every other byte alone.
+
+    `value` is TOML as it will be written — `"des mots"` with its quotes
+    for a description, `3` for a rank — and empty means take the line
+    out. The table (`extra.alt`, `extra.place`) is appended at the END
+    of the front matter when it is not there, which is the only safe
+    place for a TOML sub-table: any bare key written after it would
+    silently belong to it instead of to `[extra]`.
+
+    Two tables share this because they are the same knowledge — a line
+    keyed by file name under a header — and the comments below were paid
+    for once already.
     """
     parts = frontmatter.parts(text)
     if len(parts) < 3:
         raise Refused("{} n'a pas d'en-tête entre les +++ — c'est ce fichier"
                       " qu'il faut réparer.".format(where))
     fm = parts[1]
-    line = '"{}" = "{}"'.format(file, value)
+    line = '"{}" = {}'.format(file, value)
     # `[ \t]*` for the same reason as set_key above. A key under
     # [extra.alt] always has its table header above it, so this one was
     # never first and never bit — which is luck, not design.
@@ -636,7 +649,7 @@ def set_alt_key(text: str, file: str, value: str,
     # first to leave the blank line, so it hid behind a sequence rather
     # than a single call. Found by the gate in atomic(), the day the
     # gate learnt that a fence is a line of its own.
-    block = re.search(r'^\[extra\.alt\][ \t]*$', fm, re.M)
+    block = re.search(r'^\[' + re.escape(table) + r'\][ \t]*$', fm, re.M)
     if block and here.search(fm):
         if value:
             fm = here.sub(line, fm, count=1)
@@ -650,7 +663,7 @@ def set_alt_key(text: str, file: str, value: str,
     elif block:
         fm = fm[:block.end()] + "\n" + line + fm[block.end():]
     else:
-        fm = fm.rstrip("\n") + "\n\n[extra.alt]\n" + line + "\n"
+        fm = fm.rstrip("\n") + "\n\n[" + table + "]\n" + line + "\n"
     parts[1] = fm
     return frontmatter.rejoin(parts)
 
@@ -1671,32 +1684,68 @@ def set_wallpaper(item: str, name: str, data: bytes) -> dict:
 
 
 def reorder(item: str, names: list) -> dict:
-    """Renumber the photographs into the order given.
+    """Where each photograph sits, written down. NOTHING IS RENAMED.
 
-    Two phases, through a temporary name each: renaming 02 to 01 while 01
-    still exists would lose one, and the order the browser sends is
-    exactly the order that collides.
+        [extra.place]
+        "vue sur la mer.jpg" = 1
+        "theodora.jpg" = 2
+
+    THE POSITION IS A PROPERTY, NOT A NAME, and it had to become one
+    twice over.
+
+    Her names are hers. This used to rename the files into 01, 02, 03 …
+    so that zola's alphabetical order was the order she had chosen, and
+    that meant every arrangement overwrote whatever she had called her
+    photographs — a thing the panel has no business doing, having just
+    spent a slice establishing that the name decides nothing.
+
+    AND IT DID NOT EVEN WORK. zola names a resized image from the SOURCE
+    PATH and the resize parameters, and keeps the result in
+    `static/processed_images`. Rename 03.jpg to 01.jpg and the thumbnail
+    is still asked for under the name `01.<hash>.webp`, which is already
+    sitting in the cache from the last build — so the page came back
+    byte for byte identical and the photographs appeared to spring back
+    to where they were. Verified by building before and after a reorder:
+    the sources swap, the published thumbnails do not. Replacing a file
+    under the same name DOES come through, which is why this was
+    invisible until the names were already 01…NN and a second
+    arrangement had nothing left to rename.
+
+    So the files are left exactly alone and the templates walk the ranks
+    — see the turn loop in `_place.html` and `gallery.html`.
+
+    A rank for a photograph that has since gone is harmless: nothing
+    matches it. They are left behind rather than swept, like `[extra.alt]`
+    before them.
     """
     d = a_project(item)
-    have = [f.name for f in sorted(d.iterdir())
-            if f.is_file() and f.suffix.lower() in IMAGE
-            and f.stem.lower() not in SPOKEN_FOR]
+    # `photographs_in`, WHICH IS THE LIST THE PANEL SENDS. This had its
+    # own listing that kept `page-NN` — a dossier's pages, drawn from
+    # the PDF — so on any project holding a PDF the panel's order was
+    # short by however many pages the document had and every
+    # arrangement came back "ce ne sont pas les mêmes photos". Nothing
+    # in the tree has dossier pages yet, which is the only reason this
+    # was never seen.
+    have = photographs_in(d)
     if sorted(names) != sorted(have):
         raise Refused("ce ne sont pas les mêmes photos.")
-    moves = []
-    staged = []
-    for i, n in enumerate(names, start=1):
-        src = d / n
-        hold = d / ("studio-hold-{}{}".format(i, src.suffix.lower()))
-        os.replace(src, hold)
-        staged.append((hold, "{:02d}{}".format(i, src.suffix.lower()), n))
-    for hold, final, was in staged:
-        os.replace(hold, d / final)
-        if final != was:
-            moves.append({"from": rel(d / was), "to": rel(d / final)})
-    if moves:
-        record("reorder", [], moves)
-    return {"order": [s[1] for s in staged]}
+    texts, wrote = [], 0
+    # every file planned before any is written — see place()
+    planned = []
+    for f in language_files(d):
+        before = f.read_text(encoding="utf-8")
+        after = before
+        for i, n in enumerate(names, start=1):
+            after = set_map_key(after, n, str(i), "extra.place", rel(f))
+        planned.append((f, before, after))
+    for f, before, after in planned:
+        if after != before:
+            texts.append({"path": rel(f), "before": before})
+            atomic(f, after)
+            wrote += 1
+    if texts:
+        record("reorder", texts, [])
+    return {"order": list(names), "files": wrote}
 
 
 def remove_image(item: str, name: str) -> dict:

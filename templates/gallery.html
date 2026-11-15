@@ -16,6 +16,15 @@
      the ORIGINAL proportions, which is what lets the browser reserve the
      right space before the file arrives: without them a masonry of lazy
      images reflows violently as each one lands. #}
+  {#- THE ORDER SHE ARRANGED — see the long note in _place.html, and
+      verbs.reorder for why `[extra.place]` exists at all. One turn per
+      rank; the last turn takes everything unranked.
+
+      `loop.index` below is the INNER loop's, which is each photograph's
+      own position in `section.assets` and therefore the same number in
+      this loop and in the windows below. The ids still agree. -#}
+  {% set turns = section.assets | length + 1 %}
+  {% for turn in range(start=1, end=turns + 1) %}
   {% for asset in section.assets %}
     {# A translated section reports its photographs under /<lang>/, but a
        photograph has no language — one file serves every translation, and
@@ -25,6 +34,9 @@
       {% set asset = asset | replace(from="/" ~ lang ~ "/", to="/") %}
     {% endif %}
     {% set file = asset | split(pat="/") | last %}
+    {% set rank = 0 %}
+    {% if section.extra.place and section.extra.place[file] %}{% set rank = section.extra.place[file] %}{% endif %}
+    {% if rank != turn and not (rank == 0 and turn == turns) %}{% continue %}{% endif %}
     {% if file | split(pat=".") | last | lower in config.extra.image_types and not (file | split(pat=".") | first in config.extra.not_photographs) %}
 {# Alt text, when there is any. A photograph in a portfolio is the
          content, not decoration, so alt="" tells a screen-reader user
@@ -73,6 +85,7 @@
              alt="{{ alt }}" loading="lazy" decoding="async"></a>
     {% endif %}
   {% endfor %}
+  {% endfor %}
 </main>
 
 {#- One window per photograph, rendered closed.
@@ -87,6 +100,11 @@
     two windows with one id, and every click landing on whichever came
     first. Both loops walk `section.assets` in the same order, so
     loop.index agrees between the link and the window it opens.
+
+    THESE ARE NOT PUT IN HER ORDER, and do not need to be: a closed
+    dialog has no position on the page. Only the id has to agree with
+    the link, and loop.index is each photograph's place in `assets`,
+    which the turn loop above does not change.
 
     ponytail: no next/previous inside the viewer. Escape puts you back on
     the grid with every photograph in front of you, which is a short walk

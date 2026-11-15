@@ -78,6 +78,31 @@ def build(d: pathlib.Path) -> tuple[bool, str]:
     return r.returncode == 0, (r.stderr or "") + (r.stdout or "")
 
 
+def verbs_on(d: pathlib.Path):
+    """The panel's verbs, pointed at the SCRATCH tree.
+
+    Every path it writes through has to be repointed, trash and journal
+    included — miss one and a case that looks like it is editing a copy
+    is editing the repository.
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "verbs_under_test", d / "tools" / "studio" / "verbs.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.path.insert(0, str(d / "tools"))
+    try:
+        spec.loader.exec_module(mod)
+    finally:
+        sys.path.pop(0)
+    mod.ROOT, mod.CONTENT = d, d / "content"
+    mod.CONFIG = d / "config.toml"
+    mod.STUDIO = d / ".studio"
+    mod.JOURNAL = mod.STUDIO / "journal.jsonl"
+    mod.TRASH = mod.STUDIO / "trash"
+    mod.TRASH.mkdir(parents=True, exist_ok=True)
+    return mod
+
+
 def page(d: pathlib.Path, rel: str) -> str:
     p = d / "public" / rel
     return p.read_text(encoding="utf-8") if p.exists() else ""
@@ -2765,6 +2790,99 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_the_order_is_a_property_not_a_name(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """She arranges her photographs, and the SITE comes out in that order.
+
+    THE CASE THAT WAS MISSING TWICE OVER. `reorder` renamed her files
+    into 01, 02, 03 … so that zola's alphabetical order was her order,
+    and the panel's suite asserted the names it had written. Both of
+    those were true while the website did not change at all:
+
+    zola names a resized image from the SOURCE PATH and the resize
+    parameters, and keeps the result in `static/processed_images`.
+    Rename 03.jpg to 01.jpg and the thumbnail is asked for under a name
+    that is already in the cache from the last build — so the page came
+    back byte for byte identical and the photographs sprang back to
+    where they had been. Nothing short of a build could see it, which
+    is why this case builds TWICE and compares the two pages.
+
+    All three displays, because one verb feeds them all and two of them
+    agreeing is the shape this project keeps getting wrong:
+
+        gallery.html   pellicules, the grid
+        page.html      maison cosette, nine photographs
+        _place.html    papier calque's four, on the route
+
+    And the files are not touched: her names are hers.
+    """
+    verbs = verbs_on(d)
+
+    def shots() -> list:
+        return re.findall(r'data-shot="([^"]+)"', page(d, "pellicules/index.html"))
+
+    def stems(rel: str, cls: str) -> list:
+        """The source stem of every resized image in a page, in order.
+
+        A processed image keeps its source's stem — `01.<hash>.webp` —
+        which is the only name the route leaves in the HTML: a stop
+        there carries no file name and nothing to click, by her ask.
+        """
+        html = page(d, rel)
+        html = html[html.find(cls):] if cls in html else html
+        return [u.split(".")[0] for u in
+                re.findall(r'/processed_images/([^"\s]+?\.webp)', html)]
+
+    ok_one, log_one = build(d)
+    before_grid = shots()
+    before_page = stems("da/maison-cosette/index.html", "proj")
+    before_road = stems("travail-selectionne/index.html", "proj-route")
+    files_before = sorted(f.name for f in (d / "content" / "pellicules").iterdir())
+
+    # HER ORDER, which is not alphabetical and not a rotation — a
+    # rotation would survive several of the bugs this is here to catch.
+    want = ["03.jpg", "01.jpg", "12.jpg"] + \
+           [n for n in before_grid if n not in ("03.jpg", "01.jpg", "12.jpg")]
+    refused = ""
+    try:
+        verbs.reorder("content/pellicules", want)
+        verbs.reorder("content/da/maison-cosette",
+                      list(reversed(verbs.photographs_in(d / "content" / "da" / "maison-cosette"))))
+        verbs.reorder("content/travail-selectionne/papier-calque",
+                      ["04.jpg", "03.jpg", "02.jpg", "01.jpg"])
+    except verbs.Refused as exc:
+        refused = str(exc)
+
+    ok_two, log_two = build(d)
+    after_grid = shots()
+    after_page = stems("da/maison-cosette/index.html", "proj")
+    after_road = stems("travail-selectionne/index.html", "proj-route")
+    files_after = sorted(f.name for f in (d / "content" / "pellicules").iterdir())
+    fm = (d / "content" / "pellicules" / "_index.md").read_text(encoding="utf-8")
+    fm_en = (d / "content" / "pellicules" / "_index.en.md").read_text(encoding="utf-8")
+
+    return [
+        ("both builds go through", ok_one and ok_two),
+        ("nothing was refused", refused == ""),
+        # THE ORACLE: the published page, not what the verb returned.
+        ("the gallery comes out in her order", after_grid == want),
+        ("and it was not already in that order", before_grid != want),
+        ("a page's photographs follow it too",
+         after_page == list(reversed(before_page)) and len(before_page) > 2),
+        # the route holds five children, one photograph each but for
+        # papier calque's four, which are the only run of 01..04 in it
+        ("the route follows it as well",
+         before_road == ["01", "01", "01", "02", "03", "04", "01", "01"]
+         and after_road == ["01", "01", "04", "03", "02", "01", "01", "01"]),
+        # AND HER NAMES ARE HERS. This is the whole point: a rank is a
+        # property, and a property does not touch the files.
+        ("not one file was renamed", files_after == files_before),
+        ("the rank is written down", '"03.jpg" = 1' in fm),
+        ("in every language", '"03.jpg" = 1' in fm_en),
+        ("under its own table", "[extra.place]" in fm),
+        ("and the header still opens with its fence", fm.startswith("+++\n")),
+    ]
+
+
 def case_a_preview_is_one_picture(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A preview is one screen with one picture on it.
 
@@ -2924,25 +3042,7 @@ def case_what_the_panel_writes_zola_reads(d: pathlib.Path) -> list[tuple[str, bo
 
     Renaming is the first thing anybody does with a panel like this.
     """
-    import importlib.util
-
-    def load(name: str, path: pathlib.Path):
-        spec = importlib.util.spec_from_file_location(name, path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        return mod
-
-    sys.path.insert(0, str(d / "tools"))
-    try:
-        verbs = load("verbs_under_test", d / "tools" / "studio" / "verbs.py")
-    finally:
-        sys.path.pop(0)
-    verbs.ROOT, verbs.CONTENT = d, d / "content"
-    verbs.CONFIG = d / "config.toml"
-    verbs.STUDIO = d / ".studio"
-    verbs.JOURNAL = verbs.STUDIO / "journal.jsonl"
-    verbs.TRASH = verbs.STUDIO / "trash"
-    verbs.TRASH.mkdir(parents=True, exist_ok=True)
+    verbs = verbs_on(d)
 
     # EVERY FILE WHOSE FIRST HEADER LINE IS A KEY A VERB WRITES, which
     # is every content file on the site: `title` is always first.
@@ -3391,6 +3491,8 @@ CASES = [
     ("a dead click", case_a_dead_click),
     ("a photograph can ask for its page", case_a_photograph_can_ask_for_its_page),
     ("a preview is one picture", case_a_preview_is_one_picture),
+    ("the order is a property, not a name",
+     case_the_order_is_a_property_not_a_name),
 ]
 
 
