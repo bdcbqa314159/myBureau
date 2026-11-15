@@ -839,6 +839,63 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("undo walks all of it back",
           (tmp / proj / "index.md").read_text(encoding="utf-8") == before)
 
+    # ---- one face, out of three -------------------------------------
+    #
+    # AFTER the undo tally above: this block writes and bins, and
+    # that tally counts a fixed number of undos back to a known
+    # file.
+    #
+    # An icon is a drawn folder, a photograph, or a GIF. CHOOSING ONE
+    # HAS TO UNCHOOSE THE OTHERS, or _icon.html's precedence decides
+    # instead of her: a colocated `icon.*` beats a declared path, so a
+    # photograph dropped on a thing that already declared a folder
+    # looked chosen in the panel and was not drawn on the desk.
+    print()
+    face_at = "content/graphic-design/atelier-mirabelle"
+    fd = tmp / face_at
+    check("it starts out declaring a drawn folder",
+          'icon = "img/icons/folder' in (fd / "_index.md").read_text(encoding="utf-8"))
+    got = verbs.set_icon(face_at, "visage.jpg", pix)
+    check("dropping a photograph fills the photo slot",
+          got["face"] == "photo" and (fd / "icon.jpg").is_file(), str(got))
+    check("  and the declared folder is gone, not merely outranked",
+          "icon =" not in (fd / "_index.md").read_text(encoding="utf-8"))
+    gif = b"GIF89a" + b"\x00" * 40
+    got = verbs.set_icon(face_at, "anime.gif", gif)
+    check("dropping a GIF fills the GIF slot, read from its bytes",
+          got["face"] == "gif" and (fd / "icon.gif").is_file(), str(got))
+    check("  and the photograph it replaces is gone",
+          not (fd / "icon.jpg").is_file())
+    got = verbs.set_face(face_at, "folder", "folder-rust")
+    check("choosing a drawn folder declares it",
+          'folder-rust.svg' in (fd / "_index.md").read_text(encoding="utf-8"), str(got))
+    check("  and takes the file away with it",
+          list(fd.glob("icon.*")) == [])
+    verbs.set_face(face_at, "none")
+    check("and none of the three leaves nothing behind",
+          "icon =" not in (fd / "_index.md").read_text(encoding="utf-8")
+          and list(fd.glob("icon.*")) == [])
+    check("a drawing nobody drew is refused",
+          refused(verbs.set_face, face_at, "folder", "folder-chartreuse") != "")
+    check("and a how that is not one of the three",
+          refused(verbs.set_face, face_at, "rainbow") != "")
+    # THE TWO LISTS HAVE TO AGREE. The panel offers four drawn folders
+    # and the verb accepts four; a fifth in one and not the other is a
+    # button that is always refused.
+    app = (ROOT / "tools" / "studio" / "app.js").read_text(encoding="utf-8")
+    said = re.search(r"const DRAWN_FOLDERS = \[([^\]]*)\]", app)
+    check("the panel offers exactly the drawings the verb accepts",
+          said is not None
+          and tuple(re.findall(r'"([^"]+)"', said.group(1))) == verbs.DRAWN_FOLDERS,
+          said.group(1) if said else "not found")
+    # AND EVERY ONE OF THEM IS A FILE THAT EXISTS. A button pointing at
+    # a drawing nobody drew is a broken picture in her panel.
+    missing = [f for f in verbs.DRAWN_FOLDERS
+               if not (ROOT / "static" / "img" / "icons" / (f + ".svg")).is_file()]
+    check("and every drawing is really in static/img/icons", missing == [],
+          str(missing))
+
+
     # ---- four types, written down once ------------------------------
     #
     # AFTER the undo tally above: this block creates things and the

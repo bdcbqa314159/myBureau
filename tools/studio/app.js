@@ -336,6 +336,11 @@ function isPage(o) {
   return o.template === "page.html" || o.template === "";
 }
 
+/* The drawn folder pictures, ours and hand-drawn — see NOTICE. The
+ * same four `verbs.DRAWN_FOLDERS` accepts; the server refuses anything
+ * else, so this list being wrong is a refusal rather than a surprise. */
+const DRAWN_FOLDERS = ["folder", "folder-olive", "folder-rust", "folder-slate"];
+
 /* Where photographs go, in the words the thing deserves. */
 function dropPhotos(o) {
   return `<p class="drop" data-drop="photos">${
@@ -584,15 +589,55 @@ function inspect(o) {
   const isDesk = model.desks.some((d) => d.path === o.path);
   // What it looks like on the desk. A bureau has no photograph to take a
   // face from, so without this its appearance could not be changed at all.
+  // THREE SLOTS, AND ONLY ONE HOLDS THE FACE.
+  //
+  // It was one box. Drop anything in it and you got an icon; what you
+  // had before was not shown, and whether a dropped file beat a
+  // declared one was a precedence rule in _icon.html that she could
+  // not see. So "I chose a photograph" and "the desk draws a folder"
+  // were both true at once.
+  //
+  // Now the three are side by side, the chosen one says so, and
+  // choosing one clears the other two at the verb — `set_icon` and
+  // `set_face` each call `_unface` first, so the precedence rule never
+  // gets a chance to decide instead of her.
+  //
+  // A GIF IS ITS OWN SLOT because it moves on the desk and a
+  // photograph does not — two different answers, not one with a
+  // format. Which slot a dropped file fills is read from its BYTES.
+  const chosen = o.face || "";
+  const slot = (how, label, inner) => `
+    <li class="slot${chosen === how ? " is-chosen" : ""}" data-face="${how}">
+      <span class="slot-what">${label}</span>
+      ${inner}
+      ${chosen === how ? `<b class="slot-yes">en place</b>` : ""}
+    </li>`;
+  const shown = o.icon && !o.icon.includes("/")
+    ? `<img src="${q("/media/" + o.path + "/" + o.icon)}" alt="">` : "";
   const face = `
-    <label>apparence
-      <div class="face" data-drop="icon">${o.icon && !o.icon.includes("/")
-        ? `<img src="${q("/media/" + o.path + "/" + o.icon)}" alt="">`
-        : `<span>${o.icon ? "déclarée dans le texte"
-             : o.photographs.length ? "la première photo"
-             : "icône par défaut"}</span>`}</div>
-    </label>
-    <p class="drop" data-drop="icon">Dépose une image ici pour l'icône.</p>`;
+    <fieldset class="faces">
+      <legend>son icône — un seul des trois</legend>
+      <ul class="slots">
+        ${slot("folder", "un dossier", `
+          <div class="slot-box">
+            ${DRAWN_FOLDERS.map((f) => `<button type="button" class="drawn"
+              data-drawn="${f}" title="${f}"><img
+              src="${q("/site/img/icons/" + f + ".svg")}" alt=""></button>`).join("")}
+          </div>`)}
+        ${slot("photo", "une photo", `
+          <div class="slot-box" data-drop="icon">${
+            chosen === "photo" ? shown : ""}</div>
+          <p class="drop" data-drop="icon">Dépose une image.</p>`)}
+        ${slot("gif", "un GIF", `
+          <div class="slot-box" data-drop="icon">${
+            chosen === "gif" ? shown : ""}</div>
+          <p class="drop" data-drop="icon">Dépose un GIF.</p>`)}
+      </ul>
+      ${chosen ? `<button type="button" id="noface">Aucun des trois</button>`
+        : `<p class="hintline">Aucun des trois : ${o.photographs.length
+            ? "c'est la première photo qui sert d'icône."
+            : "c'est le dessin par défaut."}</p>`}
+    </fieldset>`;
   // A gallery ignores a wallpaper — look.py flags one declared there as a
   // line that does nothing — so the panel does not offer to set one.
   // `about me.txt` is the home desk's own window: its portrait and its
@@ -794,6 +839,19 @@ function wire(o) {
     };
     el("who").addEventListener("change", send);
     el("studio").addEventListener("change", send);
+  }
+  look.querySelectorAll("[data-drawn]").forEach((b) => {
+    b.addEventListener("click", async () => {
+      const out = await act({ verb: "set_face", item: o.path,
+                              how: "folder", which: b.dataset.drawn });
+      if (out) tell("icône : un dossier");
+    });
+  });
+  if (el("noface")) {
+    el("noface").addEventListener("click", async () => {
+      const out = await act({ verb: "set_face", item: o.path, how: "none" });
+      if (out) tell("icône rendue au réglage par défaut");
+    });
   }
   look.querySelectorAll("[data-alt]").forEach((i) => {
     i.addEventListener("change", async () => {

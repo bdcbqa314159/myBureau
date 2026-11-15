@@ -132,6 +132,38 @@ offered the wrong boxes**: an empty film had nowhere to put its film
 unless she had typed `.mov`, and a photo with no image was treated as a
 page.
 
+## Her icon: three slots, one face
+
+A thing's face is **one of three**, and choosing one unchooses the
+others:
+
+| slot | what it is | how |
+|---|---|---|
+| **un dossier** | one of four drawn folder pictures, ours — see NOTICE | a button |
+| **une photo** | a still she drops | a drop |
+| **un GIF** | a moving one she drops | a drop |
+
+Plus *aucun des trois*, which lets the engine fall back: the first
+photograph for a thing that has one, a drawn folder for a thing that
+does not.
+
+**Which slot a dropped file fills is read from its bytes**, not from
+its name — a GIF moves on the desk and a photograph does not, so they
+are two answers rather than one answer with a format.
+
+**Choosing one clears the other two at the verb.** It was one box, and
+whether a dropped file beat a declared path was a precedence rule in
+`_icon.html` she could not see: a colocated `icon.*` wins over
+`icon = "…"`. So a photograph dropped onto a thing that already
+declared a folder looked chosen in the panel and was not drawn on the
+desk — *"I chose a photograph"* and *"the desk draws a folder"* were
+both true at once. `set_icon` and `set_face` each call `_unface` first,
+so that rule never gets to decide instead of her.
+
+`drop_key()` exists for this: front matter could be written to and not
+written from, so the declared path could only ever be replaced, never
+removed.
+
 A photo that already holds its photograph has **no drop zone** — the
 verb would refuse a second — and says so instead: *"une photo seule
 n'en tient qu'une. Jette celle-ci pour en mettre une autre, ou fais-en
