@@ -940,7 +940,25 @@ def new_project(into: str, name: str, kind: str = "photos") -> dict:
     return {"made": rel(folder), "title": title, "kind": kind}
 
 
-def new_bureau(into: str, name: str) -> dict:
+def _one_of_a_kind(display: str) -> str:
+    """The folder on the main desktop already doing this job, or "".
+
+    A gallery and a selection are one of a kind. Which is which is read
+    from the TEMPLATE, because that is still the only thing that says
+    so — see specs/the-four-types.md. When their own edition is
+    designed this moves to a written-down note like everything else,
+    and this function is the one place to change.
+    """
+    want = "gallery.html" if display == "gallery" else "page.html"
+    for child in sorted(CONTENT.iterdir()):
+        if not child.is_dir() or not any(child.glob("_index*.md")):
+            continue
+        if template_of(child) == want:
+            return child.name
+    return ""
+
+
+def new_bureau(into: str, name: str, display: str = "desk") -> dict:
     """A new bureau inside another one."""
     d = inside(into)
     if not any(d.glob("_index*.md")):
@@ -959,7 +977,35 @@ def new_bureau(into: str, name: str) -> dict:
     # project page — title, description, photographs. Getting this wrong
     # builds perfectly and gives her a desk where she asked for a page.
     on_the_main_desk = d == CONTENT.resolve()
-    template = "section.html" if on_the_main_desk else "page.html"
+    # WHICH SORT OF FOLDER, on the main desktop only. All three hold
+    # her work and differ in how they show it:
+    #
+    #   desk       icons on a wallpaper   — DA, graphic design
+    #   gallery    the grid               — pellicules
+    #   selection  three columns          — travail sélectionné
+    #
+    # The last two are ONE OF A KIND: at most one of each, and the test
+    # is the sort rather than the name, so she may call a gallery
+    # whatever she likes and still not get a second.
+    #
+    # This is what lets her clear the desktop and build it again. She
+    # could delete pellicules and not put it back, which is worse than
+    # not being able to delete it.
+    if display not in ("desk", "gallery", "selection"):
+        raise Refused("un dossier est un bureau, une galerie ou une sélection.")
+    if not on_the_main_desk and display != "desk":
+        raise Refused("une galerie et une sélection vivent sur la page"
+                      " d'accueil, pas dans un bureau.")
+    if on_the_main_desk and display != "desk":
+        already = _one_of_a_kind(display)
+        if already:
+            raise Refused("il y a déjà {} : {}. Il n'en faut qu'une."
+                          .format("une galerie" if display == "gallery"
+                                  else "une sélection", already))
+    template = ("gallery.html" if display == "gallery"
+                else "page.html" if display == "selection"
+                else "section.html" if on_the_main_desk
+                else "page.html")
     # AND WHAT IT IS, written down. On the main desktop a folder holds a
     # desktop; anywhere else it is a page, whatever picture she gives
     # its icon. Position decides, and then the file remembers — nothing
@@ -973,7 +1019,7 @@ def new_bureau(into: str, name: str) -> dict:
         moves.append({"from": "", "to": rel(f)})
     moves.append({"from": "", "to": rel(folder)})
     record("new_bureau", [], moves)
-    return {"made": rel(folder), "kind": kind}
+    return {"made": rel(folder), "kind": kind, "display": display}
 
 
 def move(item: str, into: str) -> dict:

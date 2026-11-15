@@ -225,26 +225,32 @@ function wouldBe(intoPath, kind) {
        son fond d'écran, et une place dans le bandeau du haut.`;
 }
 
+/* WHERE A DROPPED FOLDER OF IMAGES WILL GO.
+ *
+ * It read the `dans …` select. With the row gone it goes into the desk
+ * that is CHOSEN — which the panel always has, and which she can see
+ * highlighted in the list and outlined in the page. Saying it out loud
+ * here is the whole of what the select was for. */
+function intoNow() {
+  const o = find(chosen);
+  if (!o) return "";
+  // the desk it SITS ON if it is a thing, itself if it is a desk
+  const d = model.desks.find((x) => x.path === o.path);
+  return d && !d.gallery ? d.path : deskOf(o);
+}
+
 function sayWillBe() {
   const el_ = el("willbe");
   if (!el_ || !model) return;
-  el_.innerHTML = wouldBe(el("into").value, el("kind").value);
+  const into = intoNow();
+  el_.innerHTML = into
+    ? `« Ajouter un dossier » créera une page dans <b>${esc(
+        (model.desks.find((d) => d.path === into) || {}).titles
+          ? (model.desks.find((d) => d.path === into).titles.fr) : into)}</b>.`
+    : "";
 }
 
 function paintInto() {
-  const sel = el("into");
-  if (!sel || !model) return;
-  const keep = sel.value;
-  sel.innerHTML = "";
-  for (const d of model.desks) {
-    if (d.gallery) continue;              // a galerie holds photographs, not things
-    const o = document.createElement("option");
-    o.value = d.path;
-    o.textContent = "  ".repeat(d.depth || 0) + (d.titles.fr || d.name);
-    sel.append(o);
-  }
-  sel.value = keep && model.desks.some((d) => d.path === keep)
-    ? keep : (model.desks[0] && model.desks[0].path);
   sayWillBe();
 }
 
@@ -496,11 +502,7 @@ function frameFor(o) {
 
 function select(o) {
   chosen = keyOf(o);
-  const sel = el("into");
-  if (sel && o.kind !== "about") {
-    const home = isBureau(o) ? o.path : o.path.split("/").slice(0, -1).join("/");
-    if (model.desks.some((d) => d.path === home)) { sel.value = home; sayWillBe(); }
-  }
+  sayWillBe();
   const show = frameFor(o);
   if (!view.src.endsWith(show)) view.src = show;
   paint();
@@ -926,6 +928,129 @@ function wire(o) {
   });
 }
 
+/* WHAT MAY BE MADE HERE, AND WHERE "HERE" IS.
+ * --------------------------------------------------------------------
+ * She right-clicks the surface and gets a menu of what belongs there.
+ * It replaces a row of selects — `dans …`, `quoi créer`, a name, a
+ * button — where she could pick a film and `dans: pellicules`, press
+ * Créer, and be told no. THE MENU MAKES THE REFUSAL UNREACHABLE
+ * instead of explaining it afterwards.
+ *
+ * Pointing also says WHERE, which the row could not: the click has an
+ * x and a y, so the thing appears under the pointer instead of in a
+ * slot she then has to drag it out of.
+ *
+ *   the main desktop    un dossier — plus une galerie and une
+ *                       sélection, each only while absent
+ *   inside a bureau     une photo, un film, une page
+ *   inside a gallery    nothing: a gallery holds the photographs she
+ *                       drops, and new_project refuses a project there
+ *
+ * Which desk she clicked comes from `data-desk` on the surface itself
+ * — the page says which it is rather than the panel mapping a url
+ * back through a language prefix and a base. */
+function whatFitsIn(deskPath, desks) {
+  // THE DESKS ARE THE INPUT, so the answer can be asked of a desktop
+  // that is missing something — which is the half that matters and
+  // the half a running panel cannot show you. `model` is a `let` and
+  // is not reachable from outside this file, so the seam is here.
+  const all = desks || (model && model.desks) || [];
+  const d = all.find((x) => x.path === deskPath);
+  if (!d || d.gallery) return [];
+  if ((d.depth || 0) > 0) {
+    return [["photo", "une photo"], ["video", "un film"], ["page", "une page"]];
+  }
+  // eslint-disable-next-line no-unused-vars
+  // THE MAIN DESKTOP. A gallery and a selection are one of a kind, and
+  // the test is the SORT rather than the name — she may call a gallery
+  // whatever she likes and still not get a second. Read from the
+  // template, which is the only thing that says which is which; the
+  // server refuses either way, so this list being generous would be a
+  // refusal rather than a wrong file.
+  const first = all.filter((x) => (x.depth || 0) === 1);
+  const out = [["folder", "un dossier"]];
+  if (!first.some((x) => x.gallery)) out.push(["gallery", "une galerie"]);
+  if (!first.some((x) => x.template === "page.html"))
+    out.push(["selection", "une sélection"]);
+  return out;
+}
+
+/* The menu itself, drawn inside the framed page so a click's own
+ * coordinates place it, with its look injected the way mark()'s
+ * outline is. */
+function shutMenu(doc) {
+  const had = doc.getElementById("studio-menu");
+  if (had) had.remove();
+}
+
+function openMenu(doc, e, desk) {
+  shutMenu(doc);
+  const deskPath = (desk.dataset.desk || "").replace(/\/$/, "");
+  const fits = whatFitsIn(deskPath);
+  if (!fits.length) {
+    tell("rien à créer ici");
+    return;
+  }
+  if (!doc.getElementById("studio-menu-css")) {
+    const s = doc.createElement("style");
+    s.id = "studio-menu-css";
+    s.textContent = `#studio-menu{position:absolute;z-index:9999;margin:0;padding:.25rem;
+      list-style:none;background:#fff;border:1px solid #9a9aa2;border-radius:4px;
+      box-shadow:0 6px 18px rgb(0 0 0 / .25);font:13px/1.3 system-ui,sans-serif;
+      min-width:11rem}
+      #studio-menu li{margin:0}
+      #studio-menu button{display:block;width:100%;text-align:left;padding:.3rem .5rem;
+      border:0;background:none;font:inherit;cursor:pointer;border-radius:3px}
+      #studio-menu button:hover,#studio-menu button:focus-visible{background:#e8eefc}
+      #studio-menu .where{padding:.2rem .5rem .3rem;color:#6b6b74;font-size:11px}`;
+    (doc.head || doc.documentElement).append(s);
+  }
+  const r = desk.getBoundingClientRect();
+  const x = e.clientX - r.left, y = e.clientY - r.top;
+  const menu = doc.createElement("ul");
+  menu.id = "studio-menu";
+  const here = (model.desks.find((d) => d.path === deskPath) || {});
+  menu.innerHTML = `<li class="where">créer dans ${
+    esc(here.titles ? (here.titles.fr || here.name) : deskPath)}</li>`
+    + fits.map(([k, label]) =>
+        `<li><button type="button" data-make="${k}">${label}</button></li>`).join("");
+  // placed where she clicked, in the desk's own coordinates — the same
+  // space arrange() and place() work in
+  menu.style.left = Math.round(x) + "px";
+  menu.style.top = Math.round(y) + "px";
+  desk.append(menu);
+  for (const b of menu.querySelectorAll("[data-make]")) {
+    b.addEventListener("click", async () => {
+      shutMenu(doc);
+      await makeHere(deskPath, b.dataset.make, desk, x, y);
+    });
+  }
+  menu.querySelector("button").focus();
+}
+
+/* Make it, and put it where she pointed. */
+async function makeHere(into, what, desk, x, y) {
+  const name = "sans nom";
+  const out = what === "folder" || what === "gallery" || what === "selection"
+    ? await act({ verb: "new_bureau", into, name,
+                  display: what === "folder" ? "desk" : what })
+    : await act({ verb: "new_project", into, name, kind: what });
+  const made = out && out.did && out.did.made;
+  if (!made) return;                       // act() has already said why
+  // WHERE SHE POINTED. A percentage of the desk, which is what `place`
+  // takes and what `arrange()` reads back — so it lands under the
+  // pointer rather than in whatever slot the loose grid had left.
+  const r = desk.getBoundingClientRect();
+  await act({ verb: "place", item: made,
+              x: Math.max(0, Math.min(100, Math.round(x / r.width * 100))),
+              y: Math.max(0, Math.min(100, Math.round(y / r.height * 100))) });
+  const o = find(made);
+  if (o) select(o);
+  tell("créé ici — donne-lui un nom");
+  const box = look.querySelector('[data-title="fr"]');
+  if (box && box.focus) { box.focus(); if (box.select) box.select(); }
+}
+
 /* WHICH BOX WILL TAKE THIS FILE.
  *
  * Every drop zone used to light up at once, whatever was being dragged —
@@ -1066,6 +1191,20 @@ function arm(doc) {
     e.preventDefault();
     e.stopImmediatePropagation();
   }, true);
+  // A LEFT-CLICK ANYWHERE SHUTS THE MENU, and a right-click on the
+  // surface opens one. On an ICON it does nothing: an icon is a thing
+  // already, and "create here" is about the empty space.
+  doc.addEventListener("click", () => shutMenu(doc));
+  doc.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") shutMenu(doc);
+  });
+  doc.addEventListener("contextmenu", (e) => {
+    const desk = e.target.closest && e.target.closest(".desk[data-desk]");
+    if (!desk) return;                     // not a surface: let the browser be
+    if (e.target.closest("a.icon")) return;
+    e.preventDefault();
+    openMenu(doc, e, desk);
+  });
 }
 
 /* What is under the pointer, other than the thing being dragged — and
@@ -1263,8 +1402,6 @@ stream.onmessage = async (e) => {
 stream.onerror = () => { lamp.className = "lamp bad"; tell("connexion perdue — relance preview"); };
 
 
-el("kind").addEventListener("change", sayWillBe);
-el("into").addEventListener("change", sayWillBe);
 
 /* A WHOLE FOLDER, IN ONE GESTURE.
  *
@@ -1305,9 +1442,12 @@ el("pickdir").addEventListener("change", async () => {
     return;
   }
 
-  const into = el("into").value;
-  const kind = el("kind").value;
-  const made = await act({ verb: "new_project", into, name: folder, kind });
+  // A FOLDER OF IMAGES IS A PAGE. It read the row's `kind`, so she
+  // could drop a folder of photographs and have it arrive as a film.
+  const into = intoNow();
+  if (!into) { tell("choisis d'abord un bureau"); return; }
+  const made = await act({ verb: "new_project", into, name: folder,
+                           kind: "page" });
   if (!made || !made.made) return;          // act() has already said why
 
   let put = 0;
@@ -1323,30 +1463,6 @@ el("pickdir").addEventListener("change", async () => {
   tell(put === mine.length
     ? `${folder} : ${put} image(s) en place.`
     : `${folder} : ${put} sur ${mine.length} — le reste a été refusé.`);
-});
-
-el("make").addEventListener("click", async () => {
-  const name = el("newname").value.trim();
-  if (!name) { tell("donne-lui un nom"); return; }
-  const into = el("into").value;            // said out loud, not inferred
-  if (!into) return;
-  const kind = el("kind").value;
-  const out = kind === "folder"
-    ? await act({ verb: "new_bureau", into, name })
-    : await act({ verb: "new_project", into, name, kind });
-  if (out) {
-    el("newname").value = "";
-    const made = out.did && out.did.made;
-    if (made) {
-      const o = find(made);
-      if (o) select(o);
-      // it has no place of its own yet: the loose grid put it somewhere.
-      // Dragging it in the page is how it gets one.
-      tell(kind === "folder"
-        ? "dossier créé — attrape-le dans la page pour le poser"
-        : "créé — attrape-le dans la page pour le poser");
-    }
-  }
 });
 
 function setPressed() {

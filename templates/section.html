@@ -77,7 +77,18 @@
 {%- set wall_narrow = resize_image(path=wall_path, width=1280, op="fit_width", format="webp", quality=72) -%}
 {%- set here = section.path | slugify -%}
 {%- if here == "" %}{% set here = "home" %}{% endif -%}
-<main class="desk"
+{#- `data-desk` is for the PANEL, and it is the only thing on this page
+    put there for the panel's sake. It says WHICH desk this is, as a
+    path under content/, so a right-click on the surface can offer what
+    may be made here — a folder on the main desktop, a photo or a film
+    or a page inside one.
+    
+    The alternative was reading the URL and mapping it back, which
+    means knowing about the language prefix and the base url in a
+    second place. The page already knows; it says so. -#}
+{#- The trailing "/" is left on rather than trimmed: this Tera has no
+    `trim_end_matches`, and the panel strips it in one line. -#}
+<main class="desk" data-desk="content/{{ section.colocated_path }}"
       style="view-transition-name:vt-{{ here }};
              --wallpaper:url('{{ wall_wide.url }}');
              --wallpaper-narrow:url('{{ wall_narrow.url }}')">

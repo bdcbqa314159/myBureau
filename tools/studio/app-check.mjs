@@ -353,6 +353,27 @@ const sandbox = {
               video: null, doc: null, languages: ["en", "fr"],
             }],
           }, {
+            // A GALLERY AND A SELECTION on the main desktop, which the
+            // fixture had neither of — so "offer them only while
+            // absent" had nothing to be false about and the main
+            // desktop offered all three.
+            kind: "desk", path: "content/pellicules", name: "pellicules",
+            gallery: true, depth: 1, empty: false, template: "gallery.html",
+            type: "folder", titles: { fr: "pellicules", en: "pellicules" },
+            bodies: { fr: "", en: "" }, x: "74", y: "24",
+            opens: null, icon: null, wallpaper: null, about: null,
+            photographs: ["01.jpg"], video: null, doc: null,
+            languages: ["en", "fr"], on: [], face: "",
+          }, {
+            kind: "desk", path: "content/travail-selectionne",
+            name: "travail-selectionne", gallery: false, depth: 1,
+            empty: false, template: "page.html", type: "folder",
+            titles: { fr: "travail sélectionné", en: "selected work" },
+            bodies: { fr: "", en: "" }, x: "50", y: "44",
+            opens: null, icon: null, wallpaper: null, about: null,
+            photographs: [], video: null, doc: null,
+            languages: ["en", "fr"], on: [], face: "",
+          }, {
             // THE FOLDER-PAGE AS A DESK OF ITS OWN, which is what the
             // real model does with every folder holding an `_index.md`
             // — see "ONE FOLDER, ONE SET OF FACTS" in model.py. Without
@@ -718,34 +739,66 @@ if (loaded) {
     && /data-drop="icon-/.test(look.innerHTML)
     && /32% \/ 12%/.test(look.innerHTML));
   if (daRow && daRow.__click) daRow.__click();
-  check("there is a way to make something new",
-    /<button[^>]*id="make"/.test(markup) && /<select[^>]*id="kind"/.test(markup));
+  // REVERSED: THE ROW IS GONE. It was `dans …`, `quoi créer`, a name
+  // and a button — four controls to say two things, and she could pick
+  // a film and `dans: pellicules`, press Créer and be told no.
+  //
+  // She right-clicks the surface now. Pointing says where, so the menu
+  // offers only what belongs there and the refusal is unreachable
+  // rather than explained.
+  check("there is no row of selects to make something with",
+    !/id="make"/.test(markup) && !/id="kind"/.test(markup)
+    && !/id="into"/.test(markup) && !/id="newname"/.test(markup));
+  check("and the panel says how to create instead",
+    /Clic droit/.test(markup));
   check("and a way to look INSIDE a thing rather than at its desk",
     /id="aspage"/.test(markup) && (listeners.get("aspage:click") || []).length > 0);
 
-  check("the panel says where a new thing is going",
-    /<select[^>]*id="into"/.test(markup) && byId.get("into").children.length > 0);
-  // Each kind must say what it really makes. "un document" produced a
-  // project called X.pdf and then asked for photographs, because the
-  // engine cannot show a PDF — the extension only ever chose the icon.
-  const kindSel = byId.get("kind"), willbe = byId.get("willbe");
-  const said = {};
-  for (const k of ["photos", "film", "document", "page"]) {
-    kindSel.value = k;
-    for (const fn of listeners.get("kind:change") || []) fn();
-    said[k] = willbe.innerHTML;
+  // WHAT MAY BE MADE WHERE, asked of the real function. The menu is
+  // drawn into the framed page, so this checks the decision rather
+  // than the markup — and the decision is the whole point: a refusal
+  // that cannot be reached beats one that is explained.
+  // The desks the fixture serves, read back from the tree the panel was
+  // given rather than written out twice.
+  const DESKS_IN_FIXTURE = () => [
+    { path: "content", depth: 0, gallery: false, template: "index.html" },
+    { path: "content/da", depth: 1, gallery: false, template: "section.html" },
+    { path: "content/pellicules", depth: 1, gallery: true, template: "gallery.html" },
+    { path: "content/travail-selectionne", depth: 1, gallery: false,
+      template: "page.html" },
+  ];
+  if (typeof sandbox.whatFitsIn === "function") {
+    const names = (p) => sandbox.whatFitsIn(p).map(([k]) => k);
+    check("the main desktop offers a folder, and nothing else while"
+      + " the gallery and the selection are both there",
+      JSON.stringify(names("content")) === JSON.stringify(["folder"]),
+      JSON.stringify(names("content")));
+    check("a bureau offers a photo, a film and a page",
+      JSON.stringify(names("content/da"))
+      === JSON.stringify(["photo", "video", "page"]),
+      JSON.stringify(names("content/da")));
+    check("and a thing that is not a desk offers nothing",
+      names("content/da/cosette/nocturne").length === 0);
+    check("a gallery offers nothing — it holds the photographs she drops",
+      names("content/pellicules").length === 0);
+    // AND THE SINGLETONS COME BACK WHEN THEY GO. This is the whole
+    // point of the rule: she can clear the desktop and build it again,
+    // and the menu offers what is missing.
+    // `model` is a `let` in app.js and not reachable from here, so the
+    // desks are passed in — which is the function's real input.
+    const whole = sandbox.whatFitsIn ? DESKS_IN_FIXTURE() : [];
+    const without = (p) => whole.filter((d) => d.path !== p);
+    const names2 = (p, ds) => sandbox.whatFitsIn(p, ds).map(([k]) => k);
+    check("wipe the gallery and the main desktop offers one again",
+      names2("content", without("content/pellicules")).includes("gallery"),
+      JSON.stringify(names2("content", without("content/pellicules"))));
+    check("wipe the selection and it offers one again",
+      names2("content", without("content/travail-selectionne"))
+        .includes("selection"));
+  } else {
+    check("whatFitsIn is reachable", false, "not a function");
   }
-  check("every kind says what it really makes",
-    Object.values(said).every((s) => s.length > 20)
-    && new Set(Object.values(said)).size === 4, JSON.stringify(said).slice(0, 160));
-  check("and the document one says the PDF is shown, in its own page",
-    /PDF/.test(said.document) && /page/i.test(said.document)
-    && !/JPEG/i.test(said.document), said.document);
-  kindSel.value = "photos";
-  for (const fn of listeners.get("kind:change") || []) fn();
 
-  check("and what it will do once it is there",
-    byId.get("willbe").innerHTML.length > 10, byId.get("willbe").innerHTML);
   check("a folder's job is explained, because it depends on where it is",
     /propre page|fenêtre|bandeau/.test(look.innerHTML), look.innerHTML.slice(0, 120));
 

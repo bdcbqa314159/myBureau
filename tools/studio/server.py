@@ -343,7 +343,8 @@ class Studio(http.server.BaseHTTPRequestHandler):
         if name == "new_project":
             return verbs.new_project(ask["into"], ask["name"], ask.get("kind", "photos"))
         if name == "new_bureau":
-            return verbs.new_bureau(ask["into"], ask["name"])
+            return verbs.new_bureau(ask["into"], ask["name"],
+                                    ask.get("display", "desk"))
         if name == "move":
             return verbs.move(ask["item"], ask["into"])
         if name == "throw_away":
