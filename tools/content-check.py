@@ -1652,11 +1652,72 @@ def case_travail_selectionne_is_a_canvas(d: pathlib.Path) -> list[tuple[str, boo
     # between the two, and once when the canvas became a <div> inside
     # the page's own <main>. Anchor on the one thing meant.
     tall = re.search(r'class="canvas"[^>]*--tall:([\d.]+)', html)
-    put = {m.group(1): (float(m.group(2)), float(m.group(3)), float(m.group(4)),
-                        int(m.group(5)))
-           for m in re.finditer(
-               r'data-shot="([^"]+)"\s+style="--x:([\d.]+); --y:([\d.]+);'
-               r' --w:([\d.]+); --o:(\d+)"', html)}
+    # EACH PROPERTY BY NAME, not the sequence they happen to be written
+    # in. This matched `--x; --y; --w; --o` in that exact order with the
+    # quote right after, and broke the moment the phone's three numbers
+    # were added to the same attribute — every expectation in the case
+    # failed at once, for no reason to do with any of them.
+    style = {}
+    for m in re.finditer(r'data-shot="([^"]+)"[^>]*?style="([^"]*)"', html, re.S):
+        style[m.group(1)] = dict(
+            (k, v) for k, v in re.findall(r'--([\w-]+)\s*:\s*([^;"]+)',
+                                          m.group(2)))
+
+    def prop(name: str, key: str, fallback=None):
+        raw = style.get(name, {}).get(key)
+        if raw is None:
+            return fallback
+        try:
+            return float(raw)
+        except ValueError:
+            return raw.strip()
+
+    # EVERY TEMPLATE, not only this one: `section.assets` is the
+    # prefixed sort. A page's `assets` are plain paths, which is why
+    # page.html does not need this and is not asked for it.
+    loose = []
+    for f in sorted((d / "templates").glob("*.html")):
+        body = f.read_text(encoding="utf-8")
+        loops = body.count("in section.assets")
+        strips = body.count('config.default_language')
+        if loops > strips:
+            loose.append("{}: {} loop(s), {} strip(s)".format(
+                f.name, loops, strips))
+
+    # THE SAME, READ OFF THE ENGLISH PAGE. A photograph has no
+    # language and the composition is one composition.
+    en_html = page(d, "en/travail-selectionne/index.html")
+    en_put = {}
+    for m in re.finditer(r'data-shot="([^"]+)"[^>]*?style="([^"]*)"', en_html, re.S):
+        got = dict(re.findall(r'--([\w-]+)\s*:\s*([^;"]+)', m.group(2)))
+        def one(k, cast=float):
+            try:
+                return cast(got.get(k, ""))
+            except ValueError:
+                return -1.0
+        en_put[m.group(1)] = (one("x"), one("y"), one("w"), one("o", int))
+
+    def side(name: str) -> str:
+        """Which edge it hangs from, from the pair of margins.
+
+        Read as a WORD rather than two numbers: `--pml:0` comes back as
+        0.0 and `--pmr:auto` as a string, and an expectation comparing
+        those to "0" and "auto" fails while the page is perfectly
+        right.
+        """
+        left = str(style.get(name, {}).get("pml", "")).strip()
+        right = str(style.get(name, {}).get("pmr", "")).strip()
+        if left == "auto" and right == "auto":
+            return "centre"
+        if left == "auto":
+            return "right"
+        if right == "auto":
+            return "left"
+        return "none"
+
+    put = {f: (prop(f, "x", -1.0), prop(f, "y", -1.0),
+               prop(f, "w", -1.0), int(prop(f, "o", -1)))
+           for f in style}
 
     # A PICTURE THAT IS NOT THERE AT ALL is what half of these are
     # guarding against, so reading it must come back as a plain NO on
@@ -1739,13 +1800,69 @@ def case_travail_selectionne_is_a_canvas(d: pathlib.Path) -> list[tuple[str, boo
          units == []),
         ("and the box reserves its shape before a picture has loaded",
          "aspect-ratio: 100 / var(--tall" in css),
-        # CRITERION 12 — HER DECISION, 2026-11-14: varying widths on a
-        # phone read as raggedness rather than composition.
-        ("on a phone it is one column, every picture the whole width",
-         ".canvas .shot" in phone and "width: 100%" in phone
-         and "position: static" in phone),
-        ("and it runs in the order she arranged them, not zola's",
+        # CRITERION 12, REWRITTEN 2026-11-15. It read "every picture
+        # the whole width", which was the 2026-11-14 decision: the
+        # client saw varying widths on a phone and called them
+        # raggedness. What she was shown then was widths alone,
+        # jittering, with nothing else moving — the page had no
+        # composition for them to belong to. It has one now, and the
+        # ask was *the aesthetics, this is the essence — something less
+        # rigid, so one can see and keep scrolling*. So three things
+        # cross over and the coordinates do not: the side, the width
+        # within a band, and the pause.
+        ("on a phone it is one column, and nothing is positioned",
+         ".canvas .shot" in phone and "position: static" in phone),
+        ("it runs in the order she arranged them, not zola's",
          "order: var(--o" in phone),
+        ("each picture keeps its own width, side and pause",
+         "var(--pw" in phone and "var(--pml" in phone
+         and "var(--pgap" in phone),
+        # AND THE NUMBERS THEMSELVES, off the rendered page.
+        ("not one of them is a sliver",
+         all(prop(f, "pw", 0) >= 70 for f in style)),
+        ("her narrowest is still the narrowest, her widest the widest",
+         prop("02.jpg", "pw") == min(prop(f, "pw") for f in style
+                                     if f != "09.jpg")
+         and prop("03.jpg", "pw") == 100),
+        # SIDES: 02 sits at left 2 (centre 16) and 03 at left 42
+        # (centre 70) — opposite halves, so opposite edges.
+        ("a picture composed on the left hangs from the left",
+         side("02.jpg") == "left"),
+        ("and one composed on the right hangs from the right",
+         side("03.jpg") == "right"),
+        ("the sides alternate, as her composition does",
+         [side(f) for f in sorted(style) if f != "09.jpg"]
+         == ["right", "left", "right", "left", "right", "left",
+             "right", "left"]),
+        # PAUSES: hers vary, so these must vary — and the first has
+        # none, because there is nothing above it.
+        ("the pauses follow the gaps she left, rather than repeating",
+         prop("01.jpg", "pgap") == 0
+         and len({prop(f, "pgap") for f in style if f != "01.jpg"}) >= 4),
+        # THE COMPOSITION IS ONE, NOT ONE PER LANGUAGE.
+        ("the English page is built, and places the same pictures",
+         en_put == {f: v for f, v in put.items()}),
+        # AND EVERY LOOP OVER `section.assets` STRIPS THE LANGUAGE.
+        #
+        # THIS IS THE ONE THAT HAD TO BE A SOURCE CHECK. A translated
+        # section reports its photographs under /<lang>/, and
+        # `/en/travail-selectionne/01.jpg` is not a file anybody can
+        # measure — `get_image_metadata` stops the build on it. The
+        # neighbour scan was added without the strip, and the suite
+        # reported eight to thirteen UNRELATED cases failing,
+        # differently on every run, none of them naming the cause.
+        #
+        # Differently on every run because ZOLA IS NOT DETERMINISTIC
+        # HERE: the same tree, built six times, failed twice. So no
+        # expectation that waits for a build can be trusted to catch
+        # it — the build above passes two times in three with the bug
+        # in place. The rule itself is what gets asserted instead, and
+        # it is exact: a loop over a section's assets that does not
+        # strip the prefix is the bug, every time.
+        ("every loop over a section's assets strips the language first",
+         loose == []),
+        ("and a picture she never placed takes none of it",
+         prop("09.jpg", "pw") == 100 and side("09.jpg") == "none"),
         ("which is a real order: the lowest picture is read last",
          max(put.items(), key=lambda kv: kv[1][1])[1][3]
          == max(v[3] for v in put.values())),
