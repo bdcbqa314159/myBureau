@@ -366,6 +366,26 @@ const sandbox = {
             }, {
               // a dossier that has not had its PDF yet — the state the
               // panel used to answer by asking for photographs
+              // A DOSSIER, and `opens`. Neither was ever set to
+              // anything in this fixture — `o.doc` was read six times
+              // by app.js and was null in every row, `o.opens` read
+              // once and null in every row. Audit 3.
+              kind: "project", path: "content/da/brochure", type: "page",
+              name: "brochure", template: "",
+              titles: { fr: "brochure.pdf", en: "brochure.pdf" },
+              bodies: { fr: "", en: "" },
+              x: "44", y: "18", opens: null, icon: null, wallpaper: null,
+              photographs: ["01.jpg"], video: null, doc: "dossier.pdf",
+              alt: {}, face: "", languages: ["en", "fr"],
+            }, {
+              kind: "project", path: "content/da/droit-a-la-page", type: "page",
+              name: "droit-a-la-page", template: "",
+              titles: { fr: "tout droit.jpg", en: "straight through.jpg" },
+              bodies: { fr: "", en: "" },
+              x: "46", y: "20", opens: "page", icon: null, wallpaper: null,
+              photographs: ["01.jpg"], video: null, doc: null,
+              alt: {}, face: "", languages: ["en", "fr"],
+            }, {
               kind: "project", path: "content/da/grocery", type: "page", name: "grocery", template: "",
               titles: { fr: "grocery.pdf", en: "grocery.pdf" },
               bodies: { fr: "", en: "" },
@@ -392,13 +412,20 @@ const sandbox = {
             photographs: ["01.jpg"], video: null, doc: null,
             languages: ["en", "fr"], on: [], face: "",
           }, {
+            // A CANVAS, which this fixture did not hold. It carried
+            // `template: "page.html"` and no `canvas` at all, so every
+            // rule the panel keys on `o.canvas` — the list that offers
+            // no order, because the page reads none — was dead code
+            // here. Audit 3 found it by listing the fields app.js
+            // reads against the fields this fixture ever sets.
             kind: "desk", path: "content/travail-selectionne",
-            name: "travail-selectionne", gallery: false, depth: 1,
-            empty: false, template: "page.html", type: "folder",
+            name: "travail-selectionne", gallery: false, canvas: true,
+            holds_photographs: true, can_receive: false, depth: 1,
+            empty: false, template: "selection.html", type: "folder",
             titles: { fr: "travail sélectionné", en: "selected work" },
             bodies: { fr: "", en: "" }, x: "50", y: "44",
             opens: null, icon: null, wallpaper: null, about: null,
-            photographs: [], video: null, doc: null,
+            photographs: ["01.jpg", "02.jpg"], video: null, doc: null,
             languages: ["en", "fr"], on: [], face: "",
           }, {
             // THE FOLDER-PAGE AS A DESK OF ITS OWN, which is what the
@@ -1654,6 +1681,33 @@ if (loaded) {
       JSON.stringify(sent));
     if (typeof sandbox.setWidth === "function") sandbox.setWidth(false);
     sandbox.fetch = keepFetch;
+  }
+
+  // ---- the shapes this fixture never had --------------------------
+  //
+  // AUDIT 3 listed every field app.js reads against every field this
+  // fixture ever sets to something. Four came back never: `canvas`,
+  // `doc`, `opens` and `holds`. Each is a branch the panel takes and
+  // nothing here had ever taken — and giving the fixture a canvas
+  // immediately failed a check whose label said the selection was
+  // already there, because the panel was still looking for one by its
+  // OLD template name and offering a second. See specs/the-audit.md.
+  if (typeof sandbox.kindOf === "function") {
+    const say = sandbox.kindOf;
+    check("a page holding a dossier is named as one",
+      say({ kind: "project", doc: "dossier.pdf", photographs: ["01.jpg"] })
+      === "dossier · page");
+    check("a thing that asks for its page is named as one",
+      say({ kind: "project", opens: "page", photographs: ["01.jpg"], doc: null })
+      === "projet · page");
+    check("  and a film still outranks both",
+      say({ kind: "project", video: "film.mp4", doc: "x.pdf",
+            opens: "page", photographs: [] }) === "film");
+    check("while one photograph is still one photograph",
+      say({ kind: "project", photographs: ["01.jpg"], doc: null, opens: null })
+      === "une photo");
+  } else {
+    check("the panel exposes kindOf, so what a row is called can be driven", false);
   }
 
   // ---- where she was, across a reload of the panel -----------------

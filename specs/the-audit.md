@@ -1,6 +1,6 @@
 # The audit
 
-**Status:** audits 1 and 2 done and fixed — fourteen findings.
+**Status:** audits 1, 2 and 3 done and fixed — twenty findings.
 **Date:** 2026-11-15
 
 Seven architectures, ordered by **what a bug in each one costs**. Not by
@@ -457,3 +457,130 @@ be refused is worse than no gesture.
 - `look.py`'s refusals — a file git ignores, a file zola cannot read —
   stop the run rather than printing advice, which is the right shape
   for the two things that are not advice.
+
+
+---
+
+# Audit 3 — the checks
+
+`content-check.py` (3,672), `studio/check.py` (1,978),
+`app-check.mjs` (1,768), `desk-check.mjs`, `contact-check.mjs`, read
+and — more usefully — **measured**, on 2026-11-15.
+
+484 expectations across 58 cases in content-check alone, 341 `check()`
+calls in the panel's suite. Reading all of that for "could this ever
+fail?" is the wrong instrument. So the audit ran a **mutation sweep**:
+eighteen plausible regressions, applied one at a time to the real
+code, with all five suites and the build asked whether they noticed.
+
+**Four of eighteen went completely unnoticed.** One of those four was
+the sweep's own mistake, which is worth as much as the rest.
+
+## What the sweep found
+
+| broken on purpose | noticed by |
+|---|---|
+| a photograph loses its alt | content |
+| the canvas drops a picture's width | content |
+| a desk stops saying which desk it is | content |
+| the canvas loses its reserved shape | content |
+| a cursor becomes the system arrow | content |
+| a photo accepts a second image | panel |
+| a thrown photograph is unlinked, not binned | panel |
+| the write gate stops checking the fence | panel |
+| a verb writes only the French file | content, panel |
+| the desk drag works in the phone view | app |
+| the order is read from file names again | content |
+| a page stops reading her description | content |
+| the phone keeps the composition's widths | content |
+| the panel stops sending its token | app |
+| **the gallery stops lazy-loading** | **nobody** |
+| **the gallery stops being a dark room** | **nobody** |
+| **the model counts our files as her photographs** | **nobody** |
+| **a dragged icon also opens its window** | **nobody** |
+
+### A3-F1 · the gallery had checks for what it holds and none for what it is
+
+Twelve full-size photographs loading at once, and a white ground
+instead of a dark room — her brief, and the whole of what the page
+is. Every suite stayed green for both.
+
+### A3-F2 · the panel would have offered her a film's affiche to throw away
+
+`model.photographs` skips `icon`, `poster`, `wallpaper`, `about` and a
+dossier's `page-NN`. Remove the skip and nothing notices: the panel
+lists a film's affiche among her photographs, to drag into an order,
+to describe, and to bin.
+
+### A3-F3 · a dragged icon also opening its window
+
+`desk-check` drives a click on an icon — but never a click that
+arrives **after a drag**, which is the handler's first branch and the
+one that stops a move from also being an open. Comment out its
+`preventDefault()` and nothing anywhere sees it.
+
+### A3-F4 · the sweep's own mistake, which is the useful one
+
+The nineteenth result said "nobody" for that same mutation after it
+was fixed. It was wrong: the sweep had edited `src/desk.ts`, and
+`desk-check` runs the COMPILED `static/js/desk.js`. The mutation never
+reached the code under test.
+
+**A mutation sweep must break what the suites actually consume**, or
+it reports gaps that are not there — and the first instinct on reading
+"nobody noticed" is to write a check for a hole that does not exist.
+
+It happened a second time, on the same row: rewritten to edit the
+compiled file, the mutation INSERTED a `preventDefault()` into a
+branch that already had one. A no-op, reported as a gap. **A mutation
+nobody notices is either a hole or a no-op, and telling the two apart
+is the whole discipline** — the sweep is only as honest as the breaks
+in it. The row removes the suppression now, and `desk-check` fails on
+it.
+
+All eighteen are covered. `tools/mutate.py` is kept so the question
+can be asked again; it is not in CI, because it edits the working
+tree.
+
+## A3-F5 · a fixture that lacked four shapes, and hid a live bug
+
+Listing every field `app.js` reads against every field its fixture
+ever sets to something gave four that were never set at all:
+`canvas`, `doc`, `opens`, `holds`. Four branches the panel takes that
+nothing had ever taken.
+
+Giving the fixture a real canvas failed a check at once — and the
+check was right. `whatFitsIn` tested for an existing selection with
+`x.template === "page.html"`, which is how a selection was spelled
+until travail sélectionné became a canvas on `selection.html`. **Since
+that day the panel has offered "une sélection" on a desktop that
+already has one**, and the server refuses it. The fixture hid it by
+still saying `page.html`: the panel's wrong answer matched a wrong
+world.
+
+It asks the model now — `x.canvas`, the same fact the server reads.
+
+## A3-F6 · thirteen patterns that pinned attribute order
+
+`<main class="desk" data-desk="…"`, `<dialog class="win win-about"
+id="about">`, `width="\d+" height="\d+"` — patterns that break when
+anything is inserted between two attributes. The `--tall` anchor broke
+three times in two days this way, each time failing a check for a
+reason with nothing to do with what it asserts. Eight rewritten to
+`[^>]*`; proven by adding an attribute to a template and watching the
+suite stay green.
+
+## What was read and found sound
+
+- **No tautologies.** Every expectation whose predicate is a literal
+  was checked by hand: 19 in the panel's suite are `check(…, False)`
+  in a `try` with `check(…, True)` in its `except`, which is the "it
+  must refuse" idiom. The two in content-check are an early-return
+  failure path and an honest skip whose label says it checked nothing.
+- **No case builds without asserting the build.** Two looked like it
+  and both assert it under another name.
+- `js-is-current.sh` recompiles before comparing, so it cannot be
+  fooled by a stale `static/js` — tested by mutating the compiled file
+  and watching it repair and report.
+- `prune.py`'s own guard refuses the run rather than uploading a site
+  missing a file it asks for.

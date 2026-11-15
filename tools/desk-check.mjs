@@ -374,5 +374,99 @@ check("while a window that IS there opens, and the link is suppressed",
       there.prevented === true && real.opened === true,
       `prevented=${there.prevented} opened=${real.opened}`);
 
+// --- a click that follows a DRAG -------------------------------------
+//
+// AUDIT 3 FOUND THIS MISSING. The two checks above drive a click on an
+// icon that was never moved; the handler's FIRST branch is the other
+// case — a click arriving straight after a drag, which must open
+// nothing and navigate nowhere, because she was moving the thing.
+//
+// A mutation sweep commented out the `preventDefault()` in that branch
+// and all five suites stayed green: dragging an icon would have ALSO
+// opened its page, and nothing here could see it. See
+// specs/the-audit.md.
+//
+// Driven through the real handlers — pointerdown, a move past the 6px
+// threshold, pointerup, then the click — because the flag that branch
+// reads is set by the drag itself and by nothing else.
+function dragThenClick({ move }) {
+  const seen = {};
+  const opened = [];
+  class FakeDialog2 {
+    constructor() { this.opened = false; }
+    showModal() { this.opened = true; opened.push(this); }
+    close() {}
+  }
+  const dial = new FakeDialog2();
+  const icon = {
+    className: "icon",
+    dataset: { window: "preview-une" },
+    classList: { add() {}, remove() {}, toggle() {}, contains: () => false },
+    style: fakeStyle(),
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 160, height: 180 }),
+    addEventListener(type, fn) { (seen[type] ||= []).push(fn); },
+    removeEventListener(type, fn) {
+      seen[type] = (seen[type] || []).filter((f) => f !== fn);
+    },
+    setPointerCapture() {}, releasePointerCapture() {},
+    closest: (sel) => (sel.includes(".desk") ? deskNode : null),
+    querySelector: () => null, querySelectorAll: () => nothing,
+    offsetParent: null,
+  };
+  const deskNode = {
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 1200, height: 800 }),
+  };
+  // `e.target instanceof Element` is the handler's first question —
+  // it refuses to drag anything whose target is not one. So the
+  // sandbox needs the constructor and the icon needs to be an
+  // instance of it, or the drag never starts and the check would be
+  // asserting against a handler that bailed on line one.
+  function Element() {}
+  Object.setPrototypeOf(icon, Element.prototype);
+  const ctxd = {
+    ...sandbox,
+    Element,
+    HTMLElement: Element,
+    HTMLDialogElement: FakeDialog2,
+    MouseEvent: class MouseEvent {},
+    document: {
+      ...sandbox.document,
+      // BOTH passes answer with this icon: `.desk .icon` is what makes
+      // it draggable, and the bare `.icon` is what attaches the click
+      // handler. The existing driver answers only the second, which is
+      // exactly why the dragged branch was never reached.
+      querySelectorAll: (sel) => (String(sel).includes("icon") ? [icon] : nothing),
+      getElementById: (id) => (id === "preview-une" ? dial : null),
+    },
+  };
+  ctxd.globalThis = ctxd;
+  vm.runInContext(readFileSync("static/js/desk.js", "utf8"), vm.createContext(ctxd));
+  const fire = (type, ev) => (seen[type] || []).slice().forEach((fn) => fn(ev));
+  const at = (x, y) => ({ button: 0, pointerId: 1, clientX: x, clientY: y,
+                          target: icon, preventDefault() {},
+                          stopImmediatePropagation() {} });
+  icon.target = icon;
+  fire("pointerdown", { ...at(10, 10), target: icon });
+  if (move) fire("pointermove", at(10 + move, 10 + move));
+  fire("pointerup", at(10 + (move || 0), 10 + (move || 0)));
+  let prevented = false;
+  fire("click", { detail: 1, preventDefault() { prevented = true; },
+                  stopImmediatePropagation() {} });
+  return { prevented, opened: dial.opened, wired: Boolean(seen["pointerdown"]) };
+}
+
+console.log("\n  a click that arrives after a drag:");
+const dragged = dragThenClick({ move: 40 });
+check("the icon is draggable at all", dragged.wired === true);
+check("a dragged icon does not also open its window",
+      dragged.opened === false, `opened=${dragged.opened}`);
+check("  and does not navigate either — the link is suppressed",
+      dragged.prevented === true, `prevented=${dragged.prevented}`);
+// THE CONTROL. A handler that suppressed everything would satisfy both
+// lines above and break every icon on the site.
+const tapped = dragThenClick({ move: 0 });
+check("while a tap — a press that never moved — still opens it",
+      tapped.opened === true, `opened=${tapped.opened}`);
+
 console.log(failed === 0 ? "\n  everything holds\n" : `\n  ${failed} FAILED\n`);
 process.exit(failed === 0 ? 0 : 1);

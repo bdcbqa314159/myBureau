@@ -905,6 +905,38 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("set_alt asks the same question of its name",
           "pas là" in refused(verbs.set_alt, proj, "../../_index.md", "x"))
 
+    # ---- AUDIT 3: OUR FILES ARE NOT HER PHOTOGRAPHS ----------------
+    #
+    # `icon.jpg`, `poster.jpg`, `wallpaper.jpg` and a dossier's
+    # `page-NN.png` are the engine's, whatever folder they sit in. The
+    # model skips them when it lists what the panel may offer — and
+    # when audit 3 removed that skip on purpose, EVERY SUITE STAYED
+    # GREEN. The panel would have offered her a film's affiche in the
+    # photographs list: to drag into an order, to describe, and to
+    # throw in the bin.
+    #
+    # Asserted on a folder that holds one of each, because a fixture
+    # without them cannot tell a working skip from a missing one.
+    import model as spoken_model
+    spoken_model.ROOT, spoken_model.CONTENT = tmp, tmp / "content"
+    mixed = tmp / "content" / "da" / "mélange"
+    mixed.mkdir()
+    (mixed / "index.md").write_text(
+        '+++\ntitle = "mélange"\n\n[extra]\nkind = "page"\n+++\n\n\n',
+        encoding="utf-8")
+    a_photograph = (ROOT / "content/da/theodora-01/01.jpg").read_bytes()
+    for name in ("01.jpg", "02.jpg", "icon.jpg", "poster.jpg",
+                 "wallpaper.jpg", "about.jpg", "page-01.png"):
+        (mixed / name).write_bytes(a_photograph)
+    listed = spoken_model.photographs(mixed, spoken_model.front(mixed / "index.md"))
+    check("the panel is offered her photographs and nothing else",
+          listed == ["01.jpg", "02.jpg"], str(listed))
+    check("  and the verb agrees, so the list and the bin cannot differ",
+          verbs.photographs_in(mixed) == listed, str(verbs.photographs_in(mixed)))
+    check("  a dossier's pages are the engine's too",
+          "page-01.png" not in listed)
+    shutil.rmtree(mixed)
+
     # ---- AUDIT 2: A CANVAS HAS NO ORDER TO GIVE --------------------
     #
     # travail sélectionné places each picture by a left, a top and a
