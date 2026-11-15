@@ -766,10 +766,17 @@ if (loaded) {
     choose("nocturne") && !/data-title/.test(look.innerHTML));
   check("  nor a face, because no icon is drawn for it",
     !/data-drop="icon"/.test(look.innerHTML));
-  check("  nor a position, the route being in name order",
+  check("  nor a position, nothing drawing it on a desk",
     !/34% \/ 43%/.test(look.innerHTML) && !/pas encore posé/.test(look.innerHTML));
+  // THE SENTENCE CHANGED WITH THE ROAD. It said the thing "s'affiche
+  // dans l'ordre de son nom de dossier", which was true while travail
+  // sélectionné laid its children out in a route — and the route went
+  // when it became a canvas. The check held the old words, so it was
+  // keeping a description of the site true to a version of it that no
+  // longer exists. What endures is that the panel SAYS why it is
+  // offering less, rather than silently offering less. Audit 4.
   check("  and it says so, rather than just showing less",
-    /dans l'ordre de son nom/.test(look.innerHTML));
+    /ni titre ni position/.test(look.innerHTML));
   // A PHOTO HOLDS ONE, and `nocturne` has it — so there is nowhere to
   // drop a second, by design: `add_image` would refuse it. What is
   // offered is the picture itself, with its description and its ✕.
@@ -854,6 +861,19 @@ if (loaded) {
         if (at >= 0) this.children.splice(at, 1);
         const to = before ? this.children.indexOf(before) : this.children.length;
         this.children.splice(to < 0 ? this.children.length : to, 0, node);
+        this.relink();
+      },
+      // `nextSibling` IS LIVE IN A BROWSER. This stub set it once when
+      // the fixture was built and never again, so code that remembers
+      // `a.nextSibling` to put a photograph back — which is what a
+      // refused reorder does — was handed a pointer from the original
+      // layout. The check then failed against the stub rather than
+      // against the panel. Audit 4.
+      relink() {
+        this.children.forEach((c, i) => {
+          c.nextSibling = this.children[i + 1] || null;
+          c.parentNode = this;
+        });
       },
     };
     for (const s of order) { s.parentNode = holder; }
@@ -929,6 +949,32 @@ if (loaded) {
       JSON.stringify(sent));
     check("  and it names the gallery it belongs to, not a guess",
       sent && sent.item === "content/pellicules", sent && sent.item);
+    // AND A REFUSAL PUTS IT BACK HERE TOO. Audit 4: the grid was
+    // reordered before the verb was called and left reordered when the
+    // verb said no, so the gallery showed an order the file did not
+    // have.
+    {
+      const was = holder.children.map((s) => s.dataset.shot);
+      const keep = sandbox.fetch;
+      sandbox.fetch = async () => ({ ok: false, json: async () => ({ error: "non" }) });
+      // ONTO A DIFFERENT PHOTOGRAPH. The first spelling dragged
+      // `children[0]`, which by now is the one the successful drag
+      // above moved to the front — and `elementFromPoint` found that
+      // same photograph, so the handler returned without moving
+      // anything and the check passed against a drag that never
+      // happened. The rects are keyed by NAME: 01 at the top, 02 in
+      // the middle, 03 at the bottom.
+      const mover = holder.children.find((s) => s.dataset.shot === "02.jpg");
+      fire(mover, "pointerdown", { button: 0, clientX: 10, clientY: 110 });
+      fire(mover, "pointermove", { clientX: 12, clientY: 10 });
+      await fireAwait(mover, "pointerup", { button: 0, clientX: 12, clientY: 10 });
+      check("a refused order puts the photograph back in the grid",
+        JSON.stringify(holder.children.map((s) => s.dataset.shot))
+        === JSON.stringify(was),
+        JSON.stringify(holder.children.map((s) => s.dataset.shot)));
+      sandbox.fetch = keep;
+    }
+
     // AND THE DRAG IS NOT ALSO A CLICK. The pointer was captured, so
     // the click lands on the photograph she just moved.
     stoppedClick = false;
@@ -964,12 +1010,20 @@ if (loaded) {
   // that cannot be reached beats one that is explained.
   // The desks the fixture serves, read back from the tree the panel was
   // given rather than written out twice.
+  // A SECOND DESCRIPTION OF THE SAME DESKTOP, and audit 3 updated only
+  // the other one. This still said travail sélectionné was a
+  // `page.html` with no `canvas`, so every answer taken from it was an
+  // answer about a world that no longer exists. Two fixtures for one
+  // thing is the same defect the audits keep finding in the code.
   const DESKS_IN_FIXTURE = () => [
-    { path: "content", depth: 0, gallery: false, template: "index.html" },
-    { path: "content/da", depth: 1, gallery: false, template: "section.html" },
-    { path: "content/pellicules", depth: 1, gallery: true, template: "gallery.html" },
+    { path: "content", depth: 0, gallery: false, canvas: false,
+      template: "index.html" },
+    { path: "content/da", depth: 1, gallery: false, canvas: false,
+      template: "section.html" },
+    { path: "content/pellicules", depth: 1, gallery: true, canvas: false,
+      template: "gallery.html" },
     { path: "content/travail-selectionne", depth: 1, gallery: false,
-      template: "page.html" },
+      canvas: true, template: "selection.html" },
   ];
   if (typeof sandbox.whatFitsIn === "function") {
     const names = (p) => sandbox.whatFitsIn(p).map(([k]) => k);
@@ -1670,6 +1724,32 @@ if (loaded) {
     check("  and a corner dragged past the edge stops at it",
       sent && sent.left + sent.width === 100, JSON.stringify(sent));
 
+    // A REFUSAL PUTS THE PICTURE BACK.
+    //
+    // AUDIT 4. The panel moves the picture first and asks the server
+    // second, which is right — she sees it move under her hand. But a
+    // REFUSAL left it where she dropped it: the page showed one
+    // composition and the file held another, until something reloaded
+    // the frame and threw her arrangement away. The same "it springs
+    // back" she reported in the gallery, with a different cause.
+    sent = null;
+    sandbox.fetch = async () => ({ ok: false,
+      json: async () => ({ error: "non" }) });
+    const wasX = one.style.getPropertyValue("--x");
+    const wasY = one.style.getPropertyValue("--y");
+    fire(one, "pointerdown", { button: 0, clientX: 400, clientY: 20 });
+    fire(one, "pointermove", { clientX: 700, clientY: 500 });
+    await fireAwait(one, "pointerup", { clientX: 700, clientY: 500 });
+    check("a refused placement puts the picture back where it was",
+      one.style.getPropertyValue("--x") === wasX
+      && one.style.getPropertyValue("--y") === wasY,
+      one.style.getPropertyValue("--x") + "," + one.style.getPropertyValue("--y")
+      + " was " + wasX + "," + wasY);
+    sandbox.fetch = async (url, opts) => {
+      if (opts && opts.body) sent = JSON.parse(opts.body);
+      return { ok: true, json: async () => ({ n: 2, did: {} }) };
+    };
+
     // LOOKING, NOT ARRANGING, in the phone view — the desk's rule and
     // the gallery's.
     sent = null;
@@ -1681,6 +1761,62 @@ if (loaded) {
       JSON.stringify(sent));
     if (typeof sandbox.setWidth === "function") sandbox.setWidth(false);
     sandbox.fetch = keepFetch;
+  }
+
+  // ---- the panel offers only what the server accepts ---------------
+  //
+  // AUDIT 4. Three places asked "is this a gallery?" where the question
+  // is "does this hold photographs?" — so a CANVAS, which is the same
+  // object with a different page, was offered things the server
+  // refuses. Each one is a menu entry or a sentence that can only end
+  // in a refusal. See specs/the-audit.md.
+  if (typeof sandbox.whatFitsIn === "function") {
+    const whole = DESKS_IN_FIXTURE();
+    const inside = (p) => sandbox.whatFitsIn(p, whole).map(([k]) => k);
+    check("nothing may be created inside a gallery",
+      JSON.stringify(inside("content/pellicules")) === "[]",
+      JSON.stringify(inside("content/pellicules")));
+    check("nor inside a canvas, which holds photographs just the same",
+      JSON.stringify(inside("content/travail-selectionne")) === "[]",
+      JSON.stringify(inside("content/travail-selectionne")));
+    check("  while an ordinary bureau still offers its three",
+      inside("content/da").length === 3, JSON.stringify(inside("content/da")));
+  }
+
+  // AND WHERE A NEW THING WOULD GO, with a canvas chosen. `intoNow`
+  // asked the same gallery-only question, so choosing travail
+  // sélectionné aimed the create button at it — refused by the server
+  // after she had typed a name.
+  if (typeof sandbox.intoNow === "function" && typeof sandbox.select === "function") {
+    const everyRow0 = [];
+    const answer0 = await (await sandbox.fetch("/api/tree")).json();
+    (function walk(x) { everyRow0.push(x); (x.on || []).forEach(walk); })
+      .call(null, { on: answer0.tree.desks });
+    const canvasRow = everyRow0.find((r) => r.path === "content/travail-selectionne");
+    const galleryRow = everyRow0.find((r) => r.path === "content/pellicules");
+    if (canvasRow) {
+      sandbox.select(canvasRow);
+      check("a canvas is not offered as the place to create something",
+        sandbox.intoNow() !== "content/travail-selectionne", sandbox.intoNow());
+    }
+    if (galleryRow) {
+      sandbox.select(galleryRow);
+      check("  and neither is a gallery, which is the rule it came from",
+        sandbox.intoNow() !== "content/pellicules", sandbox.intoNow());
+    }
+  }
+
+  // WHAT THE PANEL SAYS A DROP WILL DO, which has to be true.
+  if (typeof sandbox.dropPhotos === "function") {
+    const said = sandbox.dropPhotos;
+    check("a gallery is not promised an order by file name",
+      !/ordre de leur nom/.test(said({ gallery: true, type: "folder" })),
+      said({ gallery: true, type: "folder" }));
+    check("and a canvas is not promised that the first photo is the icon",
+      !/première est l'icône/.test(said({ canvas: true, type: "folder" })),
+      said({ canvas: true, type: "folder" }));
+    check("  while a page still is, because there it is true",
+      /première est l'icône/.test(said({ type: "page" })));
   }
 
   // ---- the shapes this fixture never had --------------------------

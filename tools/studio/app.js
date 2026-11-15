@@ -236,7 +236,12 @@ function intoNow() {
   if (!o) return "";
   // the desk it SITS ON if it is a thing, itself if it is a desk
   const d = model.desks.find((x) => x.path === o.path);
-  return d && !d.gallery ? d.path : deskOf(o);
+  // AND NOT A CANVAS EITHER. Choosing travail sélectionné made it the
+  // destination, so "Ajouter un dossier" aimed at a folder that holds
+  // photographs and nothing else — refused by the server, after she
+  // had typed a name. The third place in this file that asked about
+  // the gallery alone. Audit 4.
+  return d && !d.gallery && !d.canvas ? d.path : deskOf(o);
 }
 
 function sayWillBe() {
@@ -380,10 +385,21 @@ const DRAWN_FOLDERS = ["folder", "folder-olive", "folder-rust", "folder-slate"];
 
 /* Where photographs go, in the words the thing deserves. */
 function dropPhotos(o) {
-  return `<p class="drop" data-drop="photos">${
-    o.gallery ? "Dépose des photos ici. Elles s'affichent dans l'ordre de leur nom."
+  // WHAT EACH PAGE ACTUALLY DOES WITH THEM.
+  //
+  // The gallery was promised "dans l'ordre de leur nom", which stopped
+  // being true the day the order became `[extra.place]` — she arranges
+  // them and the names decide nothing. And a canvas fell through to
+  // "la première est l'icône", which is false twice over: it is a
+  // folder, so its icon is a drawing, and its pictures are placed
+  // rather than ordered. Audit 4.
+  const says = o.gallery
+    ? "Dépose des photos ici. Range-les ensuite en les faisant glisser."
+    : o.canvas
+      ? "Dépose des photos ici. Place-les ensuite sur la page elle-même."
       : o.type === "photo" ? "Dépose la photo ici."
-        : "Dépose des photos ici. La première est l'icône."}</p>`;
+        : "Dépose des photos ici. La première est l'icône.";
+  return `<p class="drop" data-drop="photos">${says}</p>`;
 }
 
 /* A photograph: one picture, and that is the whole object. */
@@ -659,7 +675,13 @@ function inspect(o) {
   // A GIF IS ITS OWN SLOT because it moves on the desk and a
   // photograph does not — two different answers, not one with a
   // format. Which slot a dropped file fills is read from its BYTES.
-  const chosen = o.face || "";
+  // NOT `chosen`, WHICH IS THE SELECTED PATH. This was a `const
+  // chosen` holding one of "folder" / "photo" / "gif", declared
+  // inside the same function that reads the module-level `chosen` —
+  // the path of the thing being inspected. Two different things, one
+  // name, one scope apart. Nothing read the wrong one yet; the next
+  // line written in here would have. Audit 4.
+  const faceIs = o.face || "";
   // A FOLDER'S FACE IS A FOLDER. On the main desktop a folder is
   // always a folder — her words — so it is offered the four drawings
   // and a drop for one of her own, and nothing else. A photograph or a
@@ -671,10 +693,10 @@ function inspect(o) {
   // photo", which mislabelled it and left a folder with no way to say
   // "this is my folder picture".
   const slot = (how, label, inner) => `
-    <li class="slot${chosen === how ? " is-chosen" : ""}" data-face="${how}">
+    <li class="slot${faceIs === how ? " is-chosen" : ""}" data-face="${how}">
       <span class="slot-what">${label}</span>
       ${inner}
-      ${chosen === how ? `<b class="slot-yes">${{
+      ${faceIs === how ? `<b class="slot-yes">${{
         folder: shown ? "ton dessin, en place" : "ce dessin, en place",
         photo: "cette image, en place",
         gif: "ce GIF, en place",
@@ -690,7 +712,7 @@ function inspect(o) {
       <ul class="slots${o.type === "folder" ? " one" : ""}">
         ${slot("folder", "un dossier", `
           <div class="slot-box" data-drop="icon-folder">${
-            chosen === "folder" && shown ? shown : `
+            faceIs === "folder" && shown ? shown : `
             ${DRAWN_FOLDERS.map((f) => `<button type="button" class="drawn${
               o.icon === "img/icons/" + f + ".svg" ? " is-chosen" : ""}"
               data-drawn="${f}" title="${f}"><img
@@ -700,14 +722,14 @@ function inspect(o) {
         ${o.type === "folder" ? "" : `
         ${slot("photo", "une photo", `
           <div class="slot-box" data-drop="icon-photo">${
-            chosen === "photo" ? shown : ""}</div>
+            faceIs === "photo" ? shown : ""}</div>
           <p class="drop" data-drop="icon-photo">Dépose une image.</p>`)}
         ${slot("gif", "un GIF", `
           <div class="slot-box" data-drop="icon-gif">${
-            chosen === "gif" ? shown : ""}</div>
+            faceIs === "gif" ? shown : ""}</div>
           <p class="drop" data-drop="icon-gif">Dépose un GIF.</p>`)}`}
       </ul>
-      ${chosen ? "" : `<p class="hintline">${o.photographs.length
+      ${faceIs ? "" : `<p class="hintline">${o.photographs.length
         ? "Rien de choisi : c'est la première photo qui sert d'icône."
         : "Rien de choisi : c'est le dessin par défaut."}</p>`}
     </fieldset>`;
@@ -876,13 +898,13 @@ function inspect(o) {
 
   look.innerHTML = `
     <h2>${esc(o.titles.fr || o.name)}</h2>
-    <p class="what">${kindOf(o)}${o.gallery ? ` · ${o.photographs.length} photos`
+    <p class="what">${kindOf(o)}${o.gallery || o.canvas
+       ? ` · ${o.photographs.length} photos`
        : o.holds !== undefined ? ` · ${o.holds} chose${o.holds > 1 ? "s" : ""} dedans` : ""}${
        !drawnAsAnIcon ? "" : o.x !== null ? ` · ${o.x}% / ${o.y}%`
                                             : " · pas encore posé"}</p>
     ${drawnAsAnIcon || isDesk || o.kind === "about" ? "" : `<p class="what">Sur
-      une page, pas sur un bureau : elle s'affiche dans l'ordre de son nom de
-      dossier, sans titre et sans position.</p>`}
+      une page, pas sur un bureau : ni titre ni position ici.</p>`}
     ${isDesk ? `<p class="what">${folderSays(o)}</p>` : ""}
     ${waitingFor(o) ? `<p class="waiting">${esc(waitingFor(o))}</p>` : ""}
     ${drawnAsAnIcon || o.path === "content" ? titles : ""}${
@@ -1109,13 +1131,26 @@ function arrangeGallery(doc) {
       // opening the photograph she has just moved reads as a mistake.
       a.__studioMoved = true;
       if (!onto || onto === a) return;
+      // WHERE IT WAS, in case the answer is no. (`was` is taken a few
+      // lines up — it holds whether this was a drag at all.)
+      const home = a.nextSibling;
+      const inside = a.parentNode;
       const r = onto.getBoundingClientRect();
       const after = (e.clientY - r.top) / r.height > .5;
       onto.parentNode.insertBefore(a, after ? onto.nextSibling : onto);
       const names = [...doc.querySelectorAll(".grid [data-shot]")]
         .map((n) => n.dataset.shot);
-      if (await act({ verb: "reorder", item: deskPath, names }))
+      if (await act({ verb: "reorder", item: deskPath, names })) {
         tell("ordre enregistré — la galerie se réarrange");
+      } else if (inside) {
+        // A REFUSAL PUTS IT BACK. The grid was reordered before the
+        // verb was called — which is right, she sees it move — and
+        // left reordered when the verb said no, so the gallery showed
+        // an order the file did not have until some later reload threw
+        // it away. `act` has already said why; this makes the page
+        // agree with the answer. Audit 4.
+        inside.insertBefore(a, home);
+      }
     });
 
     a.addEventListener("click", (e) => {
@@ -1225,13 +1260,24 @@ function arrangeCanvas(doc) {
     fig.addEventListener("pointerup", async (e) => {
       if (!from) return;
       const was = from.moved;
+      const before = { x: from.left, y: from.top, w: from.width };
       from = null;
       if (!was) return;
-      await act({
+      const out = await act({
         verb: "place_shot", item: here, name: fig.dataset.shot,
         left: num(fig, "--x", 0), top: num(fig, "--y", 0),
         width: num(fig, "--w", 100),
       });
+      // A REFUSAL PUTS IT BACK. She sees the picture move under her
+      // hand, which is right — but if the server says no, leaving it
+      // there shows a composition the file does not have, until some
+      // later reload throws her arrangement away. `act` has already
+      // told her why; this makes the page agree with the answer.
+      if (!out) {
+        fig.style.setProperty("--x", String(before.x));
+        fig.style.setProperty("--y", String(before.y));
+        fig.style.setProperty("--w", String(before.w));
+      }
     });
   }
 }
@@ -1272,7 +1318,13 @@ function whatFitsIn(deskPath, desks) {
   // is not reachable from outside this file, so the seam is here.
   const all = desks || (model && model.desks) || [];
   const d = all.find((x) => x.path === deskPath);
-  if (!d || d.gallery) return [];
+  // A GALLERY *OR A CANVAS*. Both hold photographs themselves and
+  // render nothing else, so anything filed into either would be built
+  // and shown nowhere — `new_project`, `new_bureau` and `move` all
+  // refuse it with one sentence. This asked only about the gallery, so
+  // right-clicking inside travail sélectionné offered "une photo, un
+  // film, une page", and every one of them ended in a refusal. Audit 4.
+  if (!d || d.gallery || d.canvas) return [];
   if ((d.depth || 0) > 0) {
     return [["photo", "une photo"], ["video", "un film"], ["page", "une page"]];
   }

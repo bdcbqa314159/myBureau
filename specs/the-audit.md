@@ -1,6 +1,6 @@
 # The audit
 
-**Status:** audits 1, 2 and 3 done and fixed — twenty findings.
+**Status:** audits 1–4 done and fixed — twenty-seven findings.
 **Date:** 2026-11-15
 
 Seven architectures, ordered by **what a bug in each one costs**. Not by
@@ -584,3 +584,91 @@ suite stay green.
   and watching it repair and report.
 - `prune.py`'s own guard refuses the run rather than uploading a site
   missing a file it asks for.
+
+
+---
+
+# Audit 4 — the panel
+
+`app.js` (1,907), `app.html`, `app.css`, read end to end on
+2026-11-15. **Seven findings, all proven, all fixed.** Six of them are
+one sentence: **the panel asked "is this a gallery?" where the
+question is "does this hold photographs?"**
+
+A canvas is the same object as a gallery with a different page — audit
+2 settled that — and three separate places had not been told.
+
+### A4-F1 · a right-click inside the canvas offered three things the server refuses
+
+`whatFitsIn` returned `[]` for a gallery and the full menu for a
+canvas. Right-click inside travail sélectionné and it offered *une
+photo, un film, une page*; `new_project` refuses all three with
+*cette page ne montre que ses photos*.
+
+### A4-F2 · the create button aimed at the canvas
+
+`intoNow` asked the same gallery-only question, so choosing travail
+sélectionné made it the destination — a refusal after she had typed a
+name.
+
+### A4-F3 · two sentences that stopped being true
+
+*"Elles s'affichent dans l'ordre de leur nom"* on the gallery, which
+stopped being true the day the order became `[extra.place]`. And a
+canvas fell through to *"La première est l'icône"*, false twice over:
+it is a folder, so its face is a drawing, and its pictures are placed
+rather than ordered.
+
+### A4-F4 · a canvas reported holding nothing
+
+`· 0 choses dedans` on a folder holding eight photographs, because the
+photograph count was offered to a gallery only.
+
+### A4-F5 · a refusal left on screen · **the one that costs her work**
+
+Both drags move the picture first and ask the server second, which is
+right — she sees it move under her hand. But a REFUSAL left it where
+she dropped it: the page showed one composition and the file held
+another, until some later reload threw her arrangement away.
+
+That is the "it springs back" she reported in the gallery, with a
+different cause. Both put it back now, after `act` has said why.
+
+### A4-F6 · a local `chosen` shadowing the selected path
+
+Inside `inspect()`, `const chosen = o.face || ""` — one of "folder",
+"photo", "gif" — declared in the same function that reads the
+module-level `chosen`, the path of the thing being inspected. Two
+different things, one name, one scope apart. Nothing read the wrong
+one yet; the next line written in there would have. This is the
+hazard the plan predicted for ten module-level `let`s, and the first
+one to actually appear.
+
+### A4-F7 · a check keeping an old version of the site true
+
+`app-check` asserted the panel says a thing on a page *"s'affiche dans
+l'ordre de son nom de dossier"* — true while travail sélectionné laid
+its children out in a route, and the route went when it became a
+canvas. The check held the old words, so it was keeping a description
+of a site that no longer exists.
+
+## Two fixtures for one desktop, again
+
+`app-check` holds **two** descriptions of the desktop — the tree the
+panel reads, and `DESKS_IN_FIXTURE` for the menu checks. Audit 3 fixed
+the first; the second still said travail sélectionné was a
+`page.html` with no `canvas`. Every answer taken from it was an answer
+about a world that no longer exists.
+
+## And a stub that modelled a DOM nobody has
+
+`nextSibling` is live in a browser. The harness set it once when the
+fixture was built and never again — so the check for A4-F5, which is
+about putting a photograph back where it was, failed against the stub
+rather than against the panel. It relinks on every insert now.
+
+The same check was **vacuous** in its first spelling: it dragged
+`children[0]`, which by then was the photograph an earlier check had
+moved to the front, and `elementFromPoint` found that same
+photograph — so the handler returned without moving anything and the
+check passed against a drag that never happened.
