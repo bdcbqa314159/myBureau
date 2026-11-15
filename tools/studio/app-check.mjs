@@ -514,19 +514,33 @@ if (loaded) {
   // declared one was a precedence rule in _icon.html she could not
   // see — so "I chose a photograph" and "the desk draws a folder"
   // were both true at once.
-  check("the editor offers three slots for the icon, not one box",
+  // A FOLDER'S FACE IS A FOLDER — one slot, the four drawings and a
+  // drop for one of her own. A photograph or a GIF there would be a
+  // face that contradicts the thing. The pane chosen here is `DA`.
+  check("a folder is offered one slot, not three",
+    (look.innerHTML.match(/data-face="/g) || []).length === 1
+    && /data-face="folder"/.test(look.innerHTML),
+    look.innerHTML.slice(0, 120));
+  check("  the four drawings, as buttons",
+    (look.innerHTML.match(/data-drawn="/g) || []).length === 4);
+  check("  AND somewhere to drop a drawing of her own",
+    /data-drop="icon-folder"/.test(look.innerHTML)
+    && /propre dessin/.test(look.innerHTML));
+
+  // AND A PAGE GETS ALL THREE.
+  choose("maison cosette");
+  check("a page is offered three slots",
     (look.innerHTML.match(/data-face="/g) || []).length === 3,
     look.innerHTML.slice(0, 120));
   check("  a dossier, a photo and a GIF, each named",
     /data-face="folder"/.test(look.innerHTML)
     && /data-face="photo"/.test(look.innerHTML)
     && /data-face="gif"/.test(look.innerHTML));
-  check("  the drawn folders are offered as buttons, not as a drop",
-    (look.innerHTML.match(/data-drawn="/g) || []).length === 4);
-  check("  and a photo or a GIF is still a drop",
-    (look.innerHTML.match(/data-drop="icon"/g) || []).length >= 2);
-  check("the editor offers an appearance to change",
-    /data-drop="icon"/.test(look.innerHTML));
+  check("  and each with its own drop, so the slot says what she meant",
+    /data-drop="icon-folder"/.test(look.innerHTML)
+    && /data-drop="icon-photo"/.test(look.innerHTML)
+    && /data-drop="icon-gif"/.test(look.innerHTML));
+  if (daRow && daRow.__click) daRow.__click();
   check("a bureau also offers its wallpaper",
     /data-drop="wallpaper"/.test(look.innerHTML));
   // A WALLPAPER WHERE THERE IS A DESK TO PUT IT ON. `section.html` is
@@ -549,8 +563,14 @@ if (loaded) {
     const marked = (pane.match(/class="slot is-chosen" data-face="([a-z]+)"/) || [])[1] || "";
     check("a thing wearing a " + (want || "fallback") + " says so, and only that",
       marked === want
-      && (pane.match(/is-chosen/g) || []).length === (want ? 1 : 0),
+      // `class="slot is-chosen"`, not every `is-chosen` in the pane:
+      // the chosen DRAWING inside the folder slot carries the same
+      // class, so counting them all made this fail on a folder for a
+      // reason that was the improvement working.
+      && (pane.match(/class="slot is-chosen"/g) || []).length === (want ? 1 : 0),
       "marked: " + marked);
+    check("  and it says in words which slot, not just an outline",
+      want ? /slot-yes/.test(pane) : !/slot-yes/.test(pane));
     check("  and the one with nothing chosen offers to take it back"
       + " only when there is something to take",
       want ? /id="noface"/.test(pane) : !/id="noface"/.test(pane));
@@ -688,7 +708,7 @@ if (loaded) {
   // THE CONTROL for all of the above: a thing ON a desk keeps all three.
   check("while a thing on a desk keeps its name, its face and its place",
     choose("theodora") && /data-title/.test(look.innerHTML)
-    && /data-drop="icon"/.test(look.innerHTML)
+    && /data-drop="icon-/.test(look.innerHTML)
     && /32% \/ 12%/.test(look.innerHTML));
   if (daRow && daRow.__click) daRow.__click();
   check("there is a way to make something new",

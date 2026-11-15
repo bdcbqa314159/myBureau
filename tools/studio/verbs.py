@@ -1341,7 +1341,7 @@ def set_poster(item: str, name: str, data: bytes) -> dict:
     return {"poster": dest.name}
 
 
-def set_icon(item: str, name: str, data: bytes) -> dict:
+def set_icon(item: str, name: str, data: bytes, as_: str = "") -> dict:
     """What this thing LOOKS like on the desk.
 
     Written as `icon.<ext>` beside its content file, which is the
@@ -1368,11 +1368,24 @@ def set_icon(item: str, name: str, data: bytes) -> dict:
     if not data:
         raise Refused("ce fichier est vide.")
     must_really_be(name, data)
-    # WHICH OF THE THREE SLOTS this fills, from the file's own format —
-    # which is a fact about the bytes, not a reading of a name. A GIF
-    # moves on the desk and a photograph does not, so they are two
-    # choices rather than one.
-    slot = "gif" if ext == ".gif" else "photo"
+    # WHICH OF THE THREE SLOTS this fills — and for a file she DROPS,
+    # only she knows. A drawing of a folder and a photograph of a
+    # folder are the same bytes; the difference is what she meant.
+    #
+    # So the slot she dropped it on is carried in, and written down.
+    # The format still decides when nothing says otherwise: a GIF
+    # moves on the desk and a photograph does not.
+    #
+    # THIS IS THE REGRESSION IT FIXES. Before the slots existed, any
+    # image she dropped became the icon — including a folder she had
+    # drawn herself. Three slots turned that into "une photo", which
+    # mislabelled her own drawing, and for a FOLDER on the main
+    # desktop there was no way to say "this is my folder picture".
+    slot = as_ or ("gif" if ext == ".gif" else "photo")
+    if slot not in ("folder", "photo", "gif"):
+        raise Refused("une icône est un dossier, une photo ou un GIF.")
+    if slot == "gif" and ext != ".gif":
+        raise Refused("ce n'est pas un GIF — dépose-le sur « une photo ».")
     moves, texts = [], []
     # AND THE OTHER TWO ARE UNCHOSEN. Without this a declared
     # `icon = "…/folder.svg"` stayed in the front matter, and
@@ -1385,6 +1398,15 @@ def set_icon(item: str, name: str, data: bytes) -> dict:
     tmp.write_bytes(data)
     os.replace(tmp, dest)
     moves.append({"from": "", "to": rel(dest)})
+    # AND WHICH SLOT IT IS, written down — her choice, not a guess from
+    # the bytes. Without it the panel has to infer, and it cannot: a
+    # folder she drew and a photograph are the same kind of file.
+    for f in language_files(d):
+        before = f.read_text(encoding="utf-8")
+        after = set_key(before, "face", slot, rel(f))
+        if after != before:
+            texts.append({"path": rel(f), "before": before})
+            atomic(f, after)
     record("set_icon", texts, moves)
     return {"icon": dest.name, "face": slot}
 
@@ -1413,7 +1435,10 @@ def _unface(d: pathlib.Path, moves: list, texts: list) -> None:
             moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
     for f in language_files(d):
         before = f.read_text(encoding="utf-8")
-        after = drop_key(before, "icon")
+        # `face` goes with `icon`: it is the note saying which slot the
+        # face came from, and a note about a face that is gone is worse
+        # than none.
+        after = drop_key(drop_key(before, "icon"), "face")
         if after != before:
             texts.append({"path": rel(f), "before": before})
             atomic(f, after)
@@ -1446,7 +1471,8 @@ def set_face(item: str, how: str, which: str = "folder") -> dict:
         path = "img/icons/{}.svg".format(which)
         for f in language_files(d):
             before = f.read_text(encoding="utf-8")
-            after = set_key(before, "icon", path, rel(f))
+            after = set_key(set_key(before, "icon", path, rel(f)),
+                            "face", "folder", rel(f))
             if after != before:
                 texts.append({"path": rel(f), "before": before})
                 atomic(f, after)

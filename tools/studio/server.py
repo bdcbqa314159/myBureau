@@ -305,8 +305,13 @@ class Studio(http.server.BaseHTTPRequestHandler):
                     out = verbs.add_doc(into, name, raw)
                 elif how == "about":
                     out = verbs.set_about(into, name, raw)
-                elif how == "icon":
-                    out = verbs.set_icon(into, name, raw)
+                # `icon`, `icon-folder`, `icon-gif`: the drop target she
+                # used, which is the one thing the bytes cannot say. A
+                # folder she drew and a photograph are the same kind of
+                # file; only she knows which she meant.
+                elif how.startswith("icon"):
+                    out = verbs.set_icon(into, name, raw,
+                                         how[5:] if "-" in how else "")
                 elif how == "video":
                     out = verbs.add_video(into, name, raw)
                 elif how == "poster":

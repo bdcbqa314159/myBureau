@@ -861,11 +861,35 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("  and the declared folder is gone, not merely outranked",
           "icon =" not in (fd / "_index.md").read_text(encoding="utf-8"))
     gif = b"GIF89a" + b"\x00" * 40
+    png = (b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR" + b"\x00" * 40)
     got = verbs.set_icon(face_at, "anime.gif", gif)
     check("dropping a GIF fills the GIF slot, read from its bytes",
           got["face"] == "gif" and (fd / "icon.gif").is_file(), str(got))
     check("  and the photograph it replaces is gone",
           not (fd / "icon.jpg").is_file())
+    # HER OWN FOLDER DRAWING. This is the regression the three slots
+    # introduced: before them, any image she dropped became the icon,
+    # so a folder she had drawn herself worked. Three slots turned that
+    # into "une photo", which mislabelled it — and a FOLDER on the main
+    # desktop had no way to say "this is my folder picture" at all.
+    #
+    # The bytes cannot tell a drawn folder from a photograph. The SLOT
+    # she dropped it on can, so that is what is carried in and written
+    # down.
+    got = verbs.set_icon(face_at, "mon-dossier.png", png, "folder")
+    check("her own drawing can be the folder",
+          got["face"] == "folder" and (fd / "icon.png").is_file(), str(got))
+    check("  and the file says which slot it came from",
+          'face = "folder"' in (fd / "_index.md").read_text(encoding="utf-8"))
+    check("  the same bytes dropped on the photo slot are a photo",
+          verbs.set_icon(face_at, "pareil.png", png, "photo")["face"] == "photo")
+    check("  so only the slot she used tells them apart",
+          'face = "photo"' in (fd / "_index.md").read_text(encoding="utf-8"))
+    check("a still dropped on the GIF slot is refused, that slot being movement",
+          "GIF" in refused(verbs.set_icon, face_at, "fixe.png", png, "gif"))
+    check("and a slot that is not one of the three",
+          refused(verbs.set_icon, face_at, "x.png", png, "rainbow") != "")
+
     got = verbs.set_face(face_at, "folder", "folder-rust")
     check("choosing a drawn folder declares it",
           'folder-rust.svg' in (fd / "_index.md").read_text(encoding="utf-8"), str(got))
@@ -874,7 +898,23 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     verbs.set_face(face_at, "none")
     check("and none of the three leaves nothing behind",
           "icon =" not in (fd / "_index.md").read_text(encoding="utf-8")
+          and "face =" not in (fd / "_index.md").read_text(encoding="utf-8")
           and list(fd.glob("icon.*")) == [])
+    # AND THE PANEL IS TOLD WHICH SLOT. This is the one place where her
+    # note and a guess from the bytes DISAGREE: `icon.png` dropped on
+    # the folder slot is a folder, and anything inferring from the file
+    # would call it a photograph. Without this the note could stop
+    # being read and every check still pass.
+    verbs.set_icon(face_at, "mon-dossier.png", png, "folder")
+    the_model.ROOT, the_model.CONTENT = tmp, tmp / "content"
+    said = ""
+    for dk in the_model.tree()["desks"]:
+        for c in dk["on"]:
+            if c["path"] == face_at:
+                said = c.get("face")
+    check("the panel is told it is a folder, which no guess could know",
+          said == "folder", str(said))
+
     check("a drawing nobody drew is refused",
           refused(verbs.set_face, face_at, "folder", "folder-chartreuse") != "")
     check("and a how that is not one of the three",

@@ -139,17 +139,32 @@ others:
 
 | slot | what it is | how |
 |---|---|---|
-| **un dossier** | one of four drawn folder pictures, ours — see NOTICE | a button |
+| **un dossier** | one of four drawn folder pictures, ours — **or one she drew** | a button each, and a drop |
 | **une photo** | a still she drops | a drop |
 | **un GIF** | a moving one she drops | a drop |
+
+**A folder is offered only the first slot.** On the main desktop a
+folder is always a folder, so its face is a folder picture — ours or
+hers. A photograph or a GIF there would be a face that contradicts the
+thing.
+
+**Her own folder drawing is why each slot has its own drop.** The
+bytes cannot tell a drawn folder from a photograph — they are the same
+kind of file — so the slot she dropped it on is carried in and
+**written down** as `face` under `[extra]`. Before the slots existed,
+any image she dropped became the icon and her own folder drawing
+worked; three slots turned it into "une photo", which mislabelled it,
+and left a folder with no way to say *this is my folder picture*.
+
+The GIF slot is the one that refuses: a still there would be a face
+that does not move, which is the only thing that slot means.
 
 Plus *aucun des trois*, which lets the engine fall back: the first
 photograph for a thing that has one, a drawn folder for a thing that
 does not.
 
-**Which slot a dropped file fills is read from its bytes**, not from
-its name — a GIF moves on the desk and a photograph does not, so they
-are two answers rather than one answer with a format.
+**Which slot a dropped file fills is what she dropped it on**, written
+down. The format decides only when nothing says otherwise.
 
 **Choosing one clears the other two at the verb.** It was one box, and
 whether a dropped file beat a declared path was a precedence rule in
