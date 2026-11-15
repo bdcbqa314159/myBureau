@@ -586,6 +586,46 @@ def doc_cases(tmp: pathlib.Path) -> None:
               (folder / "dossier.pdf").is_file()
               and len(list(folder.glob("page-*.png"))) == 4)
 
+        # ---- NOTHING IRREVERSIBLE UNTIL NOTHING CAN REFUSE ----------
+        #
+        # AUDIT 1, FINDING F2. This binned the old dossier and its
+        # pages, wrote the new file, and only THEN rasterised — so a
+        # PDF poppler cannot read answered "je n'ai pas pu lire les
+        # pages" with her previous document already in the bin and NO
+        # journal entry naming it. Annuler could not reach it. Proven
+        # on a copy of the real tree before it was fixed; see
+        # specs/the-audit.md.
+        kept = (folder / "dossier.pdf").read_bytes()
+        pages_before = sorted(f.name for f in folder.glob("page-*.png"))
+        bin_before = len([x for x in verbs.TRASH.rglob("*") if x.is_file()])
+        lines_before = len(verbs.JOURNAL.read_text(encoding="utf-8").splitlines())
+        said = refused(verbs.add_doc, proj, "cassé.pdf",
+                       b"%PDF-1.4\n" + b"garbage " * 400)
+        check("a PDF that cannot be read is refused", said != "", said)
+        check("  and the dossier she had is still there, untouched",
+              (folder / "dossier.pdf").is_file()
+              and (folder / "dossier.pdf").read_bytes() == kept)
+        check("  with all its pages",
+              sorted(f.name for f in folder.glob("page-*.png")) == pages_before)
+        check("  nothing went to the bin behind the refusal",
+              len([x for x in verbs.TRASH.rglob("*") if x.is_file()]) == bin_before)
+        check("  and the journal was not asked to remember a refusal",
+              len(verbs.JOURNAL.read_text(encoding="utf-8").splitlines())
+              == lines_before)
+
+        # AUDIT 1, FINDING F7. The pages were drawn INTO her folder
+        # under `draw-*.png`, and whatever `draw-*.png` was already
+        # there was UNLINKED — the one deletion in a design whose rule
+        # is that nothing is deleted, only binned. They are drawn in a
+        # temporary directory now.
+        hers = folder / "draw-1.png"
+        hers.write_bytes(pixels)
+        verbs.add_doc(proj, "encore.pdf", REAL_PDF)
+        check("a file of hers called draw-1.png is not swept away by a dossier",
+              hers.is_file())
+        hers.unlink()
+        verbs.undo()
+
     # ---- which file goes where ---------------------------------------
     check("an image is refused on the dossier, and says where it goes",
           "photos" in refused(verbs.add_doc, proj, "cover.jpg", pixels))
@@ -1065,7 +1105,7 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("there is no way to ask for none of the three",
           refused(verbs.set_face, face_at, "none") != "")
     # THE CLEARING STILL HAPPENS, inside every choice: picking one
-    # unchooses the others, which is what `_unface` is for.
+    # unchooses the others, which is what `_face_plan` is for.
     verbs.set_icon(face_at, "visage.jpg", pix)
     check("and choosing a photograph still clears the drawn one",
           "folder" not in (fd / "_index.md").read_text(encoding="utf-8")
@@ -1119,6 +1159,53 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("and so does the selection, which is the same object",
           refused(verbs.add_image,
                   "content/travail-selectionne", "x.jpg", pix) == "")
+
+    # ---- A REFUSAL CHANGES NOTHING ----------------------------------
+    #
+    # AUDIT 1, FINDING F1. Choosing a face bins the old `icon.*` and
+    # rewrites the front matter, and the `face` key was written LAST —
+    # and writing it RAISES if a language file has no header. So
+    # dropping an icon on a project whose `index.en.md` somebody had
+    # broken by hand reported a refusal, changed the icon on disk
+    # anyway, and recorded nothing: `undo` answered *il n'y a rien à
+    # annuler*. The whole change is planned before anything moves now.
+    # See specs/the-audit.md.
+    broke = tmp / "content" / "da" / "cassé"
+    broke.mkdir()
+    for lang in ("", ".en"):
+        (broke / "index{}.md".format(lang)).write_text(
+            '+++\ntitle = "cassé"\n\n[extra]\nkind = "page"\n+++\n\n\n',
+            encoding="utf-8")
+    (broke / "icon.jpg").write_bytes(pix)
+    was = (broke / "icon.jpg").read_bytes()
+    # the hand edit: a header that no longer has its opening fence
+    en = broke / "index.en.md"
+    en.write_text(en.read_text(encoding="utf-8").replace("+++", "", 1),
+                  encoding="utf-8")
+    lines_before = len(verbs.JOURNAL.read_text(encoding="utf-8").splitlines())
+    # COUNTED, not searched by name: the bin already holds an `icon.jpg`
+    # from the slot checks above, so "is there an icon.jpg in the bin"
+    # was answered yes by work that was perfectly correct.
+    bin_before = len([x for x in verbs.TRASH.rglob("*") if x.is_file()])
+    said = refused(verbs.set_icon, "content/da/cassé", "neuve.jpg", png, "photo")
+    check("an icon dropped on a project with a broken language file is refused",
+          said != "", said)
+    check("  and the face she had is exactly as it was",
+          (broke / "icon.jpg").is_file()
+          and (broke / "icon.jpg").read_bytes() == was)
+    check("  nothing went to the bin behind the refusal",
+          len([x for x in verbs.TRASH.rglob("*") if x.is_file()]) == bin_before)
+    check("  and the journal was not asked to remember it",
+          len(verbs.JOURNAL.read_text(encoding="utf-8").splitlines())
+          == lines_before)
+    # AND THE SAME FOR THE OTHER WAY IN. set_face plans through the
+    # same function, so a drawn folder chosen here must behave alike.
+    said = refused(verbs.set_face, "content/da/cassé", "folder", "folder-rust")
+    check("choosing a drawn folder there is refused the same way", said != "")
+    check("  and leaves the face alone too",
+          (broke / "icon.jpg").is_file()
+          and (broke / "icon.jpg").read_bytes() == was)
+    shutil.rmtree(broke)
 
     check("a drawing nobody drew is refused",
           refused(verbs.set_face, face_at, "folder", "folder-chartreuse") != "")
