@@ -1815,6 +1815,74 @@ def serve() -> None:
             check("a verb cannot be aimed outside content/", False)
         except urllib.error.HTTPError as e:
             check("a verb cannot be aimed outside content/", e.code == 400)
+
+        # ---- A PANEL THAT NO LONGER MATCHES THE DISK -----------------
+        #
+        # She pulls in GitHub Desktop with the panel open. Python loaded
+        # verbs.py once, at startup, so the process carries on writing
+        # with rules that are no longer anywhere on disk — and the one
+        # that was replaced renamed her photographs. See stale() in
+        # server.py.
+        #
+        # LAST IN THIS BLOCK, deliberately: once the code is stale every
+        # write that follows is refused, which is the whole point.
+        code = tmp / "tools" / "studio" / "verbs.py"
+        kept = code.read_bytes()
+
+        # FIRST, A TOUCH THAT CHANGES NOTHING. `git checkout` back and
+        # forth rewrites a file with the same bytes; a panel that
+        # stopped writing for that is a panel she learns to ignore.
+        code.write_bytes(kept)
+        os.utime(code, (time.time() + 5, time.time() + 5))
+        # CAUGHT: a refusal here is the failure, and an HTTPError let out
+        # of this block kills the suite before it prints a line — a run
+        # with no FAIL in it then reads like a clean one.
+        turned_down = ""
+        try:
+            post("/api/do", {"verb": "place", "item": "content/da/theodora-01",
+                             "x": 61, "y": 41})
+        except urllib.error.HTTPError as e:
+            turned_down = "{} {}".format(e.code, e.read().decode("utf-8")[:60])
+        check("a file touched but not changed does not stop the panel",
+              turned_down == "", turned_down)
+
+        code.write_bytes(kept + b"\n# pulled while she was working\n")
+        refused, said = 0, ""
+        try:
+            post("/api/do", {"verb": "place", "item": "content/da/theodora-01",
+                             "x": 62, "y": 42})
+        except urllib.error.HTTPError as e:
+            refused, said = e.code, e.read().decode("utf-8")
+        check("a panel running code that has changed under it writes nothing",
+              refused == 409, str(refused))
+        # THE VALUE, not the wire: json escapes the ç in "aperçu", so a
+        # substring match on the raw body fails while the sentence is
+        # perfectly correct.
+        why = json.loads(said).get("error", "") if said else ""
+        check("  and says what to do about it, in French",
+              "relance l'aperçu" in why, why[:90])
+        # AND THE WRITE REALLY DID NOT HAPPEN. A refusal she can see
+        # while the file changed anyway would be the worst of both.
+        where = frontmatter.header(
+            (tmp / "content/da/theodora-01/index.md").read_text(encoding="utf-8"))
+        check("  and the refusal is not merely cosmetic", "x = 62" not in where,
+              where.strip()[:60])
+
+        # the stream says so too, so she learns before she tries
+        with urllib.request.urlopen(
+                "http://127.0.0.1:{}/api/events?t={}".format(port, token),
+                timeout=10) as ev:
+            heard = ""
+            for _ in range(8):
+                line = ev.readline().decode("utf-8", "replace")
+                if line.startswith("data:"):
+                    heard = line
+                    break
+        pushed = json.loads(heard[5:]) if heard.startswith("data:") else {}
+        check("  and the live stream carries the same sentence",
+              pushed.get("stale", "") == why, str(pushed)[:90])
+
+        code.write_bytes(kept)
     finally:
         p.terminate(); p.wait(timeout=10)
         site.terminate(); site.wait(timeout=10)

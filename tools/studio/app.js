@@ -1575,8 +1575,29 @@ hook();
 
 const stream = new EventSource(q("/api/events"));
 stream.onmessage = async (e) => {
-  let n = null;
-  try { n = JSON.parse(e.data).n; } catch (err) { /* keep going */ }
+  let n = null, frozen = "";
+  try {
+    const d = JSON.parse(e.data);
+    n = d.n;
+    frozen = d.stale || "";
+  } catch (err) { /* keep going */ }
+
+  /* THE PANEL IS RUNNING CODE THAT IS NO LONGER ON THE DISK — she
+   * pulled, merged or switched branch with this open, and python loaded
+   * verbs.py once, at startup. The server has stopped accepting writes
+   * and hands over the sentence to show; see stale() in server.py.
+   *
+   * In `health`, not in `says`: `says` is wiped by the next thing she
+   * clicks, and this has to stay in front of her until she reopens the
+   * panel. The sentence travels from the server so there is not a
+   * second copy of it here to drift out of step. */
+  if (frozen) {
+    lamp.className = "lamp bad";
+    health.hidden = false;
+    health.textContent = frozen;
+    tell("le panneau n'écrit plus — relance l'aperçu");
+    return;
+  }
   await ask("/api/tree");
   // Only when somebody OTHER than this panel changed something — she
   // edited a file in TextEdit, or placeholders were fetched. Our own

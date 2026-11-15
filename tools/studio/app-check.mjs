@@ -181,6 +181,11 @@ const drawn = new Map();         // and the ones it queries by attribute
 const missing = [];
 
 let fetched = [];
+// The live stream the panel opens. KEPT, so a check can push a message
+// down it: `stream` is a const inside app.js and not reachable from
+// here, and the only other way to test what arrives is not to test it.
+const streams = [];
+
 const sandbox = {
   console,
   // a browser has these; a vm context does not inherit them
@@ -220,7 +225,7 @@ const sandbox = {
   location: { search: "?t=TESTTOKEN" },
   window: { open() {} },
   URLSearchParams,
-  EventSource: class { constructor(u) { this.url = u; } },
+  EventSource: class { constructor(u) { this.url = u; streams.push(this); } },
   fetch: async (url) => {
     fetched.push(url);
     // Shaped like the REAL answer, desks and all. An empty tree let the
@@ -1517,6 +1522,41 @@ if (loaded) {
     sandbox.fetch = keepF;
   } else {
     check("the panel has a back() to restore where she was", false);
+  }
+
+  // ---- a panel running code that is no longer on the disk ----------
+  //
+  // She pulls with the panel open; python loaded verbs.py once, at
+  // startup, so the server stops accepting writes and pushes the
+  // sentence to show down the live stream. See stale() in server.py —
+  // check.py drives that end, this one is about her seeing it.
+  if (streams.length && typeof streams[0].onmessage === "function") {
+    const SAYS = "Le panneau a changé pendant qu'il tournait : …";
+    const health = byId.get("health"), lamp = byId.get("lamp");
+    health.hidden = true;
+    health.textContent = "";
+    await streams[0].onmessage({ data: JSON.stringify({ n: 99, stale: SAYS }) });
+    check("a panel left behind by a pull says so, where it stays visible",
+      health.hidden === false && health.textContent === SAYS,
+      health.hidden + " " + health.textContent);
+    check("  and the lamp says something is wrong",
+      /bad/.test(lamp.className), lamp.className);
+    // THE SENTENCE COMES FROM THE SERVER. A copy of it here would drift
+    // out of step with the one the refusal carries.
+    check("  and it is the server's words, not a copy kept here",
+      !readFileSync(new URL("./app.js", import.meta.url), "utf8")
+        .includes("relance l'aperçu, ouvre"));
+
+    // AND AN ORDINARY MESSAGE IS STILL ORDINARY: this must not latch on
+    // and freeze a panel that is perfectly up to date.
+    health.hidden = true;
+    const before = fetched.length;
+    await streams[0].onmessage({ data: JSON.stringify({ n: 100, stale: "" }) });
+    check("an ordinary message leaves the panel alone",
+      health.hidden === true && fetched.length > before,
+      health.hidden + " " + (fetched.length - before));
+  } else {
+    check("the panel listens to the live stream at all", false);
   }
 
   const src = readFileSync(new URL("./app.js", import.meta.url), "utf8");
