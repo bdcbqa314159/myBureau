@@ -1025,11 +1025,15 @@ body.project .bar { color: var(--ink); text-shadow: none; }
    space before a single picture has loaded, and its children are
    absolutely positioned, so the content flow would otherwise give it
    a height of nothing and pile every picture at the top. */
+/* `.proj` above it carries the padding that clears the fixed bar, so
+   this only needs the gap under her paragraph. It carried the whole
+   clearance itself while the paragraph sat outside the page, where it
+   started at the top of the window and ran behind the bandeau. */
 .canvas {
   position: relative;
   width: 100%;
   aspect-ratio: 100 / var(--tall, 100);
-  margin: clamp(5rem, 9vw, 8rem) 0 clamp(3rem, 6vw, 6rem);
+  margin: clamp(2.5rem, 6vw, 5rem) 0 clamp(3rem, 6vw, 6rem);
 }
 /* `top` as a percentage resolves against the box's HEIGHT, and the
    number she has is in width-percent — so it is converted here rather
