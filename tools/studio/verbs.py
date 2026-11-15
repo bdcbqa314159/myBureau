@@ -183,6 +183,63 @@ class Refused(Exception):
 
 
 # ---------------------------------------------------------------------
+# WHAT THE BOUNDARY ASKS OF EVERY INPUT
+# ---------------------------------------------------------------------
+# Audit 1 found four holes of one shape: some inputs were validated and
+# others, of the same kind, were not. A quote was refused in a title and
+# written raw into a TOML key. A number was checked in `place_shot` and
+# passed to `int()` in `place`. A file name was matched against her
+# photographs in `place_shot` and used as a path in `remove_image`.
+#
+# One place each, so the next verb cannot forget. See specs/the-audit.md.
+
+def number(v, low: float, high: float, what: str) -> float:
+    """A number inside its bounds, CLAMPED rather than refused.
+
+    She is dragging: a gesture that ends a little past the edge should
+    land on the edge. What IS refused is something that is not a number
+    at all, in French — `place` used a bare `int()` and handed her
+    `ValueError: invalid literal for int() with base 10: 'beaucoup'`.
+    """
+    try:
+        n = round(float(v), 2)
+    except (TypeError, ValueError):
+        raise Refused("{} n'est pas un nombre.".format(what))
+    if n != n or n in (float("inf"), float("-inf")):
+        raise Refused("{} n'est pas un nombre.".format(what))
+    return max(low, min(high, n))
+
+
+def one_line(value: str, what: str) -> str:
+    """Text that will sit inside a TOML string, on one line.
+
+    A quote ends the string and a newline ends the line, and either
+    writes a header zola refuses — which stops the whole site. Quotes
+    were already refused here; NEWLINES WERE NOT, and `title = "a\nb"`
+    is not TOML. The gate in atomic() does not catch it: a fence is a
+    fence either way, so the file looks well formed and does not parse.
+    """
+    value = value.strip()
+    if '"' in value:
+        raise Refused("{} ne peut pas contenir de guillemet droit.".format(what))
+    if any(c in value for c in "\n\r") or any(ord(c) < 32 for c in value):
+        raise Refused("{} tient sur une seule ligne.".format(what))
+    return value
+
+
+def toml_name(name: str) -> str:
+    """A FILE NAME as a TOML key, with its own quotes escaped.
+
+    Her names are hers, and the Finder lets her put a `"` in one. It
+    went into `[extra.alt]` raw — `"vue "x".jpg" = "…"` — which zola
+    refuses, so describing a photograph could stop the site building.
+    Escaped rather than refused: refusing would be the panel telling
+    her what she may call her own files.
+    """
+    return name.replace("\\", "\\\\").replace('"', '\\"')
+
+
+# ---------------------------------------------------------------------
 # where things may happen
 # ---------------------------------------------------------------------
 
@@ -495,9 +552,11 @@ def place(item: str, x: int, y: int) -> dict:
     if not drawn_as_an_icon(d):
         raise Refused("cette chose n'est pas sur un bureau : elle s'affiche"
                       " dans l'ordre de son nom, sans position.")
-    x, y = int(x), int(y)
-    if not (0 <= x <= 100 and 0 <= y <= 100):
-        raise Refused("une position est un pourcentage du bureau, de 0 à 100.")
+    # CLAMPED AND REFUSED BY THE SAME HELPER AS place_shot. This was a
+    # bare `int()`, so "beaucoup" reached her as a Python ValueError
+    # through the panel's error line — see specs/the-audit.md, F8.
+    x = int(number(x, 0, 100, "la position"))
+    y = int(number(y, 0, 100, "la position"))
     texts = []
     # WORK OUT EVERY FILE FIRST, WRITE NOTHING UNTIL ALL OF THEM PARSE.
     # This verb touches one file per language, and a refusal halfway
@@ -526,11 +585,9 @@ def retitle(item: str, lang: str, title: str) -> dict:
     site ends up with English text under a French heading.
     """
     d = a_project(item)
-    title = title.strip()
+    title = one_line(title, "un nom")
     if not title:
         raise Refused("il faut un nom.")
-    if '"' in title:
-        raise Refused('un nom ne peut pas contenir de guillemet droit.')
     stem = "_index" if (d / "_index.md").exists() else "index"
     f = d / ("{}.md".format(stem) if lang in ("", "fr", None)
              else "{}.{}.md".format(stem, lang))
@@ -564,11 +621,11 @@ def set_alt(item: str, name: str, text: str) -> dict:
     over the whole pane rather than a box per language.
     """
     d = a_project(item)
-    if not (d / name).is_file():
-        raise Refused("cette photo n'existe pas.")
-    text = text.strip()
-    if '"' in text or "\n" in text:
-        raise Refused("pas de guillemets ni de retour à la ligne ici.")
+    # ONE OF HERS, not any path that resolves inside content/ — the
+    # same question place_shot asks. See remove_image.
+    if name not in photographs_in(d):
+        raise Refused("cette photo n'est pas là.")
+    text = one_line(text, "une description")
     if len(text) > 300:
         raise Refused("une description tient en 300 caractères.")
     texts, wrote = [], 0
@@ -634,11 +691,12 @@ def set_map_key(text: str, file: str, value: str, table: str,
         raise Refused("{} n'a pas d'en-tête entre les +++ — c'est ce fichier"
                       " qu'il faut réparer.".format(where))
     fm = parts[1]
-    line = '"{}" = {}'.format(file, value)
+    line = '"{}" = {}'.format(toml_name(file), value)
     # `[ \t]*` for the same reason as set_key above. A key under
     # [extra.alt] always has its table header above it, so this one was
     # never first and never bit — which is luck, not design.
-    here = re.compile(r'^[ \t]*"' + re.escape(file) + r'"[ \t]*=.*$', re.M)
+    here = re.compile(r'^[ \t]*"' + re.escape(toml_name(file)) + r'"[ \t]*=.*$',
+                      re.M)
     # `[ \t]*$`, NOT `\s*$`. `\s` crosses lines, so this matched the
     # table header AND every blank line under it, and `block.end()`
     # landed past them — the insert below then put its line at the very
@@ -796,6 +854,24 @@ NEW_KINDS = {
 }
 
 
+def _asked_in_order(d: pathlib.Path, stem: str) -> list:
+    """Her language files, THE DEFAULT ONE FIRST.
+
+    `sorted()` puts `index.en.md` before `index.md`, so the question
+    "what is this thing?" was answered by the English file — and
+    `template_of` the same way. Nothing writes the two apart today, so
+    it is a hazard rather than a bug; the hazard is that a hand edit
+    to one file silently changes what the panel believes, and the
+    panel then refuses or permits on the strength of a translation.
+
+    French is the site's default language and `index.md` is its file.
+    See specs/the-audit.md, finding F6.
+    """
+    plain = d / (stem + ".md")
+    rest = [f for f in sorted(d.glob(stem + "*.md")) if f != plain]
+    return ([plain] if plain.is_file() else []) + rest
+
+
 def kind_of(d: pathlib.Path) -> str:
     """What this thing IS, from its own front matter.
 
@@ -803,7 +879,7 @@ def kind_of(d: pathlib.Path) -> str:
     folder predates this — see tools/label-types.py, which wrote it
     into the eleven that did.
     """
-    for f in sorted(d.glob("index*.md")) + sorted(d.glob("_index*.md")):
+    for f in _asked_in_order(d, "index") + _asked_in_order(d, "_index"):
         got = re.search(r'^\s*kind\s*=\s*"([^"]*)"',
                         frontmatter.header(f.read_text(encoding="utf-8",
                                                        errors="replace")),
@@ -877,7 +953,7 @@ def template_of(d: pathlib.Path) -> str:
     a PAGE rather than a desk — indistinguishable from `section.html`,
     and both were given a wallpaper. See has_a_ground().
     """
-    for f in sorted(d.glob("_index*.md")):
+    for f in _asked_in_order(d, "_index"):
         got = re.search(r'^\s*template\s*=\s*"([^"]*)"',
                         frontmatter.header(f.read_text(encoding="utf-8",
                                                        errors="replace")),
@@ -943,8 +1019,17 @@ def has_a_ground(d: pathlib.Path) -> bool:
     return template_of(d) in ("section.html", "index.html")
 
 
-def new_project(into: str, name: str, kind: str = "photos") -> dict:
-    """A new project in a bureau: a folder, and one file per language."""
+def new_project(into: str, name: str, kind: str) -> dict:
+    """A new project in a bureau: a folder, and one file per language.
+
+    `kind` HAS NO DEFAULT, because the one it had was `"photos"` — not
+    a kind. `NEW_KINDS` holds photo, video and page, so every caller
+    that leaned on the default got "je ne connais pas ce genre de
+    projet" and no project. The panel always sends one, which is why
+    it was never seen; a default that cannot work is a signature that
+    lies, and the next caller is the one it catches out. Found while
+    writing the check for F4 — see specs/the-audit.md.
+    """
     d = inside(into)
     if not any(d.glob("_index*.md")):
         raise Refused("un projet se range dans un bureau.")
@@ -954,8 +1039,8 @@ def new_project(into: str, name: str, kind: str = "photos") -> dict:
         raise Refused(ONLY_PHOTOGRAPHS)
     if kind not in NEW_KINDS:
         raise Refused("je ne connais pas ce genre de projet.")
-    name = name.strip()
-    if not name or '"' in name:
+    name = one_line(name, "un nom")
+    if not name:
         raise Refused("donne-lui un nom, sans guillemets.")
     folder = _free_folder(d, name)
     folder.mkdir()
@@ -1001,8 +1086,8 @@ def new_bureau(into: str, name: str, display: str = "desk") -> dict:
         raise Refused("un dossier se range dans un bureau.")
     if holds_photographs(d):
         raise Refused(ONLY_PHOTOGRAPHS)
-    name = name.strip()
-    if not name or '"' in name:
+    name = one_line(name, "un nom")
+    if not name:
         raise Refused("donne-lui un nom, sans guillemets.")
     folder = _free_folder(d, name)
     folder.mkdir()
@@ -1796,15 +1881,6 @@ def place_shot(item: str, name: str, left, top, width) -> dict:
     if name not in photographs_in(d):
         raise Refused("cette photo n'est pas là.")
 
-    def number(v, low, high, what):
-        try:
-            n = round(float(v), 2)
-        except (TypeError, ValueError):
-            raise Refused("{} n'est pas un nombre.".format(what))
-        if n != n or n in (float("inf"), float("-inf")):
-            raise Refused("{} n'est pas un nombre.".format(what))
-        return max(low, min(high, n))
-
     width = number(width, 5, 100, "la largeur")
     left = number(left, 0, 100 - width, "la position")
     # NO CEILING ON `top`. A canvas grows downwards as she drags, and
@@ -1902,8 +1978,19 @@ def reorder(item: str, names: list) -> dict:
 
 
 def remove_image(item: str, name: str) -> dict:
+    """One of HER PHOTOGRAPHS to the bin, and nothing else.
+
+    It took any name and resolved it as a path, so
+    `name = "../../_index.md"` binned the home desk's content file —
+    `inside()` kept it under content/ and nothing asked whether it was
+    a photograph of this project at all. The panel only ever sends a
+    name from the list it drew, which is why it was never seen; a
+    closed list of verbs has to close anyway. See specs/the-audit.md.
+    """
     d = a_project(item)
-    f = inside(pathlib.Path(item) / name)
+    if name not in photographs_in(d):
+        raise Refused("cette photo n'est pas là.")
+    f = d / name
     if not f.is_file():
         raise Refused("cette photo n'existe pas.")
     TRASH.mkdir(parents=True, exist_ok=True)

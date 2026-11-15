@@ -1,6 +1,6 @@
 # The audit
 
-**Status:** audit 1 done — eight findings, seven proven, three fixed.
+**Status:** audit 1 done and fixed — nine findings, eight proven.
 **Date:** 2026-11-15
 
 Seven architectures, ordered by **what a bug in each one costs**. Not by
@@ -209,7 +209,7 @@ any language file is malformed. `record()` never runs.
 | output | it reports a refusal; the icon on disk has **changed**; `undo` answers *il n'y a rien à annuler* |
 | costs her | the face she had chosen, after being told nothing happened |
 
-### F5 · a quote in a file name breaks the site
+### F5 · a quote in a file name breaks the site  **· fixed**
 
 `set_map_key` writes `"{name}" = …` with the name interpolated raw.
 A photograph called `vue "x".jpg` produces TOML zola refuses, and the
@@ -221,7 +221,7 @@ gate in `atomic()` only checks the fences.
 | output | the write succeeds; `zola build` fails |
 | costs her | the whole site, from a rename the Finder allows |
 
-### F4 · a newline in a title breaks the site
+### F4 · a newline in a title breaks the site  **· fixed**
 
 `retitle`, `new_project` and `new_bureau` refuse a `"` and not a
 newline. `title = "a\nb"` is not TOML.
@@ -232,7 +232,7 @@ newline. `title = "a\nb"` is not TOML.
 | output | the file is written, the build fails |
 | costs her | the whole site. The gate exists to stop exactly this class and checks only the fences |
 
-### F3 · `remove_image` bins any file under `content/`
+### F3 · `remove_image` bins any file under `content/`  **· fixed**
 
 It validates the project and then never checks that `name` is one of
 its photographs — unlike `place_shot`, which does.
@@ -252,13 +252,13 @@ in the one module whose job is to be a closed list.
 `pages_of` does `stale.unlink()` on `draw-*.png` left from an earlier
 run. A file of hers with that name is deleted outright.
 
-### F8 · a position that is not a number is a Python error
+### F8 · a position that is not a number is a Python error  **· fixed**
 
 `place` does `int(x)` unguarded, so `x = "beaucoup"` reaches her as
 `ValueError: invalid literal for int() with base 10`. `place_shot`
 refuses the same input in French.
 
-### F6 · the English file decides what a thing IS
+### F6 · the English file decides what a thing IS  **· fixed**
 
 `kind_of` and `template_of` read the first file that `sorted()` hands
 back — and `index.en.md` sorts before `index.md`. Set them to disagree
@@ -320,6 +320,36 @@ and `every write goes through the gate` in content-check caught it
 within the minute — a check written for a different reason, holding a
 line it was not aimed at. That is what they are for.
 
-**Still open: F3, F4, F5, F6, F8.** Four of them are the same defect —
-the trust boundary validates some inputs and not others — and are the
-next slice.
+**F3, F4, F5, F6 and F8 are fixed too**, in the slice after. Four of
+them were one defect: the trust boundary validated some inputs and not
+others. There is one place each now, so the next verb cannot forget.
+
+### F9 · a default argument that cannot work  **· fixed**
+
+Found while writing the check for F4, which passed `"photos"` and was
+refused for the wrong reason.
+
+`new_project(into, name, kind="photos")` — and `"photos"` is not one of
+the three kinds, so every caller that leaned on the default got *je ne
+connais pas ce genre de projet* and no project. The panel always sends
+one explicitly, which is why nobody saw it. `kind` has no default now,
+and `server.py` says *il manque le genre de projet à créer* rather than
+naming the wrong problem.
+
+## Two things wrong with the suite, found by using it
+
+Neither is a verb, and both were in the way of this audit, so they are
+fixed here and belong to audit 3 when it comes.
+
+**A crash printed no failure.** `check.py` died partway through with a
+traceback and NO `FAIL` line, so every habit built on reading failures
+— mine included — reported a clean run. It has happened four times in
+this project. `run()` now reports a crash as a failure and still
+prints the traceback.
+
+**Six copies of `refused()`.** Each defined inside `main()`, each
+shadowing the last, so improving the helper improved only the block it
+sat in: a fix made in the first copy did nothing for the call six
+hundred lines later. One, at module level, and it now reports a Python
+error as text rather than letting it stop the suite — which is what a
+check about "does this refuse in French" is for.
