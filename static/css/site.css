@@ -1048,28 +1048,43 @@ body.project .bar { color: var(--ink); text-shadow: none; }
 }
 .canvas .shot img { display: block; width: 100%; height: auto; }
 
-/* 52rem — ONE COLUMN ON A PHONE, every picture the whole width, in the
-   order she arranged them down the page.
+/* 52rem — THE PHONE KEEPS THE COMPOSITION, not the coordinates.
+   --------------------------------------------------------------------
+   Her composition cannot survive 390px as it is: a picture at 28% of
+   that is 109px, which is not showing the work. And flattening every
+   picture to the full width, which is what this did, showed the work
+   and lost the composition — eight identical blocks with eight
+   identical gaps.
 
-   NOT her composition shrunk. The client saw the varying widths on a
-   phone on 2026-11-14 and rejected them: at that size they read as
-   raggedness rather than composition, which is the objection she made
-   to the offsets and the lean on every screen. A picture at 28% of a
-   390px screen is 109px, which is not showing the work.
+   So three things cross over and the coordinates do not. The numbers
+   are worked out at build time, per picture — see selection.html:
 
-   `order`, because the DOM is in the order zola lists files and the
-   column has to run in the order a person reads: she drops `09.jpg`,
-   puts it at the top, and alphabetically it is last. The number is
-   counted at build time — see selection.html. */
+     --pw    how wide, her width mapped into 70..100% of the column
+     --pml   which side it hangs from, from where its CENTRE sat
+     --pgap  the pause above it, from the gap she actually left
+
+   The result is a scroll with a rhythm: nothing to click, nothing to
+   choose, sizes that vary without a sliver among them, and the page
+   breathing where she let it breathe. His words: *the aesthetics,
+   this is the essence — something less rigid, so one can see and keep
+   scrolling.*
+
+   `margin-top` rather than the flex `gap`, because the pause is per
+   picture and a gap is one number for all of them. */
 @media (max-width: 52rem) {
   .canvas {
-    display: flex; flex-direction: column; gap: clamp(2rem, 7vw, 3rem);
+    display: flex; flex-direction: column;
     aspect-ratio: auto;
     padding: 0 var(--pad);
   }
   .canvas .shot {
     position: static;
-    width: 100%;
+    width: calc(var(--pw, 100) * 1%);
+    /* `auto` on one side only is what hangs it off the other. Both
+       auto centres it; neither leaves it at the left. */
+    margin-left: var(--pml, 0);
+    margin-right: var(--pmr, 0);
+    margin-top: calc(var(--pgap, 2.5) * 1rem);
     order: var(--o, 0);
   }
 }

@@ -153,3 +153,44 @@ with. It wears `project` now, like every other page: cream, ink, an ink
 bar, and the scrim that keeps a line of text off the bandeau. Her words
 sit inside `.proj`, which is where the padding that clears the bar
 lives. Her own selected-work page is white, which settled it.
+
+## The phone keeps the composition, not the coordinates
+
+Her composition cannot survive 390px as it is — a picture at 28% of
+that is 109px — and flattening every picture to the full width showed
+the work and lost the composition: eight identical blocks, eight
+identical gaps. His ask, 2026-11-15: *the aesthetics, this is the
+essence — something less rigid, always displaying the essence, so one
+can see, not select, and keep scrolling.*
+
+So three things cross over and the coordinates do not:
+
+| | |
+|---|---|
+| `--pw` | her width mapped into 70–100% of the column, scaled between the narrowest and widest she actually used — so her narrowest is still the narrowest and nothing is a sliver |
+| `--pml` | which edge it hangs from, taken from where its **centre** sat. A wide picture starting at 20 is a middle picture, not a left one |
+| `--pgap` | the pause above it, from the gap she left between it and the picture before. 0–30 of hers becomes 1.5–7rem |
+
+**This reopened the 2026-11-14 decision**, where the client saw varying
+widths on a phone and called them raggedness. What she was shown then
+was widths alone, jittering, with nothing else moving — the page had no
+composition for them to belong to. Reopened knowingly; if it reads as
+raggedness again the lever is the phone block in `selection.html` and
+the rule in `site.css`.
+
+## zola is not deterministic about a bad image path
+
+The neighbour scan was written without the language strip, so the
+English page asked `get_image_metadata` for
+`/en/travail-selectionne/01.jpg` — a path no file has. The suite
+reported **eight to thirteen unrelated cases failing, differently on
+every run**, none of them naming the cause. The same tree built six
+times failed twice.
+
+So no expectation that waits for a build can be trusted to catch this
+class of bug. The rule is asserted at the source instead: **every loop
+over a section's assets strips the language first**, counted across
+every template. The two rank-counting loops read only leaf names and
+could have been excused; they are not, because a rule with exceptions
+is one nobody applies — and it was precisely the loop added next to
+them that forgot.

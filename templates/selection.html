@@ -45,6 +45,12 @@
     draw. Tera cannot keep a running maximum across a loop except
     through set_global, and it cannot sort, so this is the shape. -#}
 {%- set_global tall = 0 -%}
+{#- AND THE SPREAD OF HER WIDTHS, for the phone. Not 5..100 but the
+    narrowest and widest she actually used: a composition whose
+    pictures run 28..56 would otherwise map into a band so tight that
+    the phone shows eight identical blocks. See the phone note below. -#}
+{%- set_global thin = 101 -%}
+{%- set_global fat = 0 -%}
 {%- for asset in section.assets -%}
   {%- if lang != config.default_language -%}
     {%- set asset = asset | replace(from="/" ~ lang ~ "/", to="/") -%}
@@ -69,6 +75,8 @@
     {%- if not placed -%}{%- set_global at = tall + 6 -%}{%- endif -%}
     {%- set_global bottom = at + (wide * shape.height / shape.width) -%}
     {%- if bottom > tall -%}{%- set_global tall = bottom -%}{%- endif -%}
+    {%- if placed and wide < thin -%}{%- set_global thin = wide -%}{%- endif -%}
+    {%- if placed and wide > fat -%}{%- set_global fat = wide -%}{%- endif -%}
   {%- endif -%}
 {%- endfor -%}
 {#- An empty folder has no height at all, and `aspect-ratio: 100 / 0`
@@ -156,6 +164,14 @@
       {%- if placed %}{%- set_global mine = at -%}{% endif -%}
       {%- set_global rank = 0 -%}
       {%- for o in section.assets -%}
+        {#- Stripped even though only the leaf is read here: the rule
+            is that EVERY loop over a section's assets strips first,
+            and a rule with exceptions is one nobody applies. The two
+            counting loops skipped it, which is how the measuring loop
+            below came to be written without it. -#}
+        {%- if lang != config.default_language -%}
+          {%- set o = o | replace(from="/" ~ lang ~ "/", to="/") -%}
+        {%- endif -%}
         {%- set of = o | split(pat="/") | last -%}
         {%- if of | split(pat=".") | last | lower in config.extra.image_types
                and not (of | split(pat=".") | first in config.extra.not_photographs) -%}
@@ -166,12 +182,116 @@
           {%- endif -%}
         {%- endif -%}
       {%- endfor -%}
+      {#- WHAT THE PHONE KEEPS OF THE COMPOSITION.
+          ------------------------------------------------------------
+          Her composition cannot survive 390px as it is: a picture at
+          28% of that is 109px, which is not showing the work. It used
+          to flatten to one full-width column, every gap identical —
+          the work was visible and the composition was gone.
+
+          So three things cross over, and the sizes are not among them:
+
+            --pw    how wide, mapped into 70..100% of the column by
+                    where her width sits between the NARROWEST and the
+                    WIDEST she used. Her narrowest is still the
+                    narrowest here; nothing can become a sliver.
+            --pml   which side it hangs from, taken from where its
+                    CENTRE sat. Left of the middle it hugs the left,
+                    right of it the right, and dead centre is centred.
+            --pgap  the pause above it, from the gap she actually left
+                    in the composition. Where she let the page breathe,
+                    the phone breathes.
+
+          THIS REOPENS A DECISION. On 2026-11-14 the client was shown
+          varying widths on a phone and rejected them: at that size
+          they read as raggedness rather than composition. What she was
+          shown then was widths alone, jittering, with nothing else
+          moving — there were no sides and no pauses to carry them,
+          because the page had no composition to carry. Reopened
+          deliberately on 2026-11-15: *the aesthetics, this is the
+          essence — something less rigid, so one can see and keep
+          scrolling.* If it reads as raggedness again, the lever is
+          this block and the phone rule in site.css.
+
+          A PICTURE SHE HAS NEVER PLACED takes none of this: it has no
+          side, no width of hers and no pause. Full width, an ordinary
+          gap, at the bottom where it already is. -#}
+      {%- set_global pw = 100 -%}
+      {%- set_global pml = "0" -%}
+      {%- set_global pmr = "0" -%}
+      {%- set_global pgap = 2.5 -%}
+      {%- if placed -%}
+        {%- if fat > thin -%}
+          {%- set_global pw = 70 + 30 * (wide - thin) / (fat - thin) -%}
+        {%- endif -%}
+        {#- ITS CENTRE, not its left edge. A wide picture starting at
+            20 is a middle picture, not a left one, and anchoring it
+            left would lean the whole page over. -#}
+        {%- set_global mid = x + wide / 2 -%}
+        {%- if mid < 46 -%}{%- set_global pmr = "auto" -%}
+        {%- elif mid > 54 -%}{%- set_global pml = "auto" -%}
+        {%- else -%}{%- set_global pml = "auto" -%}{%- set_global pmr = "auto" -%}
+        {%- endif -%}
+        {#- THE PAUSE ABOVE IT: from the bottom of whatever she put
+            before it, which is the picture one rank up. Found by
+            scanning, because Tera cannot look a neighbour up. An
+            unplaced picture is never anybody's predecessor — they all
+            rank last — so a placed picture's neighbour is placed. -#}
+        {%- if rank > 0 -%}
+          {%- set_global above = 0 -%}
+          {%- for o in section.assets -%}
+            {#- THE LANGUAGE PREFIX, STRIPPED HERE TOO. A translated
+                section reports its photographs under /<lang>/, and
+                `/en/travail-selectionne/01.jpg` is not a file anybody
+                can measure — `get_image_metadata` stops the build on
+                it. The outer loop has stripped this since the gallery
+                was written; this one was added later and did not, so
+                the English page took the site down whenever a
+                neighbour had to be measured. -#}
+            {%- if lang != config.default_language -%}
+              {%- set o = o | replace(from="/" ~ lang ~ "/", to="/") -%}
+            {%- endif -%}
+            {%- set of = o | split(pat="/") | last -%}
+            {%- if section.extra.shot and section.extra.shot[of] -%}
+              {%- set_global orank = 0 -%}
+              {%- for q in section.assets -%}
+                {%- if lang != config.default_language -%}
+                  {%- set q = q | replace(from="/" ~ lang ~ "/", to="/") -%}
+                {%- endif -%}
+                {%- set qf = q | split(pat="/") | last -%}
+                {%- if section.extra.shot and section.extra.shot[qf] -%}
+                  {%- if (section.extra.shot[qf].top | default(value=0))
+                         < (section.extra.shot[of].top | default(value=0)) -%}
+                    {%- set_global orank = orank + 1 -%}
+                  {%- endif -%}
+                {%- endif -%}
+              {%- endfor -%}
+              {%- if orank == rank - 1 -%}
+                {%- set oshape = get_image_metadata(path=o) -%}
+                {%- set ow = section.extra.shot[of].width | default(value=100) -%}
+                {%- set_global above = (section.extra.shot[of].top | default(value=0))
+                                       + ow * oshape.height / oshape.width -%}
+              {%- endif -%}
+            {%- endif -%}
+          {%- endfor -%}
+          {#- Her gap is in width-percent and can be negative where two
+              overlap. 0..30 of hers becomes 1.5..7rem here: a pause
+              she can feel without a screen of nothing. -#}
+          {%- set_global pause = at - above -%}
+          {%- if pause < 0 -%}{%- set_global pause = 0 -%}{%- endif -%}
+          {%- if pause > 30 -%}{%- set_global pause = 30 -%}{%- endif -%}
+          {%- set_global pgap = 1.5 + pause * 5.5 / 30 -%}
+        {%- else -%}
+          {%- set_global pgap = 0 -%}
+        {%- endif -%}
+      {%- endif -%}
       {#- `data-shot` is what the PANEL reads to know which file this
           is, exactly as in the gallery — a drag here becomes a
           place_shot, and reading a slug back to a file name is a
           guess. -#}
       <figure class="shot" data-shot="{{ file }}"
-              style="--x:{{ x }}; --y:{{ at }}; --w:{{ wide }}; --o:{{ rank }}">
+              style="--x:{{ x }}; --y:{{ at }}; --w:{{ wide }}; --o:{{ rank }};
+                     --pw:{{ pw }}; --pml:{{ pml }}; --pmr:{{ pmr }}; --pgap:{{ pgap }}">
         <img src="{{ one.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
              alt="{{ alt }}" loading="lazy" decoding="async">
       </figure>
