@@ -276,7 +276,7 @@ def main() -> int:
           'template = "section.html"' in (top / "_index.md").read_text(encoding="utf-8"))
 
     try:
-        verbs.new_project("content/da/theodora-01", "Dedans")
+        verbs.new_project("content/da/theodora-01", "Dedans", "photo")
         check("a project cannot be made inside a project", False)
     except verbs.Refused:
         check("a project cannot be made inside a project", True)
@@ -346,13 +346,6 @@ def main() -> int:
           (tmp / film / "film.mp4").exists())
 
     # ---- each thing receives its own kind ----------------------------
-    def refused(fn, *a):
-        try:
-            fn(*a)
-            return ""
-        except verbs.Refused as exc:
-            return str(exc)
-
     say = refused(verbs.add_image, film, "clip.mp4", clip)
     check("a video dropped on the photographs is refused, and told where to go",
           "vidéo" in say and "film" in say, say)
@@ -439,7 +432,7 @@ def main() -> int:
     # one sentence for the pair, which is why it no longer says
     # "galerie". See specs/the-canvas.md.
     for where in ("content/pellicules", "content/travail-selectionne"):
-        for fn, args in ((verbs.new_project, (where, "Essai")),
+        for fn, args in ((verbs.new_project, (where, "Essai", "photo")),
                          (verbs.new_bureau, (where, "Essai")),
                          (verbs.move, ("content/da/theodora-01", where))):
             say = refused(fn, *args)
@@ -546,13 +539,6 @@ def doc_cases(tmp: pathlib.Path) -> None:
         print("       landing and its pages are not.\n")
     pixels = (ROOT / "content/da/theodora-01/01.jpg").read_bytes()
     clip = b"\x00\x00\x00\x18ftypmp42"
-
-    def refused(fn, *a, **k):
-        try:
-            fn(*a, **k)
-        except verbs.Refused as why:
-            return str(why)
-        return ""
 
     made = verbs.new_project("content/da", "grocery", "page")
     proj = made["made"]
@@ -718,13 +704,6 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     png = (b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\rIHDR"
            + b"\x00" * 40)
 
-    def refused(fn, *a, **k):
-        try:
-            fn(*a, **k)
-        except verbs.Refused as why:
-            return str(why)
-        return ""
-
     # A PAGE, not `theodora-01`. That is a PHOTO and holds exactly one
     # image, so every drop below would be refused for the right reason
     # and tell us nothing about the thing being checked — which is what
@@ -837,6 +816,103 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     verbs.undo()
     check("undo takes a placement back",
           "top = 4000" not in (tmp / SEL / "_index.md").read_text(encoding="utf-8"))
+
+    # ---- AUDIT 1: THE BOUNDARY ASKS THE SAME OF EVERY INPUT ---------
+    #
+    # Four holes of one shape, found by reading verbs.py end to end:
+    # some inputs were validated and others of the same kind were not.
+    # See specs/the-audit.md, findings F3, F4, F5, F8.
+    print()
+
+    # F8 — a position that is not a number. `place_shot` refused this
+    # in French; `place` called int() and handed her a Python
+    # ValueError through the panel's error line.
+    for bad in ("beaucoup", None, "", float("nan")):
+        said = refused(verbs.place, proj, bad, 10)
+        check("a position of {!r} is refused in French".format(bad),
+              "nombre" in said, said)
+    # THROUGH A try, because the thing being checked is that it does
+    # NOT refuse — so a version that refuses raises here and stops the
+    # suite instead of failing this line.
+    clamped = None
+    try:
+        clamped = verbs.place(proj, 400, -20)
+    except verbs.Refused:
+        pass
+    check("and a position past the edge is still clamped, not refused",
+          clamped == {"x": 100, "y": 0, "files": 2}, str(clamped))
+    if clamped:
+        verbs.undo()
+
+    # F4 — a newline in a name. A quote was refused and a newline was
+    # not, and `title = "a\nb"` is not TOML: the file is written, the
+    # fences are fine so the gate passes it, and the site stops
+    # building. The same hole in new_project and new_bureau.
+    for bad in ('deux\nlignes', "tab\there"):
+        check("a name on two lines is refused: {!r}".format(bad),
+              "une seule ligne" in refused(verbs.retitle, proj, "fr", bad))
+    check("  and so is one for a new project",
+          "une seule ligne" in refused(verbs.new_project, "content/da",
+                                       "deux\nlignes", "photo"))
+    # AND `kind` HAS NO DEFAULT ANY MORE. It was "photos", which is not
+    # a kind, so every caller that left it out was told "je ne connais
+    # pas ce genre de projet" and got nothing. Found while writing the
+    # line above, which passed "photos" and was refused for the wrong
+    # reason. See specs/the-audit.md, F9.
+    try:
+        verbs.new_project("content/da", "sans genre")
+        check("new_project cannot be called without a kind", False)
+    except TypeError:
+        check("new_project cannot be called without a kind", True)
+    check("and the three it knows still work",
+          all(refused(verbs.new_project, "content/da", "essai " + k, k) == ""
+              for k in ("photo", "video", "page")))
+    check("  and for a new folder",
+          "une seule ligne" in refused(verbs.new_bureau, "content/da",
+                                       "deux\nlignes"))
+    check("a quote in a name is still refused, with its own sentence",
+          "guillemet" in refused(verbs.retitle, proj, "fr", 'a"b'))
+    check("and an ordinary name still goes through",
+          refused(verbs.retitle, proj, "fr", "un nom convenable") == "")
+    verbs.undo()
+
+    # F5 — a quote in a FILE NAME, which the Finder allows and which
+    # went into `[extra.alt]` raw: `"vue "x".jpg" = "…"`, a header zola
+    # refuses. Escaped rather than refused — her names are hers.
+    odd = 'vue "x".jpg'
+    shutil.copyfile(tmp / proj / "01.jpg", tmp / proj / odd)
+    said = refused(verbs.set_alt, proj, odd, "Une silhouette.")
+    check("a photograph whose name holds a quote can be described", said == "", said)
+    got = (tmp / proj / "index.md").read_text(encoding="utf-8")
+    check("  and the key is escaped, not written raw",
+          '"vue \\"x\\".jpg"' in got, got[-120:])
+    check("  so writing it twice still replaces one line",
+          (verbs.set_alt(proj, odd, "Deux silhouettes.") or True)
+          and sum(1 for l in (tmp / proj / "index.md")
+                  .read_text(encoding="utf-8").splitlines() if "vue" in l) == 1)
+    (tmp / proj / odd).unlink()
+
+    # F3 — remove_image took any name and resolved it as a path, so
+    # `../../_index.md` binned the home desk's content file.
+    for sneaky in ("../../_index.md", "../theodora-01/01.jpg", "icon.jpg"):
+        check("remove_image refuses {!r}".format(sneaky),
+              "pas là" in refused(verbs.remove_image, proj, sneaky))
+    check("  and the home desk's file is still there",
+          (tmp / "content" / "_index.md").is_file())
+    check("and one of her own photographs still goes to the bin",
+          refused(verbs.remove_image, proj, "01.jpg") == "")
+    verbs.undo()
+    check("set_alt asks the same question of its name",
+          "pas là" in refused(verbs.set_alt, proj, "../../_index.md", "x"))
+
+    # F6 — `sorted()` puts index.en.md first, so the ENGLISH file was
+    # answering "what is this thing?".
+    en = tmp / proj / "index.en.md"
+    was = en.read_text(encoding="utf-8")
+    en.write_text(was.replace('kind = "page"', 'kind = "photo"'), encoding="utf-8")
+    check("the default language decides what a thing is, not a translation",
+          verbs.kind_of(tmp / proj) == "page", verbs.kind_of(tmp / proj))
+    en.write_text(was, encoding="utf-8")
 
     # ---- the bin is bounded -----------------------------------------
     for i in range(verbs.REMEMBERED + 25):
@@ -1404,13 +1480,6 @@ def dossier_cases(tmp: pathlib.Path) -> None:
     pdf = REAL_PDF
     pix = (ROOT / "content" / "da" / "theodora-01" / "01.jpg").read_bytes()
 
-    def refused(fn, *a, **k):
-        try:
-            fn(*a, **k)
-        except verbs.Refused as why:
-            return str(why)
-        return ""
-
     made = verbs.new_project("content/da", "un dossier", "page")["made"]
     if has_pop:
         out = verbs.add_doc(made, "brochure.pdf", pdf)
@@ -1579,13 +1648,6 @@ def gate_cases(tmp: pathlib.Path) -> None:
     """
     print("\n  -- the last gate before the disk --\n")
 
-    def refused(fn, *a, **k):
-        try:
-            fn(*a, **k)
-        except verbs.Refused as why:
-            return str(why)
-        return ""
-
     f = tmp / "content" / "_index.en.md"
     good = f.read_text(encoding="utf-8")
     for what, text in [
@@ -1658,13 +1720,6 @@ def identity_cases(tmp: pathlib.Path) -> None:
     """The portrait in `about me.txt`, and the two words in the top bar."""
     print("\n  -- about me.txt, and the bandeau --\n")
     pixels = (ROOT / "content/da/theodora-01/01.jpg").read_bytes()
-
-    def refused(fn, *a, **k):
-        try:
-            fn(*a, **k)
-        except verbs.Refused as why:
-            return str(why)
-        return ""
 
     verbs.set_about("content", "moi.JPG", pixels)
     face = tmp / "content" / "about.jpg"
@@ -2061,5 +2116,52 @@ def serve() -> None:
         shutil.rmtree(tmp, ignore_errors=True)
 
 
+def refused(fn, *a, **k) -> str:
+    """The refusal this verb gives, or "" if it went through.
+
+    ONE OF THESE, not six. There were six identical copies, each
+    defined inside main() and shadowing the last — so improving the
+    helper improved only the block it sat in, and a fix made in the
+    first copy did nothing at all for the call six hundred lines
+    later. Found while making it report Python errors.
+
+    ANY exception, not only Refused. A verb that hands back a Python
+    error is failing the thing most of these checks are about — that
+    what she sees is a sentence she can act on — and catching only
+    Refused let that error escape and stop the whole suite instead of
+    failing the one check that meant to catch it. Nothing is hidden:
+    the text comes back and the check reports it.
+    """
+    try:
+        fn(*a, **k)
+        return ""
+    except verbs.Refused as why:
+        return str(why)
+    except Exception as why:                        # noqa: BLE001
+        return "{}: {}".format(type(why).__name__, why)
+
+
+def run() -> int:
+    """main(), with a crash reported as a failure rather than only raised.
+
+    A suite that dies partway prints a traceback and NO "FAIL" line,
+    so every habit built around reading failures — mine included —
+    reports a clean run. It has happened four times in this project,
+    most recently when a verb lost a default argument and the call
+    at line 279 raised TypeError instead of the Refused it expected.
+    The traceback still prints; it is simply no longer the only
+    evidence.
+    """
+    try:
+        return main()
+    except BaseException as exc:                    # noqa: BLE001
+        import traceback
+        traceback.print_exc()
+        print("\n  FAIL  the suite stopped before the end: {}: {}"
+              .format(type(exc).__name__, exc))
+        print("  1 FAILED\n")
+        return 1
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(run())

@@ -442,7 +442,15 @@ class Studio(http.server.BaseHTTPRequestHandler):
         if name == "place":
             return verbs.place(ask["item"], ask["x"], ask["y"])
         if name == "new_project":
-            return verbs.new_project(ask["into"], ask["name"], ask.get("kind", "photos"))
+            # NOT ask.get("kind", …). The default here was "photos",
+            # which is not one of the three kinds — so a request that
+            # left it out was refused with "je ne connais pas ce genre
+            # de projet", which names the wrong problem. A missing key
+            # is a missing key, and it is said so. Same shape as
+            # set_body's `body` below.
+            if "kind" not in ask:
+                raise verbs.Refused("il manque le genre de projet à créer.")
+            return verbs.new_project(ask["into"], ask["name"], ask["kind"])
         if name == "new_bureau":
             return verbs.new_bureau(ask["into"], ask["name"],
                                     ask.get("display", "desk"))
