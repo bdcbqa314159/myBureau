@@ -28,8 +28,21 @@ const node = (id = "") => {
   const n = rawNode(id);
   n.classList._owner = n;
   n._cls = n._cls || new Set();
+  // `.closest(".stage")` HAS TO ANSWER. setWidth() walks from the phone
+  // button up to the stage to put `is-phone` on it, and a stub that
+  // answers null makes pressing that button throw — so the phone view
+  // could not be entered here at all, and nothing that depends on it
+  // could be checked.
+  n.closest = (sel) => (sel === ".stage" ? STAGE : null);
   return n;
 };
+
+const STAGE = { _cls: new Set(), classList: {
+  add(c) { STAGE._cls.add(c); }, remove(c) { STAGE._cls.delete(c); },
+  contains: (c) => STAGE._cls.has(c),
+  toggle(c, on) { if (on === undefined) on = !STAGE._cls.has(c);
+                  if (on) STAGE._cls.add(c); else STAGE._cls.delete(c); },
+} };
 
 const rawNode = (id = "") => ({
   id,
@@ -753,6 +766,92 @@ if (loaded) {
     /Clic droit/.test(markup));
   check("and a way to look INSIDE a thing rather than at its desk",
     /id="aspage"/.test(markup) && (listeners.get("aspage:click") || []).length > 0);
+
+  // ARRANGING THE GALLERY, DRIVEN FOR REAL.
+  //
+  // A gallery is a CSS column flow with no coordinates, so "arrange"
+  // can only mean the ORDER — and `reorder` renames the files to 01,
+  // 02, 03 in the order it is given and the columns reflow. Her ask:
+  // click inside pellicules and move the photographs about.
+  //
+  // THE FIRST VERSION NEVER RAN. `hook()` returns early when the page
+  // has no `.desk`, and a gallery has none — so the call sitting after
+  // that return was dead, and every assertion about it would have
+  // passed by finding nothing. It is handled before the return now,
+  // and this fires the drag rather than reading the source.
+  {
+    const shot = (file) => {
+      const el2 = {
+        dataset: { shot: file }, style: {}, draggable: false, on: {},
+        addEventListener(k, fn) { (this.on[k] ||= []).push(fn); },
+        getBoundingClientRect: () => ({ top: 0, height: 100 }),
+      };
+      el2.parentNode = null;
+      return el2;
+    };
+    const order = ["01.jpg", "02.jpg", "03.jpg"].map(shot);
+    const holder = {
+      children: order,
+      insertBefore(node, before) {
+        const at = this.children.indexOf(node);
+        if (at >= 0) this.children.splice(at, 1);
+        const to = before ? this.children.indexOf(before) : this.children.length;
+        this.children.splice(to < 0 ? this.children.length : to, 0, node);
+      },
+    };
+    for (const s of order) { s.parentNode = holder; s.nextSibling = null; }
+    const gridDoc = {
+      __grid: { __studioDraggable: false },
+      querySelector: (s) => (s === ".grid" ? gridDoc.__grid
+        : s === "[data-desk]" ? { dataset: { desk: "content/pellicules/" } } : null),
+      querySelectorAll: (s) => (/data-shot/.test(s) ? holder.children : []),
+      addEventListener() {}, createElement: () => ({ id: "", textContent: "" }),
+      head: { append() {} }, getElementById: () => null,
+    };
+    byId.get("view").contentDocument = gridDoc;
+    if (typeof sandbox.hook === "function") sandbox.hook();
+    check("every photograph in the gallery can be picked up",
+      order.every((s) => s.draggable === true),
+      JSON.stringify(order.map((s) => s.draggable)));
+    check("  and the tip says what the gesture does here",
+      /se réarrange/.test(byId.get("tip").textContent),
+      byId.get("tip").textContent);
+
+    // DRAG THE THIRD ONTO THE FIRST, over its top half — so it lands
+    // BEFORE it, which is the half of the gesture that is easy to get
+    // backwards.
+    let sent = null;
+    const keep = sandbox.fetch;
+    sandbox.fetch = async (url, opts) => {
+      if (String(url).includes("/api/do")) sent = JSON.parse(opts.body);
+      return keep(url, opts);
+    };
+    for (const fn of order[2].on.dragstart || []) fn({ preventDefault() {}, dataTransfer: { setData() {} } });
+    for (const fn of holder.children[0].on.dragover || [])
+      fn({ preventDefault() {}, clientY: 10 });
+    for (const fn of holder.children.find((s) => s.dataset.shot === "01.jpg").on.drop || [])
+      await fn({ preventDefault() {} });
+    sandbox.fetch = keep;
+    check("dropping one above another sends the new order",
+      sent && sent.verb === "reorder"
+      && JSON.stringify(sent.names) === JSON.stringify(["03.jpg", "01.jpg", "02.jpg"]),
+      JSON.stringify(sent));
+    check("  and it names the gallery it belongs to, not a guess",
+      sent && sent.item === "content/pellicules", sent && sent.item);
+    // LOOKING, NOT ARRANGING, IN THE PHONE VIEW — the same rule the
+    // desk has, because a drag there is a scroll she did not mean.
+    // `narrowView` is a `let` and not reachable from here, so the
+    // phone button is pressed and the gesture tried.
+    for (const fn of listeners.get("asphone:click") || []) fn();
+    let stopped = false;
+    for (const fn of order[0].on.dragstart || [])
+      fn({ preventDefault() { stopped = true; }, dataTransfer: { setData() {} } });
+    check("in the phone view a photograph cannot be dragged",
+      stopped === true);
+    for (const fn of listeners.get("aswide:click") || []) fn();
+
+    byId.get("view").contentDocument = frameDoc;
+  }
 
   // WHAT MAY BE MADE WHERE, asked of the real function. The menu is
   // drawn into the framed page, so this checks the decision rather

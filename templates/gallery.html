@@ -57,7 +57,14 @@
           screen reader reads twelve links called "link". The file name is
           what the window's title bar shows, so it is what the link is
           called. -#}
+      {#- `data-shot` is for the PANEL, like `data-desk` on a desk: it
+          says which FILE this thumbnail is, so a drag inside the
+          gallery can be turned into a reorder. The href carries a
+          slugified name and the dialog's bar shows the file, but
+          neither is the name `reorder` needs — and reading a slug back
+          to a filename is a guess. -#}
       <a class="shot" href="#shot-{{ loop.index }}-{{ file | slugify }}"
+         data-shot="{{ file }}"
          {%- if alt == "" %} aria-label="{{ file }}"{% endif %}>
         <img src="{{ one.url }}"
              srcset="{{ one.url }} {{ one.width }}w, {{ two.url }} {{ two.width }}w"

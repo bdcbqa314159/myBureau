@@ -928,6 +928,86 @@ function wire(o) {
   });
 }
 
+/* ARRANGING THE GALLERY, IN THE GALLERY.
+ * --------------------------------------------------------------------
+ * Her ask: select pellicules to put photographs in or take them out,
+ * click inside it to arrange them.
+ *
+ * WHAT "ARRANGE" MEANS HERE. A gallery is `columns: 5 14rem` — a CSS
+ * column flow. It has no coordinates: the browser fills column one top
+ * to bottom, then column two, and balances the heights. So a
+ * photograph has no x and y to be dropped at, and the only thing that
+ * decides where it lands is its PLACE IN THE ORDER.
+ *
+ * Which is what she already has a verb for. `reorder` renames the
+ * files to 01, 02, 03 … in the order it is given, and the columns
+ * reflow around the result — "drop it here and the engine adjusts",
+ * exactly. The panel's side list has done this by drag for a while;
+ * this is the same gesture where the photographs actually are.
+ *
+ * NOT free placement. That would mean absolute positions, and then
+ * adding a photograph would not reflow around the others — which is
+ * the part of a gallery that works.
+ *
+ * `data-shot` on each thumbnail says which file it is. The href holds
+ * a slug and the dialog's bar holds the file name, but reading a slug
+ * back to a filename is a guess, and `reorder` refuses a list that is
+ * not exactly the photographs it has. */
+function arrangeGallery(doc) {
+  const grid = doc.querySelector(".grid");
+  if (!grid || grid.__studioDraggable) return;
+  const shots = [...doc.querySelectorAll(".grid [data-shot]")];
+  if (!shots.length) return;
+  grid.__studioDraggable = true;
+  const deskPath = galleryPath(doc);
+  if (!deskPath) return;
+  let lifted = null;
+  for (const a of shots) {
+    a.draggable = true;
+    a.addEventListener("dragstart", (e) => {
+      // LOOKING, NOT ARRANGING, in the phone view — the same rule the
+      // desk has. A drag there is a scroll she did not mean.
+      if (narrowView) { e.preventDefault(); return; }
+      lifted = a;
+      // an <a> drags its href by default, which would hand the browser
+      // a url to navigate rather than a photograph to move
+      if (e.dataTransfer) e.dataTransfer.setData("text/plain", "");
+      a.style.opacity = ".4";
+    });
+    a.addEventListener("dragend", () => { a.style.opacity = ""; lifted = null; });
+    a.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      if (!lifted || lifted === a) return;
+      // before or after, by which half of it she is over — the same
+      // test the side list uses, so the two gestures agree
+      const r = a.getBoundingClientRect();
+      const after = (e.clientY - r.top) / r.height > .5;
+      a.parentNode.insertBefore(lifted, after ? a.nextSibling : a);
+    });
+    a.addEventListener("drop", async (e) => {
+      e.preventDefault();
+      const names = [...doc.querySelectorAll(".grid [data-shot]")]
+        .map((n) => n.dataset.shot);
+      if (await act({ verb: "reorder", item: deskPath, names }))
+        tell("ordre enregistré — la galerie se réarrange");
+    });
+    // A CLICK STILL OPENS IT. Dragging and looking are different
+    // gestures and both belong to her; the drag only suppresses the
+    // anchor's own default, not the click.
+  }
+}
+
+/* Which gallery this page is. Its own `<main class="grid">` carries no
+ * path, so it comes from the desk list: a gallery is the only desk
+ * whose page has a `.grid`, and there is at most one. */
+function galleryPath(doc) {
+  if (!model) return "";
+  const said = doc.querySelector("[data-desk]");
+  if (said) return (said.dataset.desk || "").replace(/\/$/, "");
+  const one = model.desks.find((d) => d.gallery);
+  return one ? one.path : "";
+}
+
 /* WHAT MAY BE MADE HERE, AND WHERE "HERE" IS.
  * --------------------------------------------------------------------
  * She right-clicks the surface and gets a menu of what belongs there.
@@ -1255,10 +1335,20 @@ function hook() {
   try { doc = view.contentDocument; } catch (e) { return; }
   if (!doc) return;
   const desk = doc.querySelector(".desk");
+  const grid = doc.querySelector(".grid");
   tip.textContent = desk
     ? "Clique pour modifier · double-clique pour entrer · attrape pour poser,"
       + " ou lâche sur un dossier pour l'y ranger"
-    : "Cette page n'est pas un bureau — rien à déplacer ici.";
+    : grid
+      ? "Attrape une photo et pose-la ailleurs : la galerie se réarrange."
+      : "Cette page n'est pas un bureau — rien à déplacer ici.";
+  // A GALLERY HAS NO DESK, so everything below returns early for it —
+  // which is why arranging it has to be handled BEFORE that return and
+  // not after. It was written after, and never ran once.
+  if (grid) {
+    arrangeGallery(doc);
+    return;
+  }
   if (!desk) return;
 
   // FIRST, and before anything that can fail. This used to sit below the

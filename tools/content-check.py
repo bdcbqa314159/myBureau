@@ -3198,7 +3198,9 @@ def case_every_cursor_is_one_we_drew(d: pathlib.Path) -> list[tuple[str, bool]]:
 
 
 def case_a_desk_says_which_desk_it_is(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """`data-desk` on the surface, for the panel's right-click.
+    """What the page tells the PANEL, which no visitor ever sees.
+
+    `data-desk` on a surface, `data-shot` on a gallery's thumbnails.
 
     THE ONE THING ON THE SITE PUT THERE FOR THE PANEL. She right-clicks
     a desk and gets a menu of what may be made there — a folder on the
@@ -3238,6 +3240,17 @@ def case_a_desk_says_which_desk_it_is(d: pathlib.Path) -> list[tuple[str, bool]]
         # and the menu offers nothing.
         ("a gallery has no desk at all, so nothing is offered on one",
          'class="desk"' not in gal),
+        # AND THE GALLERY SAYS WHICH FILE EACH THUMBNAIL IS, for the
+        # same reason and the same panel: a drag in there becomes a
+        # `reorder`, and `reorder` refuses a list that is not exactly
+        # the photographs it has. The href carries a slug and the
+        # dialog's bar carries the name, but reading a slug back to a
+        # filename is a guess.
+        ("every photograph in the gallery says which file it is",
+         len(re.findall(r'data-shot="([^"]+)"', gal)) == 12),
+        ("and what it says is the file, not a slug of it",
+         all((d / "content" / "pellicules" / n).is_file()
+             for n in re.findall(r'data-shot="([^"]+)"', gal))),
         ("and every path it names is a real folder under content/",
          all((d / p.rstrip("/")).is_dir()
              for p in (said(home), said(da)) if p)),
