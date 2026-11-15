@@ -3,6 +3,7 @@ title = "travail sélectionné"
 template = "page.html"
 
 [extra]
+kind = "folder"
 # Not in her brief's nav — DA / graphic design / pellicules /
 # contact. Still on the desk, still has its page.
 band = false

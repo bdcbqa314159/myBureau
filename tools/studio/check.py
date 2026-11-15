@@ -895,11 +895,19 @@ def honesty_cases(tmp: pathlib.Path) -> None:
           'folder-rust.svg' in (fd / "_index.md").read_text(encoding="utf-8"), str(got))
     check("  and takes the file away with it",
           list(fd.glob("icon.*")) == [])
-    verbs.set_face(face_at, "none")
-    check("and none of the three leaves nothing behind",
-          "icon =" not in (fd / "_index.md").read_text(encoding="utf-8")
-          and "face =" not in (fd / "_index.md").read_text(encoding="utf-8")
-          and list(fd.glob("icon.*")) == [])
+    # NO "AUCUN DES TROIS". It was meaningless on a folder — the
+    # fallback for a folder IS one of these drawings, so the button
+    # said "stop choosing a drawing" and handed back a drawing — and on
+    # a page it named a state by negation. The panel says what a thing
+    # with nothing chosen falls back to instead.
+    check("there is no way to ask for none of the three",
+          refused(verbs.set_face, face_at, "none") != "")
+    # THE CLEARING STILL HAPPENS, inside every choice: picking one
+    # unchooses the others, which is what `_unface` is for.
+    verbs.set_icon(face_at, "visage.jpg", pix)
+    check("and choosing a photograph still clears the drawn one",
+          "folder" not in (fd / "_index.md").read_text(encoding="utf-8")
+          and (fd / "icon.jpg").is_file())
     # AND THE PANEL IS TOLD WHICH SLOT. This is the one place where her
     # note and a guess from the bytes DISAGREE: `icon.png` dropped on
     # the folder slot is a folder, and anything inferring from the file
@@ -914,6 +922,35 @@ def honesty_cases(tmp: pathlib.Path) -> None:
                 said = c.get("face")
     check("the panel is told it is a folder, which no guess could know",
           said == "folder", str(said))
+
+    # PELLICULES AND TRAVAIL SÉLECTIONNÉ ARE FOLDERS. They carried no
+    # `kind` at all — left out as "their own things" — so the panel did
+    # not know they were folders and offered them a photo slot and a
+    # GIF slot for an icon that is a folder's icon.
+    #
+    # Being a folder is what gives them a face. What makes them special
+    # is still their template, and that is where it stays until their
+    # own edition is designed.
+    for one in ("content/pellicules", "content/travail-selectionne"):
+        check("{} says it is a folder".format(one.split("/")[-1]),
+              verbs.kind_of(tmp / one) == "folder")
+        check("  so it can be given one of our drawings",
+              verbs.set_face(one, "folder", "folder-olive")["which"]
+              == "folder-olive")
+        check("  or one of hers",
+              verbs.set_icon(one, "mien.png", png, "folder")["face"] == "folder")
+        check("  and never a wallpaper, each for its own reason",
+              refused(verbs.set_wallpaper, one, "f.jpg", pix) != "")
+    # A GALLERY IS THE ONE FOLDER THAT HOLDS FILES ITSELF. Its content
+    # is the photographs she drops straight into it, so `ACCEPTS
+    # ["folder"] = ()` is wrong for exactly this one — and labelling it
+    # a folder without saying so would have refused the photographs the
+    # gallery is made of.
+    check("the gallery takes the photographs it is made of",
+          refused(verbs.add_image, "content/pellicules", "neuve.jpg", pix) == "")
+    check("while the selection holds things, not loose files",
+          "choses" in refused(verbs.add_image,
+                              "content/travail-selectionne", "x.jpg", pix))
 
     check("a drawing nobody drew is refused",
           refused(verbs.set_face, face_at, "folder", "folder-chartreuse") != "")
