@@ -20,21 +20,19 @@
   <div class="side">
     <nav class="tree" id="tree" aria-label="le contenu"></nav>
     <div class="make">
-      <label class="where">dans
-        <select id="into" aria-label="dans quel dossier"></select>
-      </label>
-      <select id="kind" aria-label="quoi créer">
-        <!-- THE FOUR TYPES, and nothing else. `des photos` and `une
-             page` were the same thing; `un document` was a page whose
-             name ended in .pdf, and a page takes PDFs now whatever it
-             is called. The value IS the type that gets written down. -->
-        <option value="photo">une photo</option>
-        <option value="video">un film</option>
-        <option value="page">une page</option>
-        <option value="folder">un dossier</option>
-      </select>
-      <input type="text" id="newname" placeholder="nom" aria-label="nom">
-      <button id="make">Créer</button>
+      <!-- NO ROW OF SELECTS. It was `dans …`, `quoi créer`, a name and
+           a button — four controls to say two things, and she could
+           pick a film and `dans: pellicules`, press Créer and be told
+           no.
+
+           She right-clicks the surface instead. Pointing says WHERE,
+           so the menu can offer only what belongs there and the
+           refusal becomes unreachable rather than explained. And the
+           click has an x and a y, so the thing lands under the pointer
+           instead of in a slot she has to drag it out of.
+
+           See whatFitsIn() and openMenu() in app.js. -->
+      <p class="willbe" id="makehint">Clic droit sur le bureau pour créer.</p>
       <!-- A browser cannot browse her disk, and no panel will change
            that. It CAN take a whole folder in one gesture, which is the
            thing she actually wants: no second window to arrange beside
@@ -42,8 +40,9 @@
       <button id="adddir">Ajouter un dossier…</button>
       <input type="file" id="pickdir" webkitdirectory directory multiple
              hidden aria-hidden="true" tabindex="-1">
-      <!-- what it will do THERE. A folder's job depends on where it is,
-           so the destination is not a detail to be inferred. -->
+      <!-- what the folder picker will do, and where. It used to read
+           the row's `dans`; with the row gone it goes into whatever is
+           CHOSEN, which the panel always has and which she can see. -->
       <p class="willbe" id="willbe"></p>
     </div>
   </div>

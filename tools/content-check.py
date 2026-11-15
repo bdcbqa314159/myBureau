@@ -3197,6 +3197,53 @@ def case_every_cursor_is_one_we_drew(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_a_desk_says_which_desk_it_is(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """`data-desk` on the surface, for the panel's right-click.
+
+    THE ONE THING ON THE SITE PUT THERE FOR THE PANEL. She right-clicks
+    a desk and gets a menu of what may be made there — a folder on the
+    main desktop, a photo or a film or a page inside one — and that
+    answer depends on WHICH desk she clicked.
+
+    The page says so. The alternative was the panel reading the url and
+    mapping it back, which means knowing about the language prefix and
+    the base url in a second place: `/en/da/` and `/da/` are the same
+    desk, and `base_url` moves when the repository is renamed.
+
+    So the attribute is load-bearing for the panel and invisible on the
+    site, which is exactly the kind of thing that gets deleted as
+    unused. Removing it breaks no page and no check except this one.
+    """
+    ok, log = build(d)
+    home = page(d, "index.html")
+    da = page(d, "da/index.html")
+    en = page(d, "en/da/index.html")
+    gal = page(d, "pellicules/index.html")
+
+    def said(html: str) -> str:
+        m = re.search(r'<main class="desk" data-desk="([^"]*)"', html)
+        return m.group(1) if m else ""
+
+    return [
+        ("builds", ok),
+        ("the main desktop says it is content/", said(home) == "content/"),
+        ("a bureau says which one it is", said(da) == "content/da/"),
+        # THE SAME DESK IN BOTH LANGUAGES. A url cannot say this
+        # without knowing the prefix; `colocated_path` has no language
+        # in it, so the two agree by construction.
+        ("and says the same in English, where the url does not",
+         said(en) == said(da) and said(en) != ""),
+        # A GALLERY HAS NO SURFACE, so there is nothing to right-click
+        # and nothing to create — `new_project` refuses a project there
+        # and the menu offers nothing.
+        ("a gallery has no desk at all, so nothing is offered on one",
+         'class="desk"' not in gal),
+        ("and every path it names is a real folder under content/",
+         all((d / p.rstrip("/")).is_dir()
+             for p in (said(home), said(da)) if p)),
+    ]
+
+
 def case_a_dead_click(d: pathlib.Path) -> list[tuple[str, bool]]:
     """An icon that names a window nobody rendered.
 
@@ -3327,6 +3374,7 @@ CASES = [
     ("a body is shown, or not offered", case_a_body_is_shown_or_not_offered),
     ("a photograph opens at full resolution", case_a_photograph_opens_at_full_resolution),
     ("every cursor is one we drew", case_every_cursor_is_one_we_drew),
+    ("a desk says which desk it is", case_a_desk_says_which_desk_it_is),
     ("a dead click", case_a_dead_click),
     ("a photograph can ask for its page", case_a_photograph_can_ask_for_its_page),
     ("a preview is one picture", case_a_preview_is_one_picture),

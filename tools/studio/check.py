@@ -839,6 +839,35 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("undo walks all of it back",
           (tmp / proj / "index.md").read_text(encoding="utf-8") == before)
 
+    # ---- a folder's sort, and one of each ---------------------------
+    #
+    # AFTER the undo tally above, like every block that creates:
+    # that tally counts a fixed number of undos back to a known
+    # file.
+    #
+    # SO SHE CAN CLEAR THE DESKTOP AND BUILD IT AGAIN. She could delete
+    # pellicules and not put it back, which is worse than not being
+    # able to delete it: `new_bureau` only ever wrote `section.html`.
+    #
+    # Three sorts, all folders, differing in how they show what is
+    # inside: a bureau (icons on a wallpaper), a gallery (the grid), a
+    # selection (three columns). The last two are ONE OF A KIND, and
+    # the test is the sort rather than the name — so she may call a
+    # gallery whatever she likes and still not get a second.
+    print()
+    check("a folder on the main desktop is a bureau by default",
+          verbs.new_bureau("content", "un bureau")["display"] == "desk")
+    check("a second gallery is refused, and names the one that exists",
+          "pellicules" in refused(verbs.new_bureau, "content",
+                                  "deux", "gallery"))
+    check("and a second selection too",
+          "sélection" in refused(verbs.new_bureau, "content",
+                                 "deux", "selection"))
+    check("neither belongs inside a bureau",
+          "accueil" in refused(verbs.new_bureau, "content/da", "x", "gallery"))
+    check("and a sort nobody has heard of is refused",
+          refused(verbs.new_bureau, "content", "x", "rainbow") != "")
+
     # ---- one face, out of three -------------------------------------
     #
     # AFTER the undo tally above: this block writes and bins, and
@@ -1104,6 +1133,23 @@ def honesty_cases(tmp: pathlib.Path) -> None:
           and not verbs.drawn_as_an_icon(
               tmp / "content" / "travail-selectionne" / "nocturne-01"))
 
+
+
+    # ---- wiping the gallery, which has to come LAST -----------------
+    #
+    # This REMOVES pellicules from the scratch copy, and the checks
+    # above it use pellicules — it took a photograph, refused a
+    # wallpaper, said it was a folder. Run earlier it broke three of
+    # them for a reason that had nothing to do with them.
+    shutil.rmtree(tmp / "content" / "pellicules")
+    made = verbs.new_bureau("content", "mes bobines", "gallery")
+    check("wipe the gallery and she can make another, under any name",
+          made["display"] == "gallery"
+          and verbs.template_of(tmp / made["made"]) == "gallery.html", str(made))
+    check("  and it is a folder, like the one it replaces",
+          verbs.kind_of(tmp / made["made"]) == "folder")
+    check("  and now a THIRD is refused, by sort and not by name",
+          "bobines" in refused(verbs.new_bureau, "content", "encore", "gallery"))
 
 
 def dossier_cases(tmp: pathlib.Path) -> None:
