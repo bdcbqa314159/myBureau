@@ -1646,11 +1646,12 @@ def case_travail_selectionne_is_a_canvas(d: pathlib.Path) -> list[tuple[str, boo
 
     ok, log = build(d)
     html = page(d, "travail-selectionne/index.html")
-    # NOT `class="canvas" style=` with the two adjacent: `data-desk`
-    # was added between them and this stopped matching, so `tall` went
-    # None and the height expectation failed for a reason that had
-    # nothing to do with heights. Anchor on the one attribute meant.
-    tall = re.search(r'<main class="canvas"[^>]*--tall:([\d.]+)', html)
+    # NOT on the element and not on the attribute next door. This read
+    # `<main class="canvas" style=` and broke TWICE for reasons that
+    # had nothing to do with heights: once when `data-desk` was added
+    # between the two, and once when the canvas became a <div> inside
+    # the page's own <main>. Anchor on the one thing meant.
+    tall = re.search(r'class="canvas"[^>]*--tall:([\d.]+)', html)
     put = {m.group(1): (float(m.group(2)), float(m.group(3)), float(m.group(4)),
                         int(m.group(5)))
            for m in re.finditer(
@@ -1700,6 +1701,19 @@ def case_travail_selectionne_is_a_canvas(d: pathlib.Path) -> list[tuple[str, boo
          bool(tall) and "09.jpg" in put
          and abs(float(tall.group(1))
                  - (at("09.jpg")[1] + 100 * 2 / 3)) < 0.5),
+        # IT IS PAPER, NOT THE DESKTOP'S GROUND. The body class was
+        # `selection`, which no stylesheet has a rule for, so it fell
+        # through to the default — and the default is the dark ground
+        # the desk uses. Her white composition arrived on black with
+        # her paragraph in white. Her own selected-work page is white.
+        ("the canvas is paper, like every other page",
+         'class="project"' in html),
+        # AND HER WORDS CLEAR THE BAR. The padding that does that lives
+        # on `.proj`; the paragraph was outside it, so it started at
+        # the top of the window and ran behind "myBureau".
+        ("her words are inside the page, not behind the bandeau",
+         html.find('class="proj"') < html.find("proj-intro")
+         and html.find("proj-intro") < html.find('class="canvas"')),
         # CRITERION 2, the rendered half. It holds eight photographs
         # now, and the fallback for a thing with no declared face is
         # its first one — so the desk would draw `01.jpg` as the

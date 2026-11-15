@@ -1,6 +1,17 @@
 {% extends "base.html" %}
 {% block title %}{{ section.title }} — {{ id.title }}{% endblock %}
-{% block bodyclass %}selection{% endblock %}
+{#- A PAPER PAGE, like every other page on the site.
+
+    It was `selection`, which no stylesheet has a rule for — so the
+    body fell through to the default, and the default is the desktop's
+    dark ground. A white composition on black, with her paragraph in
+    white, under a bar it was colliding with.
+
+    `project` is what a page wears: the cream ground, ink text, an ink
+    bar, and the scrim under the bar that keeps a line of text from
+    running into "myBureau". Her own selected-work page is white, which
+    settles it. -#}
+{% block bodyclass %}project{% endblock %}
 {% block bar_mid %}<span class="bar-mid is-page">{{ section.title }}</span>{% endblock %}
 {% block content %}
 {#- THE CANVAS.
@@ -64,6 +75,12 @@
     is not a ratio. One screen of nothing, waiting for a photograph. -#}
 {%- if tall < 1 -%}{%- set_global tall = 60 -%}{%- endif -%}
 
+{#- INSIDE `.proj`, which is where the top padding lives that clears
+    the fixed bar. Her paragraph was outside it and started at y=0,
+    behind the bandeau. -#}
+<main class="proj" style="view-transition-name:vt-{{ section.path | slugify }}">
+  <h1 class="sr-only">{{ section.title }}</h1>
+
 {#- HER WORDS, ABOVE THE CANVAS and in the ordinary flow of the page.
 
     The canvas itself cannot hold them: its children are placed by
@@ -80,8 +97,7 @@
 {#- `data-desk` says WHICH folder this is, the same way a desk does:
     the panel turns a drag here into a place_shot and needs the path,
     and deriving one from the url is a guess. -#}
-<main class="canvas" data-desk="content/{{ section.colocated_path }}" style="--tall:{{ tall }}; view-transition-name:vt-{{ section.path | slugify }}">
-  <h1 class="sr-only">{{ section.title }}</h1>
+<div class="canvas" data-desk="content/{{ section.colocated_path }}" style="--tall:{{ tall }}">
   {%- set_global below = 0 -%}
   {%- for asset in section.assets -%}
     {%- if lang != config.default_language -%}
@@ -161,5 +177,6 @@
       </figure>
     {%- endif -%}
   {%- endfor -%}
+</div>
 </main>
 {% endblock %}

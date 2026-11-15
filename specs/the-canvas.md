@@ -144,3 +144,12 @@ sentences would have drifted.
 so the panel went on offering travail sélectionné as a destination that
 the server refuses — caught by the check that compares what the panel
 offers with what the verb accepts.
+
+**It is paper.** The first build gave it `bodyclass: selection`, which
+no stylesheet has a rule for — so the body fell through to the default,
+and the default is the desktop's dark ground. A white composition
+arrived on black with her paragraph in white, under a bar it collided
+with. It wears `project` now, like every other page: cream, ink, an ink
+bar, and the scrim that keeps a line of text off the bandeau. Her words
+sit inside `.proj`, which is where the padding that clears the bar
+lives. Her own selected-work page is white, which settled it.
