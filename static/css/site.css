@@ -1001,92 +1001,73 @@ body.project .bar { color: var(--ink); text-shadow: none; }
    around it — `.proj-pairs` and `.proj-fig`, gone 2026-11-13 with the
    two rhythms. Every page on a desk is one column now, so there is
    nothing left for a second width to apply to. */
-/* WHAT IS INSIDE A FOLDER: THREE COLUMNS, AND A PICTURE IN ONE.
+/* THE CANVAS — travail sélectionné.
    --------------------------------------------------------------------
-   The blank space is divided into three columns. A photograph sits in
-   one of them and is the width of that column — so the column decides
-   the size and the choice of column decides the place. Her words:
-   *three columns within the blank space where we can sit one picture,
-   a display per column taken by the width of a picture, and the three
-   columns setting the limits of expression.*
+   She puts each picture where she wants it: a left, a top and a width,
+   all three PERCENTAGES OF THE PAGE WIDTH. The composition then scales
+   with the window and keeps its proportions, which is what her
+   reference does by being one tall image. See specs/the-canvas.md.
 
-   ONE NUMBER DOES IT, declared per file in the folder's front matter
-   (see _place.html) and otherwise taken from the rhythm below:
+     --x   the left edge
+     --y   the top, measured in width-percent like the rest
+     --w   how wide
+     --o   where it comes in reading order, for the phone only
+     --tall  on the canvas: how far the lowest picture reaches
 
-     --c   which column, 1, 2 or 3
+   THIS REPLACED THREE COLUMNS, which replaced a free width, which
+   replaced a width, an offset and a lean. Her own selected-work page
+   was measured before this was built: eight pictures, eight widths,
+   two of them sharing a vertical band. A column grid cannot say that,
+   and she had said *the three columns setting the limits of
+   expression* before any of us had looked at what she actually makes.
 
-   IT WAS A WIDTH BEFORE — `--w`, a percentage of the page — and
-   before that a width, an offset and a lean. The lean and the offset
-   were rejected; the free width went with this, because a column that
-   sets the width is the same idea with a limit on it, and the limit is
-   the point.
-
-   PLACEMENT IS SPARSE, which is the browser's default and is what
-   makes this a composition rather than a gallery. A photograph goes
-   into the next free row of its own column — so two in different
-   columns can share a row, and two in the same column cannot. Rows
-   therefore hold one, two or three pictures depending on the sequence,
-   and the gaps are where the eye rests.
-
-   THE RHYTHM is 1, 3, 2, 1, 3 — five steps over three columns, so it
-   does not fall into a march and a row is rarely full. A folder nobody
-   has arranged still reads as composed. */
-.proj-route {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: clamp(2.2rem, 6vh, 5rem);
-  padding: clamp(2.5rem, 7vh, 5rem) var(--pad);
-}
-/* A stop fills the column it was put in. `margin: 0` because a
-   <figure> has one from the UA and the track does the spacing. */
-.stop {
-  grid-column: var(--c, auto);
+   `aspect-ratio`, not a height: the box has to reserve the right
+   space before a single picture has loaded, and its children are
+   absolutely positioned, so the content flow would otherwise give it
+   a height of nothing and pile every picture at the top. */
+.canvas {
+  position: relative;
   width: 100%;
+  aspect-ratio: 100 / var(--tall, 100);
+  margin: clamp(5rem, 9vw, 8rem) 0 clamp(3rem, 6vw, 6rem);
+}
+/* `top` as a percentage resolves against the box's HEIGHT, and the
+   number she has is in width-percent — so it is converted here rather
+   than stored converted. Stored against the height, moving one
+   picture down would renumber every other one. */
+.canvas .shot {
+  position: absolute;
+  left: calc(var(--x, 0) * 1%);
+  top: calc(var(--y, 0) / var(--tall, 100) * 100%);
+  width: calc(var(--w, 100) * 1%);
   margin: 0;
 }
-.stop img { display: block; width: 100%; height: auto; }
+.canvas .shot img { display: block; width: 100%; height: auto; }
 
-/* Five steps over three columns: 1, 3, 2, 1, 3. Not 1, 2, 3 — that
-   fills every row and the page becomes the gallery. */
-.stop:nth-child(5n+1) { --c: 1; }
-.stop:nth-child(5n+2) { --c: 3; }
-.stop:nth-child(5n+3) { --c: 2; }
-.stop:nth-child(5n+4) { --c: 1; }
-.stop:nth-child(5n+5) { --c: 3; }
+/* 52rem — ONE COLUMN ON A PHONE, every picture the whole width, in the
+   order she arranged them down the page.
 
-/* NO NAME ON A PHOTOGRAPH. The plate that carried the file's name on
-   hover is gone with the links: this is somewhere to look, and a file
-   name is not something a visitor came for. Nothing replaces it —
-   what a photograph shows belongs in [extra.alt], where a screen
-   reader can reach it and the eye is not asked to read a filename. */
+   NOT her composition shrunk. The client saw the varying widths on a
+   phone on 2026-11-14 and rejected them: at that size they read as
+   raggedness rather than composition, which is the objection she made
+   to the offsets and the lean on every screen. A picture at 28% of a
+   390px screen is 109px, which is not showing the work.
 
-/* 52rem — two columns become one, so the widths come together too.
-   It lived at 46rem for no reason anybody wrote down. */
-/* 52rem — ONE COLUMN ON A PHONE. Three columns of a 390px screen is
-   three slivers, so the three collapse into one and every photograph
-   takes the whole width, one after another.
-
-   This went back and forth, so the history is worth having. It began
-   as full width; that was called flattening and replaced by a squeeze
-   — widths 20..100 compressed into roughly 67..100, so a narrow
-   picture stayed narrower than a wide one. The argument was that the
-   answer to values too extreme is smaller values, not none.
-
-   The client has now seen it on a phone and does not want it: on a
-   screen this narrow the varying widths read as raggedness rather
-   than composition, which is the same objection she made to the
-   offsets and the lean on every screen. 2026-11-14.
-
-   So the widths are a wide-screen idea, and `--w` simply does not
-   apply down here. Nothing is lost that she can see: on a phone a
-   photograph at 70% and one at 100% differ by a margin, not by a
-   composition. */
+   `order`, because the DOM is in the order zola lists files and the
+   column has to run in the order a person reads: she drops `09.jpg`,
+   puts it at the top, and alphabetically it is last. The number is
+   counted at build time — see selection.html. */
 @media (max-width: 52rem) {
-  .proj-route { grid-template-columns: 1fr; }
-  /* `grid-column: 1`, not `auto`: her declared column would otherwise
-     ask for a track that does not exist down here, and the grid would
-     grow an implicit second and third column to hold it. */
-  .stop { grid-column: 1; width: 100%; }
+  .canvas {
+    display: flex; flex-direction: column; gap: clamp(2rem, 7vw, 3rem);
+    aspect-ratio: auto;
+    padding: 0 var(--pad);
+  }
+  .canvas .shot {
+    position: static;
+    width: 100%;
+    order: var(--o, 0);
+  }
 }
 
 .proj-back {

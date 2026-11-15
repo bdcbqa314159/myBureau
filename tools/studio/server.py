@@ -471,6 +471,9 @@ class Studio(http.server.BaseHTTPRequestHandler):
             return verbs.set_body(ask["item"], ask.get("lang", "fr"), ask["body"])
         if name == "reorder":
             return verbs.reorder(ask["item"], ask["names"])
+        if name == "place_shot":
+            return verbs.place_shot(ask["item"], ask["name"], ask["left"],
+                                    ask["top"], ask["width"])
         if name == "remove_image":
             return verbs.remove_image(ask["item"], ask["name"])
         if name == "undo":

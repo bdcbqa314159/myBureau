@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}{{ section.title }} — {{ id.title }}{% endblock %}
+{% block bodyclass %}selection{% endblock %}
+{% block bar_mid %}<span class="bar-mid is-page">{{ section.title }}</span>{% endblock %}
+{% block content %}
+{#- THE CANVAS.
+
+    A folder that holds photographs, like pellicules — and where
+    pellicules flows them into columns, this one puts each where she
+    put it. See specs/the-canvas.md.
+
+        [extra.shot]
+        "01.jpg" = { left = 30, top = 0, width = 55 }
+
+    ALL THREE ARE PERCENTAGES OF THE PAGE WIDTH, top included. The
+    composition then scales with the window and keeps its proportions,
+    which is what her reference does by being a single image; a top in
+    pixels would hold at one window size only.
+
+    `top` is stored against the WIDTH and converted below, so that
+    moving one picture down does not renumber every other one.
+
+    THE HEIGHT IS COMPUTED, not declared: the canvas reaches as far as
+    its lowest picture, and a picture's height is its width times its
+    own proportions. Without this the box is as tall as the content
+    flow thinks it is, which for absolutely positioned children is
+    nothing at all — every picture piled at the top of a flat page.
+
+    Overlap is allowed. Document order decides what sits on top; there
+    is no z-index to manage, and the reference comes within a hair of
+    needing one.
+
+    ponytail: two passes over the assets, one to measure and one to
+    draw. Tera cannot keep a running maximum across a loop except
+    through set_global, and it cannot sort, so this is the shape. -#}
+{%- set_global tall = 0 -%}
+{%- for asset in section.assets -%}
+  {%- if lang != config.default_language -%}
+    {%- set asset = asset | replace(from="/" ~ lang ~ "/", to="/") -%}
+  {%- endif -%}
+  {%- set file = asset | split(pat="/") | last -%}
+  {%- set ext = file | split(pat=".") | last | lower -%}
+  {%- if ext in config.extra.image_types
+         and not (file | split(pat=".") | first in config.extra.not_photographs) -%}
+    {%- set shape = get_image_metadata(path=asset) -%}
+    {#- A PICTURE SHE HAS NEVER PLACED still has to appear, or dropping
+        one would look like losing it. It goes below everything, full
+        width, in the order zola gives — see criterion 13. -#}
+    {%- set_global at = 0 -%}
+    {%- set_global wide = 100 -%}
+    {%- set_global placed = false -%}
+    {%- if section.extra.shot and section.extra.shot[file] -%}
+      {%- set s = section.extra.shot[file] -%}
+      {%- set_global at = s.top | default(value=0) -%}
+      {%- set_global wide = s.width | default(value=100) -%}
+      {%- set_global placed = true -%}
+    {%- endif -%}
+    {%- if not placed -%}{%- set_global at = tall + 6 -%}{%- endif -%}
+    {%- set_global bottom = at + (wide * shape.height / shape.width) -%}
+    {%- if bottom > tall -%}{%- set_global tall = bottom -%}{%- endif -%}
+  {%- endif -%}
+{%- endfor -%}
+{#- An empty folder has no height at all, and `aspect-ratio: 100 / 0`
+    is not a ratio. One screen of nothing, waiting for a photograph. -#}
+{%- if tall < 1 -%}{%- set_global tall = 60 -%}{%- endif -%}
+
+{#- HER WORDS, ABOVE THE CANVAS and in the ordinary flow of the page.
+
+    The canvas itself cannot hold them: its children are placed by
+    coordinate, and a paragraph has no coordinate. It sits above
+    instead, which is where page.html put it when this folder was a
+    road.
+
+    It is not decoration. The panel decides whether to offer her a text
+    box by whether the template renders one, so a canvas with no
+    `.content` would take the box away from the one page she has
+    written a sentence for. -#}
+<div class="proj-intro">{{ section.content | safe }}</div>
+
+{#- `data-desk` says WHICH folder this is, the same way a desk does:
+    the panel turns a drag here into a place_shot and needs the path,
+    and deriving one from the url is a guess. -#}
+<main class="canvas" data-desk="content/{{ section.colocated_path }}" style="--tall:{{ tall }}; view-transition-name:vt-{{ section.path | slugify }}">
+  <h1 class="sr-only">{{ section.title }}</h1>
+  {%- set_global below = 0 -%}
+  {%- for asset in section.assets -%}
+    {%- if lang != config.default_language -%}
+      {%- set asset = asset | replace(from="/" ~ lang ~ "/", to="/") -%}
+    {%- endif -%}
+    {%- set file = asset | split(pat="/") | last -%}
+    {%- set ext = file | split(pat=".") | last | lower -%}
+    {%- if ext in config.extra.image_types
+           and not (file | split(pat=".") | first in config.extra.not_photographs) -%}
+      {%- set shape = get_image_metadata(path=asset) -%}
+      {%- set_global x = 0 -%}
+      {%- set_global at = 0 -%}
+      {%- set_global wide = 100 -%}
+      {%- set_global placed = false -%}
+      {%- if section.extra.shot and section.extra.shot[file] -%}
+        {%- set s = section.extra.shot[file] -%}
+        {%- set_global x = s.left | default(value=0) -%}
+        {%- set_global at = s.top | default(value=0) -%}
+        {%- set_global wide = s.width | default(value=100) -%}
+        {%- set_global placed = true -%}
+      {%- endif -%}
+      {%- if not placed -%}
+        {%- set_global at = below + 6 -%}
+        {%- set_global below = at + (wide * shape.height / shape.width) -%}
+      {%- endif -%}
+      {%- if placed and (at + (wide * shape.height / shape.width)) > below -%}
+        {%- set_global below = at + (wide * shape.height / shape.width) -%}
+      {%- endif -%}
+      {#- Resized to the WIDTH IT IS DRAWN AT, give or take: a picture
+          that occupies a third of the page does not need the whole
+          original, and the gallery already learnt not to ask for more
+          pixels than the file holds. 16 is the page's own margin
+          either side. -#}
+      {%- set_global want = wide * 16 -%}
+      {%- if want > shape.width -%}{%- set_global want = shape.width -%}{%- endif -%}
+      {%- if want < 320 -%}{%- set_global want = 320 -%}{%- endif -%}
+      {%- set one = resize_image(path=asset, width=want, op="fit_width", format="webp", quality=78) -%}
+      {%- set alt = "" -%}
+      {%- if section.extra.alt and section.extra.alt[file] %}{%- set alt = section.extra.alt[file] -%}{%- endif -%}
+      {#- WHICH PICTURE THIS IS, READING DOWN — for the phone, and only
+          for the phone. There the canvas becomes one column, and the
+          column has to run in the order a person reads, not the order
+          zola lists files in: she drops `09.jpg` and puts it at the
+          top, and alphabetically it is last.
+
+          Counted rather than sorted, because Tera cannot sort by a
+          value looked up elsewhere. Quadratic in her photographs, and
+          cheap: no resize, no metadata, just a number compared.
+
+          By `top` alone. Two pictures at the same height keep the
+          order zola gave them, which is as good an answer as any and
+          costs nothing to read. A picture she has never placed sits
+          at 9000 with the others like it, so they all land at the
+          bottom in the order they arrived. -#}
+      {%- set_global mine = 9000 -%}
+      {%- if placed %}{%- set_global mine = at -%}{% endif -%}
+      {%- set_global rank = 0 -%}
+      {%- for o in section.assets -%}
+        {%- set of = o | split(pat="/") | last -%}
+        {%- if of | split(pat=".") | last | lower in config.extra.image_types
+               and not (of | split(pat=".") | first in config.extra.not_photographs) -%}
+          {%- if section.extra.shot and section.extra.shot[of] -%}
+            {%- if (section.extra.shot[of].top | default(value=0)) < mine -%}
+              {%- set_global rank = rank + 1 -%}
+            {%- endif -%}
+          {%- endif -%}
+        {%- endif -%}
+      {%- endfor -%}
+      {#- `data-shot` is what the PANEL reads to know which file this
+          is, exactly as in the gallery — a drag here becomes a
+          place_shot, and reading a slug back to a file name is a
+          guess. -#}
+      <figure class="shot" data-shot="{{ file }}"
+              style="--x:{{ x }}; --y:{{ at }}; --w:{{ wide }}; --o:{{ rank }}">
+        <img src="{{ one.url }}" width="{{ shape.width }}" height="{{ shape.height }}"
+             alt="{{ alt }}" loading="lazy" decoding="async">
+      </figure>
+    {%- endif -%}
+  {%- endfor -%}
+</main>
+{% endblock %}

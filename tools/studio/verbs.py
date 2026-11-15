@@ -817,17 +817,15 @@ def must_accept(d: pathlib.Path, role: str) -> None:
     kind = kind_of(d)
     if not kind:
         return                     # nothing declared: the old behaviour
-    # A GALLERY IS A FOLDER THAT HOLDS PHOTOGRAPHS ITSELF, which is the
-    # one place `ACCEPTS["folder"] = ()` is wrong. `pellicules` is a
-    # folder on the main desktop — same as DA, with a face and no
-    # wallpaper — and its content is the photographs she drops straight
-    # into it rather than things inside it.
+    # A FOLDER THAT HOLDS PHOTOGRAPHS ITSELF is the one place
+    # `ACCEPTS["folder"] = ()` is wrong — see holds_photographs.
     #
-    # Read from the template, because that is still what says a folder
-    # is a gallery. When their own edition is designed that moves to a
-    # written-down note like everything else; until then this is the
-    # fact, and it is one line rather than a guess.
-    if kind == "folder" and role == "image" and is_gallery(d):
+    # TWO OF THEM NOW: pellicules and travail sélectionné. The second
+    # was a folder holding five projects, so selecting it offered her
+    # no photographs at all and the only drop on it was the icon slot
+    # — she dropped a picture meaning to add it to the page and set
+    # the folder's face instead. See specs/the-canvas.md.
+    if kind == "folder" and role == "image" and holds_photographs(d):
         return
     if role in ACCEPTS.get(kind, ()):
         return
@@ -892,6 +890,31 @@ def is_gallery(d: pathlib.Path) -> bool:
     return template_of(d) == "gallery.html"
 
 
+def is_canvas(d: pathlib.Path) -> bool:
+    """travail sélectionné: photographs, each one placed by hand."""
+    return template_of(d) == "selection.html"
+
+
+ONLY_PHOTOGRAPHS = ("cette page ne montre que ses photos — ce que tu ranges"
+                    " là ne s'afficherait nulle part.")
+
+
+def holds_photographs(d: pathlib.Path) -> bool:
+    """A FOLDER THAT HOLDS PHOTOGRAPHS ITSELF, rather than things.
+
+    Two of them, both on the main desktop, both one of a kind, and
+    they differ only in what their page does with the photographs:
+
+        pellicules            a column flow — an order, no coordinates
+        travail sélectionné   a canvas — a left, a top and a width each
+
+    Read from the template, because that is still what says which
+    sort a folder is. When their own edition is designed that moves
+    to a written-down note like everything else.
+    """
+    return is_gallery(d) or is_canvas(d)
+
+
 def drawn_as_an_icon(d: pathlib.Path) -> bool:
     """Is this thing drawn as an icon anywhere, with a name under it?
 
@@ -926,9 +949,8 @@ def new_project(into: str, name: str, kind: str = "photos") -> dict:
         raise Refused("un projet se range dans un bureau.")
     # A gallery renders its own photographs and nothing else: a project
     # put inside one would be built and never shown anywhere.
-    if is_gallery(d):
-        raise Refused("une galerie ne montre que ses photos — un projet rangé"
-                      " là ne s'afficherait nulle part.")
+    if holds_photographs(d):
+        raise Refused(ONLY_PHOTOGRAPHS)
     if kind not in NEW_KINDS:
         raise Refused("je ne connais pas ce genre de projet.")
     name = name.strip()
@@ -962,7 +984,7 @@ def _one_of_a_kind(display: str) -> str:
     designed this moves to a written-down note like everything else,
     and this function is the one place to change.
     """
-    want = "gallery.html" if display == "gallery" else "page.html"
+    want = "gallery.html" if display == "gallery" else "selection.html"
     for child in sorted(CONTENT.iterdir()):
         if not child.is_dir() or not any(child.glob("_index*.md")):
             continue
@@ -976,9 +998,8 @@ def new_bureau(into: str, name: str, display: str = "desk") -> dict:
     d = inside(into)
     if not any(d.glob("_index*.md")):
         raise Refused("un dossier se range dans un bureau.")
-    if is_gallery(d):
-        raise Refused("une galerie ne montre que ses photos — un dossier rangé"
-                      " là ne s'afficherait nulle part.")
+    if holds_photographs(d):
+        raise Refused(ONLY_PHOTOGRAPHS)
     name = name.strip()
     if not name or '"' in name:
         raise Refused("donne-lui un nom, sans guillemets.")
@@ -1016,7 +1037,7 @@ def new_bureau(into: str, name: str, display: str = "desk") -> dict:
                           .format("une galerie" if display == "gallery"
                                   else "une sélection", already))
     template = ("gallery.html" if display == "gallery"
-                else "page.html" if display == "selection"
+                else "selection.html" if display == "selection"
                 else "section.html" if on_the_main_desk
                 else "page.html")
     # AND WHAT IT IS, written down. On the main desktop a folder holds a
@@ -1051,9 +1072,8 @@ def move(item: str, into: str) -> dict:
     dst = inside(into)
     if not any(dst.glob("_index*.md")):
         raise Refused("ça se range dans un bureau.")
-    if is_gallery(dst):
-        raise Refused("une galerie ne montre que ses photos — ce que tu déposes"
-                      " là ne s'afficherait nulle part.")
+    if holds_photographs(dst):
+        raise Refused(ONLY_PHOTOGRAPHS)
     if src == dst:
         raise Refused("il y est déjà.")
     if dst == src.parent:
@@ -1683,6 +1703,78 @@ def set_wallpaper(item: str, name: str, data: bytes) -> dict:
     return {"wallpaper": dest.name}
 
 
+def place_shot(item: str, name: str, left, top, width) -> dict:
+    """Where one picture sits on the canvas, and how wide it is.
+
+        [extra.shot]
+        "vue sur la mer.jpg" = { left = 28, top = 4, width = 62 }
+
+    ALL THREE ARE PERCENTAGES OF THE PAGE WIDTH, top included, so the
+    composition scales with the window and keeps its proportions —
+    which is what her reference does by being one tall image. See
+    specs/the-canvas.md.
+
+    CLAMPED, NOT REFUSED, exactly like `place`: she is dragging, and a
+    drag that ends slightly off the edge should land on the edge
+    rather than throw her work away with a sentence.
+
+      left   0 .. 100, and left + width never passes 100, so nothing
+             hangs off the right edge
+      top    0 and up, with no ceiling: the canvas is as tall as its
+             lowest picture, so dragging down makes the page longer
+      width  5 .. 100. Below 5 it is a speck she cannot grab again,
+             which is a trap rather than a composition
+
+    Written to EVERY language file: a photograph is in one place, and
+    a composition that differed between French and English would be
+    two compositions to maintain.
+    """
+    d = a_project(item)
+    if not is_canvas(d):
+        raise Refused("seule une page qui place ses photos a des positions.")
+    if name not in photographs_in(d):
+        raise Refused("cette photo n'est pas là.")
+
+    def number(v, low, high, what):
+        try:
+            n = round(float(v), 2)
+        except (TypeError, ValueError):
+            raise Refused("{} n'est pas un nombre.".format(what))
+        if n != n or n in (float("inf"), float("-inf")):
+            raise Refused("{} n'est pas un nombre.".format(what))
+        return max(low, min(high, n))
+
+    width = number(width, 5, 100, "la largeur")
+    left = number(left, 0, 100 - width, "la position")
+    # NO CEILING ON `top`. A canvas grows downwards as she drags, and
+    # a clamp here would be a wall she cannot see. The only bound is
+    # that a picture cannot sit above the page.
+    top = number(top, 0, 100000, "la hauteur")
+
+    line = "{{ left = {}, top = {}, width = {} }}".format(
+        _plain(left), _plain(top), _plain(width))
+    texts, wrote = [], 0
+    planned = []
+    for f in language_files(d):
+        before = f.read_text(encoding="utf-8")
+        planned.append((f, before,
+                        set_map_key(before, name, line, "extra.shot", rel(f))))
+    for f, before, after in planned:
+        if after != before:
+            texts.append({"path": rel(f), "before": before})
+            atomic(f, after)
+            wrote += 1
+    if texts:
+        record("place_shot", texts, [])
+    return {"shot": name, "left": left, "top": top, "width": width,
+            "files": wrote}
+
+
+def _plain(n: float):
+    """28.0 is written as 28 — TOML reads both, a person reads one."""
+    return int(n) if float(n).is_integer() else n
+
+
 def reorder(item: str, names: list) -> dict:
     """Where each photograph sits, written down. NOTHING IS RENAMED.
 
@@ -1712,7 +1804,7 @@ def reorder(item: str, names: list) -> dict:
     arrangement had nothing left to rename.
 
     So the files are left exactly alone and the templates walk the ranks
-    — see the turn loop in `_place.html` and `gallery.html`.
+    — see the turn loop in `gallery.html` and `page.html`.
 
     A rank for a photograph that has since gone is harmless: nothing
     matches it. They are left behind rather than swept, like `[extra.alt]`

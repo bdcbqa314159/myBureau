@@ -1462,6 +1462,138 @@ if (loaded) {
   check("after an edit it waits for the page before reloading the frame",
     polled, JSON.stringify(fetched.slice(mark)));
 
+  // ---- placing a picture on the canvas ----------------------------
+  //
+  // travail sélectionné holds photographs now, like pellicules, and
+  // its page places each one: a left, a top and a width, all three in
+  // percentages of the PAGE WIDTH. Drag the picture to move it; drag
+  // its bottom-right corner to size it. See specs/the-canvas.md.
+  //
+  // THE CANVAS HAS NO `.desk` EITHER, which is the trap the gallery
+  // drag fell into twice: the call has to come before hook()'s early
+  // return or it is dead code that every check still passes.
+  //
+  // The canvas here is 1000px wide, so a pixel is a tenth of a
+  // percent and the arithmetic is readable.
+  {
+    const made = [];
+    const fig = (file, x, y, w) => {
+      const box = { left: x * 10, top: y * 10, width: w * 10, height: w * 10 * 2 / 3 };
+      const el2 = {
+        dataset: { shot: file }, on: {},
+        style: {
+          vals: { "--x": String(x), "--y": String(y), "--w": String(w) },
+          setProperty(k, v) { this.vals[k] = v; },
+          getPropertyValue(k) { return this.vals[k] ?? ""; },
+        },
+        addEventListener(k, fn) { (this.on[k] ||= []).push(fn); },
+        setPointerCapture() { el2.captured = true; },
+        querySelector: () => el2.img,
+        img: { draggable: true },
+        getBoundingClientRect: () => ({
+          left: box.left, top: box.top, width: box.width, height: box.height,
+          right: box.left + box.width, bottom: box.top + box.height,
+        }),
+      };
+      made.push(el2);
+      return el2;
+    };
+    const one = fig("01.jpg", 30, 0, 55);
+    const two = fig("02.jpg", 2, 48, 28);
+    const canvasEl = {
+      dataset: { desk: "content/travail-selectionne/" },
+      getBoundingClientRect: () => ({ left: 0, top: 0, width: 1000, height: 3000 }),
+      querySelectorAll: () => made,
+    };
+    const canvasDoc = {
+      querySelector: (s) => (s === ".canvas" ? canvasEl : null),
+      querySelectorAll: (s) => (/data-shot/.test(s) ? made : []),
+      addEventListener() {}, createElement: () => ({ id: "", textContent: "" }),
+      head: { append() {} }, getElementById: () => null,
+    };
+    byId.get("view").contentDocument = canvasDoc;
+    if (typeof sandbox.hook === "function") sandbox.hook();
+
+    check("the tip says what the gesture does on a canvas",
+      /coin en bas/.test(byId.get("tip").textContent),
+      byId.get("tip").textContent);
+    check("  and the picture's own native drag is out of the way",
+      made.every((m) => m.img.draggable === false));
+
+    const fire = (el2, kind, ev) => { for (const fn of el2.on[kind] || []) fn(ev); };
+    const fireAwait = async (el2, kind, ev) => {
+      for (const fn of el2.on[kind] || []) await fn(ev);
+    };
+    let sent = null;
+    const keepFetch = sandbox.fetch;
+    sandbox.fetch = async (url, opts) => {
+      if (opts && opts.body) sent = JSON.parse(opts.body);
+      return { ok: true, json: async () => ({ n: 2, did: {} }) };
+    };
+
+    // A TAP IS NOT A PLACEMENT, and a tap moves — a finger is never
+    // still. Without a pointermove the threshold is never reached, so
+    // a check that goes straight from down to up would pass with the
+    // threshold deleted.
+    fire(one, "pointerdown", { button: 0, clientX: 400, clientY: 20 });
+    fire(one, "pointermove", { clientX: 402, clientY: 21 });
+    await fireAwait(one, "pointerup", { clientX: 402, clientY: 21 });
+    check("a tap places nothing", sent === null, JSON.stringify(sent));
+
+    // MOVED: 150px right and 300px down on a 1000px canvas, which is
+    // +15 and +30 — and `top` is divided by the WIDTH, not the
+    // height, because that is the unit it is stored in. Dividing by
+    // the height here would give +10 and put the picture somewhere
+    // other than under her finger.
+    fire(one, "pointerdown", { button: 0, clientX: 400, clientY: 20 });
+    fire(one, "pointermove", { clientX: 550, clientY: 320 });
+    await fireAwait(one, "pointerup", { clientX: 550, clientY: 320 });
+    check("dragging a picture writes where she put it",
+      sent && sent.verb === "place_shot" && sent.item === "content/travail-selectionne"
+      && sent.name === "01.jpg", JSON.stringify(sent));
+    check("  moved by exactly what the pointer moved, in width-percent",
+      sent && sent.left === 45 && sent.top === 30,
+      JSON.stringify(sent && [sent.left, sent.top])); 
+    check("  and its width is untouched by a move",
+      sent && sent.width === 55, JSON.stringify(sent && sent.width));
+    check("  and she sees it move while she drags, not only after",
+      one.style.getPropertyValue("--x") === "45");
+
+    // SIZED: the gesture starts inside the bottom-right corner. 02 is
+    // at left 2, top 48, width 28 — so its box is 20..300 across and
+    // 480..666 down, and a grab at 295,660 is within 18px of the
+    // corner.
+    sent = null;
+    fire(two, "pointerdown", { button: 0, clientX: 295, clientY: 660 });
+    fire(two, "pointermove", { clientX: 395, clientY: 660 });
+    await fireAwait(two, "pointerup", { clientX: 395, clientY: 660 });
+    check("dragging the corner sizes it instead of moving it",
+      sent && sent.name === "02.jpg" && sent.width === 38
+      && sent.left === 2 && sent.top === 48, JSON.stringify(sent));
+
+    // AND NOTHING HANGS OFF THE RIGHT EDGE. The verb clamps too, but
+    // what she sees while dragging has to agree with what is written
+    // or the picture jumps on reload.
+    sent = null;
+    fire(two, "pointerdown", { button: 0, clientX: 295, clientY: 660 });
+    fire(two, "pointermove", { clientX: 1400, clientY: 660 });
+    await fireAwait(two, "pointerup", { clientX: 1400, clientY: 660 });
+    check("  and a corner dragged past the edge stops at it",
+      sent && sent.left + sent.width === 100, JSON.stringify(sent));
+
+    // LOOKING, NOT ARRANGING, in the phone view — the desk's rule and
+    // the gallery's.
+    sent = null;
+    if (typeof sandbox.setWidth === "function") sandbox.setWidth(true);
+    fire(one, "pointerdown", { button: 0, clientX: 400, clientY: 20 });
+    fire(one, "pointermove", { clientX: 600, clientY: 400 });
+    await fireAwait(one, "pointerup", { clientX: 600, clientY: 400 });
+    check("the phone view looks and does not place", sent === null,
+      JSON.stringify(sent));
+    if (typeof sandbox.setWidth === "function") sandbox.setWidth(false);
+    sandbox.fetch = keepFetch;
+  }
+
   // ---- where she was, across a reload of the panel -----------------
   //
   // THE COMPLAINT: "every time I click refresh it sends me to the main
