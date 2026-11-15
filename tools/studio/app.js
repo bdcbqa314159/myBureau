@@ -1279,15 +1279,23 @@ function whatFitsIn(deskPath, desks) {
   // eslint-disable-next-line no-unused-vars
   // THE MAIN DESKTOP. A gallery and a selection are one of a kind, and
   // the test is the SORT rather than the name — she may call a gallery
-  // whatever she likes and still not get a second. Read from the
-  // template, which is the only thing that says which is which; the
-  // server refuses either way, so this list being generous would be a
-  // refusal rather than a wrong file.
+  // whatever she likes and still not get a second.
+  //
+  // ASKED OF THE MODEL, not of a template name. This read
+  // `x.template === "page.html"`, which was how a selection was spelled
+  // until travail sélectionné became a canvas and moved to
+  // `selection.html` — so from that day the panel offered "une
+  // sélection" on a desktop that already had one, and the server
+  // refused it. `gallery` and `canvas` are the model's own words for
+  // the two sorts, and the server reads the same fact.
+  //
+  // The fixture hid it: its travail sélectionné row still said
+  // page.html, so the panel's wrong answer matched a wrong world.
+  // Audit 3 found it by giving the fixture the shape it lacked.
   const first = all.filter((x) => (x.depth || 0) === 1);
   const out = [["folder", "un dossier"]];
   if (!first.some((x) => x.gallery)) out.push(["gallery", "une galerie"]);
-  if (!first.some((x) => x.template === "page.html"))
-    out.push(["selection", "une sélection"]);
+  if (!first.some((x) => x.canvas)) out.push(["selection", "une sélection"]);
   return out;
 }
 

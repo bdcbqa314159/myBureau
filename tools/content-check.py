@@ -895,8 +895,8 @@ def case_about_is_a_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
                     d / "content" / "about.jpg")
     ok, log = build(d)
     h = page(d, "index.html")
-    win = re.search(r'<dialog class="win win-about" id="about">.*?</dialog>', h, re.S)
-    en = re.search(r'<dialog class="win win-about" id="about">.*?</dialog>',
+    win = re.search(r'<dialog class="win win-about"[^>]*id="about"[^>]*>.*?</dialog>', h, re.S)
+    en = re.search(r'<dialog class="win win-about"[^>]*id="about"[^>]*>.*?</dialog>',
                    page(d, "en/index.html"), re.S)
 
     # Captured BEFORE the photograph is taken away below — a page()
@@ -913,7 +913,7 @@ def case_about_is_a_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     m = re.search(r'<a class="icon"[^>]*data-vt="about-me-txt"[^>]*>.*?'
                   r'<img[^>]*src="([^"]+)"', bare, re.S)
     gone_icon = m.group(1) if m else ""
-    gone_win = re.search(r'<dialog class="win win-about" id="about">.*?</dialog>',
+    gone_win = re.search(r'<dialog class="win win-about"[^>]*id="about"[^>]*>.*?</dialog>',
                          bare, re.S)
     gone_sheet = bool(gone_win) and "about-sheet" in gone_win.group(0)
 
@@ -976,7 +976,7 @@ def case_a_film_wears_its_own_frame(d: pathlib.Path) -> list[tuple[str, bool]]:
     desk = page(d, "da/index.html")
     icons = re.findall(r'<a class="icon".*?</a>', desk, re.S)
     mine = next((i for i in icons if 'data-vt="da-clip-sans-photo"' in i), "")
-    win = re.search(r'<dialog class="win win-film" id="film-da-clip-sans-photo">.*?</dialog>',
+    win = re.search(r'<dialog class="win win-film"[^>]*id="film-da-clip-sans-photo"[^>]*>.*?</dialog>',
                     desk, re.S)
     inner = page(d, "da/clip-sans-photo/index.html")
     return [
@@ -1144,6 +1144,46 @@ def case_a_document_is_shown(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
+def case_the_gallery_is_a_dark_room(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """What a gallery looks like, and what it costs to arrive at.
+
+    BOTH OF THESE WENT UNNOTICED by every suite when audit 3 broke
+    them on purpose: the ground turned white, and twelve full-size
+    photographs loaded at once, and all five suites plus the build
+    stayed green. The gallery had checks for what it CONTAINS — every
+    photograph opens, the order is hers, a description reaches the
+    page — and none at all for what it IS.
+
+    See specs/the-audit.md: a mutation sweep is what found them.
+    """
+    ok, log = build(d)
+    h = page(d, "pellicules/index.html")
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    bare = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    # EVERY RULE FOR IT, not the first. `body.gallery` appears three
+    # times — the scrim, the --ground token, and the ground itself —
+    # and a `re.search` stops at whichever comes first in the file.
+    ground = "".join(m.group(1) for m in
+                     re.finditer(r"body\.gallery\s*\{([^}]*)\}", bare))
+    shots = re.findall(r'<a class="shot"[^>]*>\s*<img([^>]*)>', h, re.S)
+    big = re.findall(r'win-shot.*?<img([^>]*)>', h, re.S)
+    return [
+        ("builds", ok),
+        ("the gallery has its photographs", len(shots) >= 8),
+        # A DARK ROOM, which is her brief and the whole of what the
+        # page is.
+        ("it is a dark room, not a white page",
+         "background: #0d0b0a" in ground),
+        # AND WHAT ARRIVING COSTS. Twelve originals at once on a phone
+        # is the difference between a page that opens and one that
+        # does not, and `loading="lazy"` is all that prevents it.
+        ("every photograph in the grid waits to be scrolled to",
+         bool(shots) and all('loading="lazy"' in s for s in shots)),
+        ("and the big one behind each window waits too",
+         bool(big) and all('loading="lazy"' in s for s in big)),
+    ]
+
+
 def case_gallery_photographs_open(d: pathlib.Path) -> list[tuple[str, bool]]:
     """Every photograph in the gallery opens, and opens its OWN window.
 
@@ -1158,7 +1198,7 @@ def case_gallery_photographs_open(d: pathlib.Path) -> list[tuple[str, bool]]:
     (g / "vue-13.jpg").write_bytes(photo)
     ok, log = build(d)
     h = page(d, "pellicules/index.html")
-    links = re.findall(r'<a class="shot" href="#([^"]+)"', h)
+    links = re.findall(r'<a class="shot"[^>]*href="#([^"]+)"', h)
     ids = re.findall(r'<dialog[^>]*id="(shot-[^"]+)"', h)
     imgs = len(re.findall(r'<a class="shot"[^>]*>\s*<img', h))
     return [
@@ -2820,9 +2860,9 @@ def case_a_picture_opens_plain(d: pathlib.Path) -> list[tuple[str, bool]]:
     (q / "clip.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
     ok, log = build(d)
     h = page(d, "da/index.html")
-    pic = re.search(r'<dialog class="win win-preview" id="preview-da-une-photo".*?</dialog>',
+    pic = re.search(r'<dialog class="win win-preview"[^>]*id="preview-da-une-photo".*?</dialog>',
                     h, re.S)
-    film = re.search(r'<dialog class="win win-film" id="film-da-un-clip".*?</dialog>',
+    film = re.search(r'<dialog class="win win-film"[^>]*id="film-da-un-clip".*?</dialog>',
                      h, re.S)
     return [
         ("builds", ok),
@@ -3504,7 +3544,7 @@ def case_a_desk_says_which_desk_it_is(d: pathlib.Path) -> list[tuple[str, bool]]
     gal = page(d, "pellicules/index.html")
 
     def said(html: str) -> str:
-        m = re.search(r'<main class="desk" data-desk="([^"]*)"', html)
+        m = re.search(r'<main class="desk"[^>]*data-desk="([^"]*)"', html)
         return m.group(1) if m else ""
 
     return [
@@ -3636,6 +3676,7 @@ CASES = [
     ("about me opens as a screen", case_about_is_a_screen),
     ("a document is shown, not downloaded", case_a_document_is_shown),
     ("a film wears its own frame", case_a_film_wears_its_own_frame),
+    ("the gallery is a dark room", case_the_gallery_is_a_dark_room),
     ("every photograph in the gallery opens", case_gallery_photographs_open),
     ("the project page is a column", case_the_project_page_is_a_column),
     ("a project wears its own first photograph", case_icon_is_the_work),
