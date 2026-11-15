@@ -961,39 +961,95 @@ function arrangeGallery(doc) {
   grid.__studioDraggable = true;
   const deskPath = galleryPath(doc);
   if (!deskPath) return;
-  let lifted = null;
+
+  // POINTER EVENTS, NOT HTML5 DRAG-AND-DROP.
+  //
+  // The first version used dragstart/dragover/drop. It passed every
+  // check — the harness fires synthetic events and they behaved — and
+  // did nothing at all in a browser: the ghost appeared and the
+  // photographs stayed where they were.
+  //
+  // A `.shot` is an <a> wrapping an <img>, which is two things a
+  // browser already has a native drag for, and `setData` with an empty
+  // string is not a drag every browser will honour. The desk's icon
+  // drag has worked for weeks and uses pointer events; so does this
+  // now. The same gesture, the same mechanism.
+  //
+  // `setPointerCapture` is what makes a drag survive the pointer
+  // leaving the element, and `elementFromPoint` on release is what
+  // says where she let go — neither of which needs the browser to
+  // agree with us about what a draggable link is.
+  let lifted = null, startY = 0, startX = 0, moved = false;
+  let marked = null;
+
+  const mark = (a) => {
+    if (marked === a) return;
+    if (marked) marked.style.outline = "";
+    marked = a;
+    if (marked) marked.style.outline = "2px solid #5b86e5";
+  };
+
+  const shotUnder = (x, y) => {
+    const at = doc.elementFromPoint ? doc.elementFromPoint(x, y) : null;
+    return at && at.closest ? at.closest("[data-shot]") : null;
+  };
+
   for (const a of shots) {
-    a.draggable = true;
-    a.addEventListener("dragstart", (e) => {
-      // LOOKING, NOT ARRANGING, in the phone view — the same rule the
-      // desk has. A drag there is a scroll she did not mean.
-      if (narrowView) { e.preventDefault(); return; }
-      lifted = a;
-      // an <a> drags its href by default, which would hand the browser
-      // a url to navigate rather than a photograph to move
-      if (e.dataTransfer) e.dataTransfer.setData("text/plain", "");
-      a.style.opacity = ".4";
+    // the native drag of a link and of an image, both out of the way —
+    // otherwise the browser starts its own and the pointer events stop
+    a.draggable = false;
+    const img = a.querySelector && a.querySelector("img");
+    if (img) img.draggable = false;
+
+    a.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      // Looking, not arranging, in the phone view — the desk's rule.
+      if (narrowView) return;
+      lifted = a; moved = false;
+      startX = e.clientX; startY = e.clientY;
+      if (a.setPointerCapture) a.setPointerCapture(e.pointerId);
     });
-    a.addEventListener("dragend", () => { a.style.opacity = ""; lifted = null; });
-    a.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      if (!lifted || lifted === a) return;
-      // before or after, by which half of it she is over — the same
-      // test the side list uses, so the two gestures agree
-      const r = a.getBoundingClientRect();
+
+    a.addEventListener("pointermove", (e) => {
+      if (lifted !== a) return;
+      if (!moved
+          && Math.abs(e.clientX - startX) < 5
+          && Math.abs(e.clientY - startY) < 5) return;
+      // A FINGER IS NEVER STILL. Without the threshold every tap counts
+      // as a drag and a click never opens the photograph.
+      moved = true;
+      a.style.opacity = ".45";
+      mark(shotUnder(e.clientX, e.clientY));
+    });
+
+    a.addEventListener("pointerup", async (e) => {
+      if (lifted !== a) return;
+      const was = moved;
+      lifted = null; moved = false;
+      a.style.opacity = "";
+      const onto = shotUnder(e.clientX, e.clientY);
+      mark(null);
+      if (!was) return;                    // a click: let it open
+      // A DRAG MUST NOT ALSO BE A CLICK. The pointer was captured, so
+      // the click lands on this element whatever it is over — and
+      // opening the photograph she has just moved reads as a mistake.
+      a.__studioMoved = true;
+      if (!onto || onto === a) return;
+      const r = onto.getBoundingClientRect();
       const after = (e.clientY - r.top) / r.height > .5;
-      a.parentNode.insertBefore(lifted, after ? a.nextSibling : a);
-    });
-    a.addEventListener("drop", async (e) => {
-      e.preventDefault();
+      onto.parentNode.insertBefore(a, after ? onto.nextSibling : onto);
       const names = [...doc.querySelectorAll(".grid [data-shot]")]
         .map((n) => n.dataset.shot);
       if (await act({ verb: "reorder", item: deskPath, names }))
         tell("ordre enregistré — la galerie se réarrange");
     });
-    // A CLICK STILL OPENS IT. Dragging and looking are different
-    // gestures and both belong to her; the drag only suppresses the
-    // anchor's own default, not the click.
+
+    a.addEventListener("click", (e) => {
+      if (!a.__studioMoved) return;
+      a.__studioMoved = false;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }, true);
   }
 }
 
