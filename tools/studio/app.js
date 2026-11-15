@@ -653,10 +653,9 @@ function inspect(o) {
             chosen === "gif" ? shown : ""}</div>
           <p class="drop" data-drop="icon-gif">Dépose un GIF.</p>`)}`}
       </ul>
-      ${chosen ? `<button type="button" id="noface">Aucun des trois</button>`
-        : `<p class="hintline">Aucun des trois : ${o.photographs.length
-            ? "c'est la première photo qui sert d'icône."
-            : "c'est le dessin par défaut."}</p>`}
+      ${chosen ? "" : `<p class="hintline">${o.photographs.length
+        ? "Rien de choisi : c'est la première photo qui sert d'icône."
+        : "Rien de choisi : c'est le dessin par défaut."}</p>`}
     </fieldset>`;
   // A gallery ignores a wallpaper — look.py flags one declared there as a
   // line that does nothing — so the panel does not offer to set one.
@@ -867,12 +866,6 @@ function wire(o) {
       if (out) tell("icône : un dossier");
     });
   });
-  if (el("noface")) {
-    el("noface").addEventListener("click", async () => {
-      const out = await act({ verb: "set_face", item: o.path, how: "none" });
-      if (out) tell("icône rendue au réglage par défaut");
-    });
-  }
   look.querySelectorAll("[data-alt]").forEach((i) => {
     i.addEventListener("change", async () => {
       const out = await act({ verb: "set_alt", item: o.path,

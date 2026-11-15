@@ -36,6 +36,14 @@ Anything else is refused, with a sentence saying what to do instead.
 | video | a video, an affiche | an image, a PDF |
 | page | images, PDFs | a video |
 | folder | things | files |
+| folder **that is a gallery** | images | everything else |
+
+**A gallery is the one folder that holds files itself.** Its content is
+the photographs she drops straight into it rather than things inside
+it, so `ACCEPTS["folder"] = ()` is wrong for exactly that one — and
+labelling `pellicules` a folder without saying so would have refused
+the photographs the gallery is made of. Read from the template, which
+is still what says a folder is a gallery.
 
 **A photo is a photo.** A second image on it is refused rather than
 quietly turning it into a page. An object that changes type under her
@@ -92,9 +100,12 @@ to be worked out once, by hand, and `tools/label-types.py` did it:
 | `maison cosette`, `logofolio`, `atelier mirabelle`, `grocery list`, `calendar`, `douze regards` | page |
 | `DA`, `graphic design` | folder |
 
-`pellicules` and `travail sélectionné` are not labelled: they are their
-own things on the main desktop — a gallery and the road — and their
-templates already say so.
+`pellicules` and `travail sélectionné` were not labelled at first, on
+the grounds that they are "their own things". That was the same mistake
+in a smaller shape: with no `kind` the panel did not know they were
+folders and offered them a photo slot and a GIF slot for an icon that
+is a folder's icon. **They are folders**, labelled with the rest; their
+template is what still says which sort.
 
 That script used exactly the inference being retired, one last time, to
 seed the answer. **It has no reason to run again**, and must not become
@@ -146,7 +157,15 @@ others:
 **A folder is offered only the first slot.** On the main desktop a
 folder is always a folder, so its face is a folder picture — ours or
 hers. A photograph or a GIF there would be a face that contradicts the
-thing.
+thing. That includes **pellicules and travail sélectionné**: they are
+folders on the main desktop like DA, one of a kind, and what makes
+them special is their template rather than their type.
+
+**There is no "aucun des trois".** It was meaningless on a folder —
+the fallback for a folder IS one of these drawings, so it said "stop
+choosing a drawing" and handed back a drawing — and on a page it meant
+"revert to the first photograph", which is a state named by negation.
+A thing with nothing chosen says what it falls back to instead.
 
 **Her own folder drawing is why each slot has its own drop.** The
 bytes cannot tell a drawn folder from a photograph — they are the same

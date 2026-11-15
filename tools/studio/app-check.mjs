@@ -571,9 +571,16 @@ if (loaded) {
       "marked: " + marked);
     check("  and it says in words which slot, not just an outline",
       want ? /slot-yes/.test(pane) : !/slot-yes/.test(pane));
-    check("  and the one with nothing chosen offers to take it back"
-      + " only when there is something to take",
-      want ? /id="noface"/.test(pane) : !/id="noface"/.test(pane));
+    // REVERSED: there is no "aucun des trois" any more. For a folder
+    // it was meaningless — the fallback for a folder IS one of the
+    // drawings, so it handed back the thing it claimed to remove — and
+    // for a page it meant "revert to the first photograph", a state
+    // labelled by negation. What a thing with nothing chosen gets is
+    // said in words instead.
+    check("  and nothing offers to take a choice back by negation",
+      !/id="noface"/.test(pane));
+    check("  while one with nothing chosen says what it falls back to",
+      want ? !/Rien de choisi/.test(pane) : /Rien de choisi/.test(pane));
   }
   if (daRow && daRow.__click) daRow.__click();
 

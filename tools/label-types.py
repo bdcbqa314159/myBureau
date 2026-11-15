@@ -36,8 +36,17 @@ import filetypes      # noqa: E402
 import frontmatter    # noqa: E402
 
 CONTENT = ROOT / "content"
-# their own things, each with a template that already says what it is
-LEAVE = {"content/pellicules", "content/travail-selectionne"}
+# PELLICULES AND TRAVAIL SÉLECTIONNÉ ARE FOLDERS TOO. They were left
+# out of this as "their own things", and that was the same mistake in a
+# smaller shape: with no `kind` the panel did not know they were
+# folders, so it offered them a photo slot and a GIF slot for an icon
+# that is a folder's icon.
+#
+# They ARE folders on the main desktop — a face, no wallpaper — and
+# one of a kind: at most one gallery and at most one selection. What
+# makes them special is still their template, until their own edition
+# is designed.
+LEAVE = set()
 
 
 def guess(folder: pathlib.Path) -> str:

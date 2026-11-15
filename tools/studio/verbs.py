@@ -804,6 +804,18 @@ def must_accept(d: pathlib.Path, role: str) -> None:
     kind = kind_of(d)
     if not kind:
         return                     # nothing declared: the old behaviour
+    # A GALLERY IS A FOLDER THAT HOLDS PHOTOGRAPHS ITSELF, which is the
+    # one place `ACCEPTS["folder"] = ()` is wrong. `pellicules` is a
+    # folder on the main desktop — same as DA, with a face and no
+    # wallpaper — and its content is the photographs she drops straight
+    # into it rather than things inside it.
+    #
+    # Read from the template, because that is still what says a folder
+    # is a gallery. When their own edition is designed that moves to a
+    # written-down note like everything else; until then this is the
+    # fact, and it is one line rather than a guess.
+    if kind == "folder" and role == "image" and is_gallery(d):
+        return
     if role in ACCEPTS.get(kind, ()):
         return
     raise Refused("c'est {} — {} ne va pas là. {}".format(
@@ -1445,40 +1457,43 @@ def _unface(d: pathlib.Path, moves: list, texts: list) -> None:
 
 
 def set_face(item: str, how: str, which: str = "folder") -> dict:
-    """Give a thing a DRAWN face, or take its face away.
+    """Give a thing one of our drawn folder pictures as its face.
 
     Three slots, and only one of them can hold the face:
 
-        un dossier   one of our drawn folder pictures — this verb
-        une photo    a file she drops            — set_icon
-        un GIF       a file she drops            — set_icon
+        un dossier   one of our drawn pictures — this verb
+                     or one she drew herself   — set_icon with "folder"
+        une photo    a file she drops          — set_icon
+        un GIF       a file she drops          — set_icon
 
-    `how = "folder"` picks a drawn one, `how = "none"` clears all three
-    and lets the engine fall back — the first photograph for a thing
-    that has one, a drawn folder for a thing that does not.
+    THERE WAS AN "AUCUN DES TROIS", and it is gone. For a folder it was
+    meaningless — the fallback for a folder IS one of these drawings,
+    so the button said "stop choosing a drawing" and handed back a
+    drawing. For a page it meant "revert to the first photograph",
+    which is a state rather than an absence, and labelling it by
+    negation made her work out what it did.
     """
     d = a_project(item)
     if not drawn_as_an_icon(d):
         raise Refused("rien ne dessine d'icône pour cette chose :"
                       " une image d'icône ne s'y verrait pas.")
-    if how not in ("folder", "none"):
+    if how != "folder":
         raise Refused("une icône est un dossier, une photo ou un GIF.")
     if how == "folder" and which not in DRAWN_FOLDERS:
         raise Refused("je ne connais pas ce dessin de dossier.")
     moves, texts = [], []
     _unface(d, moves, texts)
-    if how == "folder":
-        path = "img/icons/{}.svg".format(which)
-        for f in language_files(d):
-            before = f.read_text(encoding="utf-8")
-            after = set_key(set_key(before, "icon", path, rel(f)),
-                            "face", "folder", rel(f))
-            if after != before:
-                texts.append({"path": rel(f), "before": before})
-                atomic(f, after)
+    path = "img/icons/{}.svg".format(which)
+    for f in language_files(d):
+        before = f.read_text(encoding="utf-8")
+        after = set_key(set_key(before, "icon", path, rel(f)),
+                        "face", "folder", rel(f))
+        if after != before:
+            texts.append({"path": rel(f), "before": before})
+            atomic(f, after)
     if moves or texts:
         record("set_face", texts, moves)
-    return {"face": how, "which": which if how == "folder" else None}
+    return {"face": "folder", "which": which}
 
 
 def set_identity(owner: str, studio: str) -> dict:
