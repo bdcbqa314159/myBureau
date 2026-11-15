@@ -84,7 +84,20 @@ def photographs(folder: pathlib.Path) -> list:
 
 
 def face_of(folder: pathlib.Path, fm: str) -> str:
-    """Which of the three icon slots holds this thing's face."""
+    """Which of the three icon slots holds this thing's face.
+
+    HER NOTE FIRST. A folder she drew and a photograph are the same
+    kind of file, so the bytes cannot say which slot a dropped image
+    belongs to — only she can, and `set_icon` writes it down.
+
+    The guesses below are the fallback for anything she set before the
+    note existed: a `.gif` moves so it is the GIF slot, another
+    colocated file is a photograph, a declared `img/icons/folder…` is
+    one of ours.
+    """
+    said = key(fm, "face") or ""
+    if said in ("folder", "photo", "gif"):
+        return said
     got = special(folder, "icon")
     if got:
         return "gif" if got.lower().endswith(".gif") else "photo"

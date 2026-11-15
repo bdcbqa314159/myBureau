@@ -606,32 +606,52 @@ function inspect(o) {
   // photograph does not — two different answers, not one with a
   // format. Which slot a dropped file fills is read from its BYTES.
   const chosen = o.face || "";
+  // A FOLDER'S FACE IS A FOLDER. On the main desktop a folder is
+  // always a folder — her words — so it is offered the four drawings
+  // and a drop for one of her own, and nothing else. A photograph or a
+  // GIF there would be a face that contradicts the thing.
+  //
+  // HER OWN DRAWING IS THE POINT of that drop. Before the slots
+  // existed, any image she dropped became the icon, and a folder she
+  // had drawn herself worked. Three slots turned that into "une
+  // photo", which mislabelled it and left a folder with no way to say
+  // "this is my folder picture".
   const slot = (how, label, inner) => `
     <li class="slot${chosen === how ? " is-chosen" : ""}" data-face="${how}">
       <span class="slot-what">${label}</span>
       ${inner}
-      ${chosen === how ? `<b class="slot-yes">en place</b>` : ""}
+      ${chosen === how ? `<b class="slot-yes">${{
+        folder: shown ? "ton dessin, en place" : "ce dessin, en place",
+        photo: "cette image, en place",
+        gif: "ce GIF, en place",
+      }[how]}</b>` : ""}
     </li>`;
   const shown = o.icon && !o.icon.includes("/")
     ? `<img src="${q("/media/" + o.path + "/" + o.icon)}" alt="">` : "";
   const face = `
     <fieldset class="faces">
-      <legend>son icône — un seul des trois</legend>
-      <ul class="slots">
+      <legend>son icône${o.type === "folder"
+        ? " — un dessin, le nôtre ou le tien"
+        : " — un seul des trois"}</legend>
+      <ul class="slots${o.type === "folder" ? " one" : ""}">
         ${slot("folder", "un dossier", `
-          <div class="slot-box">
-            ${DRAWN_FOLDERS.map((f) => `<button type="button" class="drawn"
+          <div class="slot-box" data-drop="icon-folder">${
+            chosen === "folder" && shown ? shown : `
+            ${DRAWN_FOLDERS.map((f) => `<button type="button" class="drawn${
+              o.icon === "img/icons/" + f + ".svg" ? " is-chosen" : ""}"
               data-drawn="${f}" title="${f}"><img
-              src="${q("/site/img/icons/" + f + ".svg")}" alt=""></button>`).join("")}
-          </div>`)}
+              src="${q("/site/img/icons/" + f + ".svg")}" alt=""></button>`).join("")}`}
+          </div>
+          <p class="drop" data-drop="icon-folder">Ou dépose ton propre dessin.</p>`)}
+        ${o.type === "folder" ? "" : `
         ${slot("photo", "une photo", `
-          <div class="slot-box" data-drop="icon">${
+          <div class="slot-box" data-drop="icon-photo">${
             chosen === "photo" ? shown : ""}</div>
-          <p class="drop" data-drop="icon">Dépose une image.</p>`)}
+          <p class="drop" data-drop="icon-photo">Dépose une image.</p>`)}
         ${slot("gif", "un GIF", `
-          <div class="slot-box" data-drop="icon">${
+          <div class="slot-box" data-drop="icon-gif">${
             chosen === "gif" ? shown : ""}</div>
-          <p class="drop" data-drop="icon">Dépose un GIF.</p>`)}
+          <p class="drop" data-drop="icon-gif">Dépose un GIF.</p>`)}`}
       </ul>
       ${chosen ? `<button type="button" id="noface">Aucun des trois</button>`
         : `<p class="hintline">Aucun des trois : ${o.photographs.length
@@ -932,6 +952,14 @@ const TAKES = {
   doc:       (kind) => kind === "application/pdf",
   photos:    (kind) => kind.startsWith("image/"),
   icon:      (kind) => kind.startsWith("image/"),
+  // THE THREE ICON SLOTS. `icon-gif` takes only a GIF, because the
+  // slot's whole meaning is that the face MOVES — and the verb refuses
+  // a still there, so lighting it would be a promise it cannot keep.
+  // The other two take any picture: a folder she drew and a photograph
+  // are the same kind of file, and which it is is what the slot says.
+  "icon-folder": (kind) => kind.startsWith("image/"),
+  "icon-photo":  (kind) => kind.startsWith("image/"),
+  "icon-gif":    (kind) => kind === "image/gif",
   poster:    (kind) => kind.startsWith("image/"),
   wallpaper: (kind) => kind.startsWith("image/"),
   about:     (kind) => kind.startsWith("image/"),
@@ -989,7 +1017,9 @@ look.addEventListener("drop", async (e) => {
   // Only when the project already wants one — on a project of
   // photographs a PDF still refuses, because accepting it would quietly
   // change what clicking that icon does.
-  const wantsDoc = o.doc || /\.pdf$/.test((o.titles.fr || "").toLowerCase());
+  // A PAGE TAKES PDFs, whatever it is called. This read the title's
+  // extension; the type says it now.
+  const wantsDoc = isPage(o);
   if (as === "photos" && wantsDoc && files.every((f) => /\.pdf$/i.test(f.name)))
     as = "doc";
   // a wallpaper and an icon are one each; photographs are a pile
@@ -999,6 +1029,9 @@ look.addEventListener("drop", async (e) => {
       + (as === "photos" ? "" : `&as=${as}`),
       { method: "POST", body: await f.arrayBuffer() });
     const said = { wallpaper: "fond d'écran changé", icon: "apparence changée",
+                   "icon-folder": "ton dessin de dossier est en place",
+                   "icon-photo": "la photo est en place comme icône",
+                   "icon-gif": "le GIF est en place comme icône",
                    about: "ta photo de présentation est en place",
                    doc: "le dossier est en place" }[as]
                  || `${f.name} ajoutée`;
