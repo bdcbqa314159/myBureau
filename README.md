@@ -1359,6 +1359,38 @@ An exclusive `flock` on `.studio/panel.lock`, released by the kernel
 however the process dies, so there is no stale lock to explain. The
 second panel says so in French and exits.
 
+#### A panel that no longer matches the disk
+
+`import verbs` happens once, at startup, and never again. Pull, merge or
+switch branch with the panel open and the process carries on running the
+code it loaded — obeying rules that are no longer anywhere on disk, and
+saying nothing about it.
+
+Not hypothetical: `reorder` used to rename her photographs into `01, 02,
+03` to put them in order, and that was replaced by a rank in the front
+matter. A panel left running across that merge would still be renaming
+her files, and reporting success.
+
+So the server stamps a hash of `server.py`, `verbs.py` and `model.py` at
+startup, **refuses every write** once the disk no longer matches, and
+pushes the sentence down the live stream so she learns before she tries
+rather than after she has done the work. Reading is left alone: she can
+still look at her site and read her own words. A panel that went blank
+would read as *I have lost my work*.
+
+The bytes decide, not the timestamp — `git checkout` back and forth
+rewrites a file with the same contents, and a panel that cried stale at
+that is a panel you learn to ignore. Stat first, hash only when the stat
+moves, since this is asked on every write and three times a second by
+the stream.
+
+Only the Python. `app.js`, `app.html` and `app.css` are served fresh on
+every page load, so a browser reload already picks those up.
+
+**No hot reload.** Re-importing `verbs.py` under a running server means
+half the session wrote with the old module and half with the new, and
+one journal holding both. Quitting and reopening is a double-click.
+
 #### One writer at a time
 
 Four photographs dropped at once answered `[200, 200, 500, 500]` and left

@@ -19,6 +19,7 @@ is not under content/.
 from __future__ import annotations
 
 import fcntl
+import hashlib
 import http.server
 import json
 import mimetypes
@@ -53,6 +54,87 @@ STATE = {"n": 0, "look": "", "site": "", "mark": None}
 
 # Held for the length of any verb. See do_POST.
 WRITING = threading.Lock()
+
+
+# ---- THE PANEL'S OWN CODE, WHICH PYTHON LOADS ONCE -------------------
+#
+# `import verbs` happens at startup and never again. Pull, merge or
+# switch branch while the panel is open and the process keeps running
+# the code it loaded — so the panel obeys rules that no longer exist
+# anywhere on disk, and nothing says so.
+#
+# It is not hypothetical. `reorder` used to rename her photographs into
+# 01, 02, 03 to put them in order; that was replaced by a rank in the
+# front matter (see verbs.reorder). A panel left running across that
+# merge would still be renaming her files — writing with rules we had
+# already decided were wrong, and reporting success.
+#
+# Her way in is to double-click, so she gets a fresh process every
+# session; the hazard is the long-lived one, and a pull in GitHub
+# Desktop is one click away from it at any moment.
+#
+# ONLY THE PYTHON. app.js, app.html and app.css are served fresh on
+# every page load, so a browser reload already picks those up — holding
+# writes for a change a reload fixes would be a stop sign she cannot
+# obey.
+#
+# NO HOT RELOAD. Re-importing verbs.py under a running server means half
+# the session wrote with the old module and half with the new, and one
+# journal holding both. Quitting and reopening is a double-click.
+PANEL_CODE = (HERE / "server.py", HERE / "verbs.py", HERE / "model.py")
+
+STALE_SAYS = ("Le panneau a changé pendant qu'il tournait : il tient encore"
+              " l'ancien code, alors il n'écrit plus rien. Ferme la fenêtre"
+              " noire, relance l'aperçu, ouvre la nouvelle adresse — ton"
+              " travail est sur le disque, rien n'est perdu.")
+
+
+def code_stamp() -> tuple:
+    """Cheap: what the filesystem says, without reading a byte."""
+    out = []
+    for f in PANEL_CODE:
+        try:
+            s = f.stat()
+            out.append((s.st_mtime_ns, s.st_size))
+        except OSError:
+            out.append(None)                 # gone counts as changed
+    return tuple(out)
+
+
+def code_hash() -> str:
+    """The bytes themselves, for when the stamp says something moved."""
+    h = hashlib.sha256()
+    for f in PANEL_CODE:
+        try:
+            h.update(f.read_bytes())
+        except OSError:
+            h.update(b"gone")
+    return h.hexdigest()
+
+
+AT_START = {"stamp": code_stamp(), "hash": code_hash()}
+
+
+def stale() -> bool:
+    """Is the code on disk no longer the code this process is running?
+
+    Stat first, hash only when the stat moved: this is asked on every
+    write and three times a second by the stream, and reading 110 KB
+    for an answer that is almost always no would be silly.
+
+    THE BYTES DECIDE, not the timestamp. `git checkout` back and forth
+    rewrites a file with the same contents, and a panel that cried
+    stale at that would be a panel she learns to ignore. A touch with
+    nothing changed updates the stamp instead, so the fast path comes
+    back.
+    """
+    now = code_stamp()
+    if now == AT_START["stamp"]:
+        return False
+    if code_hash() == AT_START["hash"]:
+        AT_START["stamp"] = now
+        return False
+    return True
 
 
 def fingerprint() -> int:
@@ -250,12 +332,20 @@ class Studio(http.server.BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         seen = -1
+        # TOLD BEFORE SHE TRIES, rather than when a write is refused.
+        # She finds out by being refused otherwise, which is the moment
+        # she has already done the work.
+        told = None
         beat = time.time()
         while True:
             try:
-                if STATE["n"] != seen:
-                    seen = STATE["n"]
-                    self.wfile.write(("data: " + json.dumps({"n": seen}) + "\n\n").encode())
+                now = stale()
+                if STATE["n"] != seen or now != told:
+                    seen, told = STATE["n"], now
+                    self.wfile.write((
+                        "data: " + json.dumps(
+                            {"n": seen, "stale": STALE_SAYS if now else ""})
+                        + "\n\n").encode())
                     self.wfile.flush()
                 elif time.time() - beat > 15:
                     # a comment line, so a proxy or a sleeping laptop does
@@ -273,6 +363,17 @@ class Studio(http.server.BaseHTTPRequestHandler):
         q = urllib.parse.parse_qs(u.query)
         if not self.allowed(q):
             return self.oops(403, "no")
+        # NOTHING IS WRITTEN BY A PANEL THAT NO LONGER MATCHES THE DISK.
+        # Warning alone would not do: the harm is not that she is
+        # confused, it is that an old verb writes under rules we have
+        # replaced. 409, because the state of the world and the state of
+        # this process disagree.
+        #
+        # READING IS LEFT ALONE on purpose. She can still look at her
+        # site, open things and read her own words; only writing stops.
+        # A panel that went blank would read as "I have lost my work".
+        if stale():
+            return self.oops(409, STALE_SAYS)
         length = int(self.headers.get("Content-Length") or 0)
         if length > 64 * 1024 * 1024:
             return self.oops(413, "ce fichier est très lourd.")
