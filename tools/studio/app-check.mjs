@@ -767,29 +767,40 @@ if (loaded) {
   check("and a way to look INSIDE a thing rather than at its desk",
     /id="aspage"/.test(markup) && (listeners.get("aspage:click") || []).length > 0);
 
-  // ARRANGING THE GALLERY, DRIVEN FOR REAL.
+  // ARRANGING THE GALLERY, DRIVEN THE WAY A BROWSER DRIVES IT.
   //
   // A gallery is a CSS column flow with no coordinates, so "arrange"
-  // can only mean the ORDER — and `reorder` renames the files to 01,
-  // 02, 03 in the order it is given and the columns reflow. Her ask:
-  // click inside pellicules and move the photographs about.
+  // can only mean the ORDER — `reorder` renames the files 01, 02, 03
+  // and the columns reflow.
   //
-  // THE FIRST VERSION NEVER RAN. `hook()` returns early when the page
-  // has no `.desk`, and a gallery has none — so the call sitting after
-  // that return was dead, and every assertion about it would have
-  // passed by finding nothing. It is handled before the return now,
-  // and this fires the drag rather than reading the source.
+  // THE FIRST TWO VERSIONS BOTH PASSED AND BOTH DID NOTHING.
+  //
+  //   one  the call sat after `hook()`'s early return, and a gallery
+  //        has no `.desk`, so it was dead code
+  //   two  it used HTML5 dragstart/dragover/drop. Synthetic events
+  //        behaved; a browser did not — a `.shot` is an <a> round an
+  //        <img>, two things with native drags of their own, and the
+  //        ghost appeared while the photographs stayed put
+  //
+  // So this fires POINTER events, the mechanism the desk's icon drag
+  // has used all along, and the stub answers `elementFromPoint` —
+  // which is the thing the gesture actually turns on.
   {
-    const shot = (file) => {
+    const rects = new Map();
+    const shot = (file, top) => {
       const el2 = {
-        dataset: { shot: file }, style: {}, draggable: false, on: {},
+        dataset: { shot: file }, style: {}, draggable: true, on: {},
         addEventListener(k, fn) { (this.on[k] ||= []).push(fn); },
-        getBoundingClientRect: () => ({ top: 0, height: 100 }),
+        setPointerCapture() { el2.captured = true; },
+        querySelector: () => el2.img,
+        img: { draggable: true },
+        getBoundingClientRect: () => rects.get(file),
+        closest: (sel) => (/data-shot/.test(sel) ? el2 : null),
       };
-      el2.parentNode = null;
+      rects.set(file, { top, height: 100, left: 0, width: 100 });
       return el2;
     };
-    const order = ["01.jpg", "02.jpg", "03.jpg"].map(shot);
+    const order = [shot("01.jpg", 0), shot("02.jpg", 100), shot("03.jpg", 200)];
     const holder = {
       children: order,
       insertBefore(node, before) {
@@ -799,55 +810,103 @@ if (loaded) {
         this.children.splice(to < 0 ? this.children.length : to, 0, node);
       },
     };
-    for (const s of order) { s.parentNode = holder; s.nextSibling = null; }
+    for (const s of order) { s.parentNode = holder; }
+    order[0].nextSibling = order[1];
+    order[1].nextSibling = order[2];
+    order[2].nextSibling = null;
     const gridDoc = {
-      __grid: { __studioDraggable: false },
+      __grid: {},
       querySelector: (s) => (s === ".grid" ? gridDoc.__grid
         : s === "[data-desk]" ? { dataset: { desk: "content/pellicules/" } } : null),
       querySelectorAll: (s) => (/data-shot/.test(s) ? holder.children : []),
+      // WHAT THE GESTURE TURNS ON: where she let go. A browser answers
+      // this; the HTML5 version never needed it, which is part of why
+      // it could pass while doing nothing.
+      elementFromPoint: (x, y) => order.find((s) => {
+        const r = rects.get(s.dataset.shot);
+        return y >= r.top && y < r.top + r.height;
+      }) || null,
       addEventListener() {}, createElement: () => ({ id: "", textContent: "" }),
       head: { append() {} }, getElementById: () => null,
     };
     byId.get("view").contentDocument = gridDoc;
     if (typeof sandbox.hook === "function") sandbox.hook();
-    check("every photograph in the gallery can be picked up",
-      order.every((s) => s.draggable === true),
+
+    check("the native drag of a link and an image is taken out of the way",
+      order.every((s) => s.draggable === false && s.img.draggable === false),
       JSON.stringify(order.map((s) => s.draggable)));
     check("  and the tip says what the gesture does here",
       /se réarrange/.test(byId.get("tip").textContent),
       byId.get("tip").textContent);
 
-    // DRAG THE THIRD ONTO THE FIRST, over its top half — so it lands
-    // BEFORE it, which is the half of the gesture that is easy to get
-    // backwards.
     let sent = null;
     const keep = sandbox.fetch;
     sandbox.fetch = async (url, opts) => {
       if (String(url).includes("/api/do")) sent = JSON.parse(opts.body);
       return keep(url, opts);
     };
-    for (const fn of order[2].on.dragstart || []) fn({ preventDefault() {}, dataTransfer: { setData() {} } });
-    for (const fn of holder.children[0].on.dragover || [])
-      fn({ preventDefault() {}, clientY: 10 });
-    for (const fn of holder.children.find((s) => s.dataset.shot === "01.jpg").on.drop || [])
-      await fn({ preventDefault() {} });
-    sandbox.fetch = keep;
+    const fire = (el2, kind, ev) => {
+      for (const fn of el2.on[kind] || []) fn(ev);
+    };
+    const fireAwait = async (el2, kind, ev) => {
+      for (const fn of el2.on[kind] || []) await fn(ev);
+    };
+
+    // A TAP IS NOT A DRAG — and a tap MOVES, because a finger is never
+    // still. The first version of this check went straight from down to
+    // up with no movement at all, so deleting the 5px threshold
+    // entirely left it passing: `moved` is only set inside
+    // pointermove, and no pointermove was ever fired.
+    fire(order[0], "pointerdown", { button: 0, clientX: 10, clientY: 10 });
+    fire(order[0], "pointermove", { clientX: 11, clientY: 12 });
+    await fireAwait(order[0], "pointerup", { button: 0, clientX: 11, clientY: 12 });
+    check("a tap reorders nothing", sent === null, JSON.stringify(sent));
+    let stoppedClick = false;
+    fire(order[0], "click", { preventDefault() { stoppedClick = true; },
+                              stopImmediatePropagation() {} });
+    check("  and still opens the photograph", stoppedClick === false);
+
+    // NOW A REAL DRAG: the third onto the TOP half of the first, so it
+    // lands before it. Which half is the easiest thing to get
+    // backwards, so the drop is at y=10 of a box 100 tall.
+    const third = order[2];
+    fire(third, "pointerdown", { button: 0, clientX: 10, clientY: 210 });
+    fire(third, "pointermove", { clientX: 12, clientY: 150 });
+    check("moving past the threshold picks it up", third.style.opacity === ".45",
+      third.style.opacity);
+    check("  and the pointer was captured, so it survives leaving the photo",
+      third.captured === true);
+    await fireAwait(third, "pointerup", { button: 0, clientX: 12, clientY: 10 });
     check("dropping one above another sends the new order",
       sent && sent.verb === "reorder"
       && JSON.stringify(sent.names) === JSON.stringify(["03.jpg", "01.jpg", "02.jpg"]),
       JSON.stringify(sent));
     check("  and it names the gallery it belongs to, not a guess",
       sent && sent.item === "content/pellicules", sent && sent.item);
-    // LOOKING, NOT ARRANGING, IN THE PHONE VIEW — the same rule the
-    // desk has, because a drag there is a scroll she did not mean.
-    // `narrowView` is a `let` and not reachable from here, so the
-    // phone button is pressed and the gesture tried.
+    // AND THE DRAG IS NOT ALSO A CLICK. The pointer was captured, so
+    // the click lands on the photograph she just moved.
+    stoppedClick = false;
+    fire(third, "click", { preventDefault() { stoppedClick = true; },
+                           stopImmediatePropagation() {} });
+    check("  and does not also open what she just moved",
+      stoppedClick === true);
+    sandbox.fetch = keep;
+
+    // LOOKING, NOT ARRANGING, IN THE PHONE VIEW — the desk's rule.
+    // `narrowView` is a `let` and unreachable from here, so the button
+    // is pressed and the gesture tried.
     for (const fn of listeners.get("asphone:click") || []) fn();
-    let stopped = false;
-    for (const fn of order[0].on.dragstart || [])
-      fn({ preventDefault() { stopped = true; }, dataTransfer: { setData() {} } });
+    sent = null;
+    sandbox.fetch = async (url, opts) => {
+      if (String(url).includes("/api/do")) sent = JSON.parse(opts.body);
+      return keep(url, opts);
+    };
+    fire(order[0], "pointerdown", { button: 0, clientX: 10, clientY: 10 });
+    fire(order[0], "pointermove", { clientX: 40, clientY: 210 });
+    await fireAwait(order[0], "pointerup", { button: 0, clientX: 40, clientY: 210 });
+    sandbox.fetch = keep;
     check("in the phone view a photograph cannot be dragged",
-      stopped === true);
+      sent === null, JSON.stringify(sent));
     for (const fn of listeners.get("aswide:click") || []) fn();
 
     byId.get("view").contentDocument = frameDoc;
