@@ -653,7 +653,7 @@ function inspect(o) {
   //
   // Now the three are side by side, the chosen one says so, and
   // choosing one clears the other two at the verb — `set_icon` and
-  // `set_face` each call `_unface` first, so the precedence rule never
+  // `set_face` each plan the unchoosing first, so the precedence rule never
   // gets a chance to decide instead of her.
   //
   // A GIF IS ITS OWN SLOT because it moves on the desk and a

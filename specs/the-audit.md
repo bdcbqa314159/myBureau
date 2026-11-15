@@ -1,6 +1,6 @@
 # The audit
 
-**Status:** the plan. Nothing audited yet.
+**Status:** audit 1 done — eight findings, seven proven, three fixed.
 **Date:** 2026-11-15
 
 Seven architectures, ordered by **what a bug in each one costs**. Not by
@@ -174,3 +174,152 @@ done its job.
   time, and this file records that it was read and found sound — which
   is worth as much as a list of defects, and is the part people skip
   writing down.
+
+---
+
+# Audit 1 — the write side
+
+`verbs.py` (1,854) and `server.py` (526), read end to end on
+2026-11-15. Eight candidates, **seven proven** by making them happen on
+a scratch copy of the real tree. Ordered by what each costs her.
+
+## The findings
+
+### F2 · a PDF poppler cannot read takes the dossier she had  **· fixed**
+
+`add_doc` bins the old dossier and its rendered pages, writes the new
+file, and THEN rasterises — and `pages_of` raises on a PDF it cannot
+read. `record()` never runs.
+
+| | |
+|---|---|
+| input | drop a corrupt PDF on a project that already has one |
+| output | "je n'ai pas pu lire les pages de ce PDF" — and `calendar.pdf` plus both its pages are in the bin, `dossier.pdf` (the corrupt one) is on disk, the journal gained nothing |
+| costs her | the dossier she had, with **Annuler unable to reach it**, after being told the drop was refused |
+
+### F1 · a refusal that changes her icon anyway  **· fixed**
+
+`set_icon` calls `_unface`, which bins the old `icon.*` and rewrites
+the front matter, and only then writes the `face` key — which raises if
+any language file is malformed. `record()` never runs.
+
+| | |
+|---|---|
+| input | drop an icon on a project whose `index.en.md` somebody broke by hand |
+| output | it reports a refusal; the icon on disk has **changed**; `undo` answers *il n'y a rien à annuler* |
+| costs her | the face she had chosen, after being told nothing happened |
+
+### F5 · a quote in a file name breaks the site
+
+`set_map_key` writes `"{name}" = …` with the name interpolated raw.
+A photograph called `vue "x".jpg` produces TOML zola refuses, and the
+gate in `atomic()` only checks the fences.
+
+| | |
+|---|---|
+| input | rename a photograph in the Finder to include a `"`, then describe it in the panel |
+| output | the write succeeds; `zola build` fails |
+| costs her | the whole site, from a rename the Finder allows |
+
+### F4 · a newline in a title breaks the site
+
+`retitle`, `new_project` and `new_bureau` refuse a `"` and not a
+newline. `title = "a\nb"` is not TOML.
+
+| | |
+|---|---|
+| input | a title containing a line break |
+| output | the file is written, the build fails |
+| costs her | the whole site. The gate exists to stop exactly this class and checks only the fences |
+
+### F3 · `remove_image` bins any file under `content/`
+
+It validates the project and then never checks that `name` is one of
+its photographs — unlike `place_shot`, which does.
+
+| | |
+|---|---|
+| input | `{"verb":"remove_image","item":"content/da/theodora-01","name":"../../_index.md"}` |
+| output | the home desk's content file is in the bin |
+| costs her | her home page's title, its windows and their positions. Undo reaches it, and nothing else does |
+
+Not reachable from the panel, which only ever sends a name from the
+photographs list. It is an input-validation hole at a trust boundary,
+in the one module whose job is to be a closed list.
+
+### F7 · the one unlink in a design whose rule is "to the bin"  **· fixed**
+
+`pages_of` does `stale.unlink()` on `draw-*.png` left from an earlier
+run. A file of hers with that name is deleted outright.
+
+### F8 · a position that is not a number is a Python error
+
+`place` does `int(x)` unguarded, so `x = "beaucoup"` reaches her as
+`ValueError: invalid literal for int() with base 10`. `place_shot`
+refuses the same input in French.
+
+### F6 · the English file decides what a thing IS
+
+`kind_of` and `template_of` read the first file that `sorted()` hands
+back — and `index.en.md` sorts before `index.md`. Set them to disagree
+and the English one wins. Nothing writes them separately today and
+nothing checks they agree, so this is a latent hazard rather than a
+live bug.
+
+## What they have in common
+
+F1 and F2 are the same defect in two verbs: **something irreversible
+happens before everything that can refuse has refused.** Six verbs bin
+an old file and write a new one, and the journal entry is written last.
+
+`place`, `set_alt`, `reorder` and `place_shot` already do it the other
+way — *"WORK OUT EVERY FILE FIRST, WRITE NOTHING UNTIL ALL OF THEM
+PARSE"* — and that comment was written after the same bug bit in
+`place`. It was never carried across.
+
+F3, F4, F5 and F8 are one defect too: **the trust boundary checks some
+inputs and not others.** A quote is refused in a title and allowed in a
+file name; a number is validated in `place_shot` and not in `place`.
+
+## What was read and found sound
+
+Worth recording, because an audit that only lists faults reads as
+though everything it did not mention was examined and condemned:
+
+- `inside()` resolves symlinks and compares real paths; every verb goes
+  through it. No path escaped `content/` in any probe.
+- The token, the loopback bind, the cross-site refusal and the
+  `flock` in `only_one()` hold up.
+- `undo` stages every move through a holding name, so a permutation
+  cannot eat a file halfway round the cycle.
+- The journal and the bin are trimmed together, bin after journal, so
+  nothing is swept while an entry can still ask for it.
+- `atomic()` is the only writer of content files, and its gate catches
+  the fence bug that caused the original damage.
+- `must_really_be` reads the first bytes rather than trusting the
+  extension, and deliberately allows bytes it does not recognise.
+
+## Fixed, and how
+
+**F2, F1 and F7 in one change, because they are one rule:** nothing
+irreversible happens until everything that can refuse has refused.
+
+- `add_doc` rasterises FIRST, from the bytes she handed over, straight
+  through a pipe — `pdftoppm` reads `-` as standard input, so the
+  document never becomes a file until it is going to stay. Only once
+  there are pages does anything of hers move.
+- `_unface` became `_face_plan` + `_apply_face`. The plan includes the
+  step that can refuse — writing the `face` key — so it raises while
+  the plan is still only a plan. `set_icon` and `set_face` both go
+  through it.
+- The pages are drawn in a temporary directory, so her folder is never
+  the scratch space and `draw-*.png` of hers is never in the way.
+
+The first version of the `add_doc` fix wrote the PDF to a temp file,
+and `every write goes through the gate` in content-check caught it
+within the minute — a check written for a different reason, holding a
+line it was not aimed at. That is what they are for.
+
+**Still open: F3, F4, F5, F6, F8.** Four of them are the same defect —
+the trust boundary validates some inputs and not others — and are the
+next slice.

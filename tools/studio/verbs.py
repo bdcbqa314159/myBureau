@@ -32,6 +32,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
@@ -1271,7 +1272,7 @@ def have_pdftoppm() -> bool:
     return shutil.which("pdftoppm") is not None
 
 
-def pages_of(d: pathlib.Path, doc: pathlib.Path, moves: list) -> list:
+def pages_of(data: bytes, work: pathlib.Path) -> list:
     """Every page of the dossier, as photographs.
 
     THE DOSSIER IS ITS PAGES. Three earlier attempts put a PDF READER
@@ -1307,28 +1308,47 @@ def pages_of(d: pathlib.Path, doc: pathlib.Path, moves: list) -> list:
     which costs one short expression and no new machinery. Her own
     drops are numbered by `add_image` and never carry a dash.
     """
-    # pdftoppm names its output `<prefix>-N.png`, and OUR names are
-    # `page-NN.png` — one digit against two, so `page-1.png` and
-    # `page-01.png` would both exist and the second run would find the
-    # first run's leftovers. It draws under `draw-` and is renamed.
-    for stale in sorted(d.glob("draw-*.png")):
-        stale.unlink()
+    # OUTSIDE HER FOLDER, and this matters twice.
+    #
+    # It drew into the project under `draw-*.png` and deleted whatever
+    # `draw-*.png` it found there first — the ONE unlink in a design
+    # whose rule is that nothing is deleted, only binned. A file of
+    # hers with that name was gone for good.
+    #
+    # And it drew AFTER the old dossier had been binned, so a PDF
+    # poppler cannot read raised here with her previous document
+    # already in the bin and no journal entry naming it. See the rule
+    # in add_doc.
+    #
+    # Rendering into a temporary directory makes both go away: her
+    # folder is untouched until there are pages to put in it, and
+    # leftovers cannot collide with anything of hers because they are
+    # not in her folder.
+    # FROM THE BYTES, THROUGH A PIPE. pdftoppm reads `-` as standard
+    # input, so the document she just handed over never becomes a file
+    # until it is going to stay — and `verbs.atomic()` remains the only
+    # thing in this module that writes one. The check
+    # `every write goes through the gate` is what noticed the temp
+    # file the first version of this used.
     out = subprocess.run(
-        ["pdftoppm", "-r", str(PAGE_DPI), "-png", str(doc), str(d / "draw")],
-        capture_output=True, text=True, timeout=120)
+        ["pdftoppm", "-r", str(PAGE_DPI), "-png", "-", str(work / "draw")],
+        input=data, capture_output=True, timeout=120)
     if out.returncode != 0:
+        said = (out.stderr or b"").decode("utf-8", "replace").strip()
         raise Refused("je n'ai pas pu lire les pages de ce PDF : "
-                      + (out.stderr.strip()[-200:] or "pdftoppm a refusé."))
-    drawn = sorted(d.glob("draw-*.png"))
+                      + (said[-200:] or "pdftoppm a refusé."))
+    drawn = sorted(work.glob("draw-*.png"))
     if not drawn:
         raise Refused("ce PDF n'a aucune page à montrer.")
-    made = []
+    # NAMED HERE, MOVED BY THE CALLER. It used to put them straight
+    # into her folder, which is why a PDF that could not be read left
+    # her previous dossier binned and the new pages half-made.
+    pages = []
     for i, f in enumerate(drawn, start=1):
-        dest = d / "page-{:02d}.png".format(i)
-        os.replace(str(f), str(dest))
-        moves.append({"from": "", "to": rel(dest)})
-        made.append(dest.name)
-    return made
+        named = work / "page-{:02d}.png".format(i)
+        f.rename(named)
+        pages.append(named)
+    return pages
 
 
 def add_doc(item: str, name: str, data: bytes) -> dict:
@@ -1367,7 +1387,27 @@ def add_doc(item: str, name: str, data: bytes) -> dict:
     if not have_pdftoppm():
         raise Refused("il me manque poppler, qui lit les pages d'un PDF."
                       " Dans le Terminal : brew install poppler")
+    # NOTHING IRREVERSIBLE UNTIL NOTHING CAN REFUSE.
+    #
+    # This binned the old dossier and its pages, wrote the new file,
+    # and only THEN rasterised — and `pages_of` raises on a PDF poppler
+    # cannot read. So a corrupt drop answered "je n'ai pas pu lire les
+    # pages", and left her previous document in the bin with NO journal
+    # entry naming it: `record()` is the last line and never ran.
+    # Annuler could not bring it back. Proven on a copy of the real
+    # tree — see specs/the-audit.md, finding F2.
+    #
+    # So the pages are drawn FIRST, into a temporary directory, from
+    # the bytes she just handed over. Everything that can refuse has
+    # refused by the time anything of hers moves.
+    work = pathlib.Path(tempfile.mkdtemp(prefix="studio-doc-"))
     moves = []
+    try:
+        pages = pages_of(data, work)
+    except BaseException:
+        shutil.rmtree(work, ignore_errors=True)
+        raise
+    # ---- from here nothing else can refuse ---------------------------
     # THE OLD PAGES GO WITH THE OLD DOSSIER. Without this a second PDF
     # left the first one's pages behind, and the miniature would open a
     # document that was no longer there.
@@ -1391,11 +1431,15 @@ def add_doc(item: str, name: str, data: bytes) -> dict:
     tmp.write_bytes(data)
     os.replace(tmp, dest)
     moves.append({"from": "", "to": rel(dest)})
-    # EVERY PAGE, as photographs. The PDF itself stays in the folder as
-    # the source and is shown by nothing.
-    pages = pages_of(d, dest, moves)
+    made = []
+    for i, page in enumerate(pages, start=1):
+        into = d / page.name
+        shutil.move(str(page), str(into))
+        moves.append({"from": "", "to": rel(into)})
+        made.append(into.name)
+    shutil.rmtree(work, ignore_errors=True)
     record("add_doc", [], moves)
-    return {"doc": dest.name, "pages": pages}
+    return {"doc": dest.name, "pages": made}
 
 
 def set_poster(item: str, name: str, data: bytes) -> dict:
@@ -1483,21 +1527,18 @@ def set_icon(item: str, name: str, data: bytes, as_: str = "") -> dict:
     # _icon.html gives a colocated file precedence — so the panel
     # showed the photograph she had just dropped while the desk went on
     # drawing the folder.
-    _unface(d, moves, texts)
+    #
+    # AND WHICH SLOT IT IS goes into the same plan — her choice, not a
+    # guess from the bytes, and the one step here that can refuse. It
+    # happens before her old face is touched. See _face_plan.
+    faces, plan = _face_plan(d, lambda text, where: set_key(
+        text, "face", slot, where))
+    _apply_face(faces, plan, moves, texts)
     dest = d / ("icon" + ext)
     tmp = dest.with_name(dest.name + ".studio-tmp")
     tmp.write_bytes(data)
     os.replace(tmp, dest)
     moves.append({"from": "", "to": rel(dest)})
-    # AND WHICH SLOT IT IS, written down — her choice, not a guess from
-    # the bytes. Without it the panel has to infer, and it cannot: a
-    # folder she drew and a photograph are the same kind of file.
-    for f in language_files(d):
-        before = f.read_text(encoding="utf-8")
-        after = set_key(before, "face", slot, rel(f))
-        if after != before:
-            texts.append({"path": rel(f), "before": before})
-            atomic(f, after)
     record("set_icon", texts, moves)
     return {"icon": dest.name, "face": slot}
 
@@ -1508,28 +1549,53 @@ def set_icon(item: str, name: str, data: bytes, as_: str = "") -> dict:
 DRAWN_FOLDERS = ("folder", "folder-olive", "folder-rust", "folder-slate")
 
 
-def _unface(d: pathlib.Path, moves: list, texts: list) -> None:
-    """Take away whatever face this thing has, all three sorts of it.
+def _face_plan(d: pathlib.Path, then=None) -> tuple:
+    """What taking a face off WOULD do, worked out before anything is.
 
     A FACE IS ONE OF THREE THINGS and choosing one has to unchoose the
     others, or the precedence in _icon.html decides instead of her: a
     colocated `icon.*` beats a declared path, which beats the default.
     So a photograph dropped on a thing that already declared a folder
     looked chosen in the panel and was not drawn on the desk.
+
+    NOTHING IRREVERSIBLE UNTIL NOTHING CAN REFUSE. This used to bin the
+    old `icon.*` and rewrite the front matter as it went, and the verb
+    that called it then wrote the `face` key — which RAISES if a
+    language file has no header. So dropping an icon on a project whose
+    `index.en.md` somebody had broken reported a refusal, changed the
+    icon on disk anyway, and recorded nothing: `undo` answered *il n'y
+    a rien à annuler*. Proven on a copy of the real tree — see
+    specs/the-audit.md, finding F1.
+
+    `then` is what the caller wants written on top of the cleared text,
+    so the step that can refuse happens HERE, while the plan is still
+    only a plan. The caller applies what comes back, in order, with
+    nothing left that can fail.
     """
-    for old in sorted(d.iterdir()):
-        if old.is_file() and old.stem.lower() == "icon":
-            TRASH.mkdir(parents=True, exist_ok=True)
-            bin_ = TRASH / str(int(time.time() * 1000))
-            bin_.mkdir(exist_ok=True)
-            shutil.move(str(old), str(bin_ / old.name))
-            moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
+    faces = [f for f in sorted(d.iterdir())
+             if f.is_file() and f.stem.lower() == "icon"]
+    plan = []
     for f in language_files(d):
         before = f.read_text(encoding="utf-8")
         # `face` goes with `icon`: it is the note saying which slot the
         # face came from, and a note about a face that is gone is worse
         # than none.
         after = drop_key(drop_key(before, "icon"), "face")
+        if then is not None:
+            after = then(after, rel(f))       # may raise — that is the point
+        plan.append((f, before, after))
+    return faces, plan
+
+
+def _apply_face(faces: list, plan: list, moves: list, texts: list) -> None:
+    """The plan, carried out. Nothing here is allowed to refuse."""
+    for old in faces:
+        TRASH.mkdir(parents=True, exist_ok=True)
+        bin_ = TRASH / str(int(time.time() * 1000))
+        bin_.mkdir(exist_ok=True)
+        shutil.move(str(old), str(bin_ / old.name))
+        moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
+    for f, before, after in plan:
         if after != before:
             texts.append({"path": rel(f), "before": before})
             atomic(f, after)
@@ -1561,15 +1627,10 @@ def set_face(item: str, how: str, which: str = "folder") -> dict:
     if how == "folder" and which not in DRAWN_FOLDERS:
         raise Refused("je ne connais pas ce dessin de dossier.")
     moves, texts = [], []
-    _unface(d, moves, texts)
     path = "img/icons/{}.svg".format(which)
-    for f in language_files(d):
-        before = f.read_text(encoding="utf-8")
-        after = set_key(set_key(before, "icon", path, rel(f)),
-                        "face", "folder", rel(f))
-        if after != before:
-            texts.append({"path": rel(f), "before": before})
-            atomic(f, after)
+    faces, plan = _face_plan(d, lambda text, where: set_key(
+        set_key(text, "icon", path, where), "face", "folder", where))
+    _apply_face(faces, plan, moves, texts)
     if moves or texts:
         record("set_face", texts, moves)
     return {"face": "folder", "which": which}
