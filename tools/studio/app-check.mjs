@@ -189,6 +189,15 @@ const sandbox = {
   // sandbox the call throws before any fetch happens, and the checks
   // below report no requests rather than a broken request.
   AbortController,
+  // A REAL ONE, because the panel keeps where she was in it: boot with
+  // nothing stored and it lands on the first desk, which is the old
+  // behaviour and would hide a restore that never happens.
+  localStorage: {
+    store: new Map(),
+    getItem(k) { return this.store.has(k) ? this.store.get(k) : null; },
+    setItem(k, v) { this.store.set(k, String(v)); },
+    removeItem(k) { this.store.delete(k); },
+  },
   document: {
     getElementById: (id) => {
       if (byId.has(id)) return byId.get(id);
@@ -1447,6 +1456,68 @@ if (loaded) {
   const polled = fetched.slice(mark).some((u) => String(u).startsWith("/site/"));
   check("after an edit it waits for the page before reloading the frame",
     polled, JSON.stringify(fetched.slice(mark)));
+
+  // ---- where she was, across a reload of the panel -----------------
+  //
+  // THE COMPLAINT: "every time I click refresh it sends me to the main
+  // page". Reloading the panel is the obvious way to see the site as it
+  // really is, and it threw the place away — the panel booted onto the
+  // first desk and the frame onto /site/.
+  //
+  // `back()` is what boot calls. Driven here with a real localStorage,
+  // since with none at all it falls back to the first desk and a restore
+  // that never happens looks exactly like one that works.
+  //
+  // READ THROUGH THE FRAME AND THE STORE, not through `chosen`: app.js
+  // declares its state with `let`, and a `let` at the top of a script
+  // is NOT a property of the context — `sandbox.chosen` is undefined
+  // whatever the panel is doing, and a check against it passes or fails
+  // for reasons that have nothing to do with the panel. The frame's url
+  // is what she actually sees; the store is what the next reload reads.
+  const where = () =>
+    JSON.parse(sandbox.localStorage.getItem("mybureau.where") || "null");
+
+  if (typeof sandbox.back === "function" && typeof sandbox.paint === "function") {
+    sandbox.localStorage.setItem("mybureau.where", JSON.stringify(
+      { chosen: "content/da", mode: "desk", src: "/site/da/" }));
+    byId.get("view").src = "/site/";
+    await sandbox.back();
+    check("a reload comes back to the page she was looking at",
+      byId.get("view").src === "/site/da/", byId.get("view").src);
+
+    // AND THE LIVE SELECTION IS HERS TOO, not just the frame. Written
+    // fresh from the panel's own state — the stored entry is cleared
+    // first, so this cannot pass by reading back what was seeded.
+    sandbox.localStorage.removeItem("mybureau.where");
+    sandbox.paint();
+    check("  and the thing she had chosen is chosen again",
+      where() && where().chosen === "content/da", JSON.stringify(where()));
+    check("  so moving about is what writes it down", where() !== null);
+
+    // A THING SHE THREW AWAY between two visits must not strand her in
+    // the site's 404 — which is what an unchecked stored url does.
+    sandbox.localStorage.setItem("mybureau.where", JSON.stringify(
+      { chosen: "content/da/gone-for-good", mode: "page",
+        src: "/site/da/gone-for-good/" }));
+    await sandbox.back();
+    check("a place that no longer exists falls back to the first desk",
+      byId.get("view").src !== "/site/da/gone-for-good/"
+      && where() && where().chosen === "content",
+      byId.get("view").src + " " + JSON.stringify(where()));
+
+    // and a url that 404s is not reloaded into even when the thing is
+    // still in the tree
+    const keepF = sandbox.fetch;
+    sandbox.fetch = async () => ({ ok: false, json: async () => ({}) });
+    sandbox.localStorage.setItem("mybureau.where", JSON.stringify(
+      { chosen: "content/da", mode: "desk", src: "/site/da/thrown-away/" }));
+    await sandbox.back();
+    check("  and a page that has gone is not reloaded into",
+      byId.get("view").src !== "/site/da/thrown-away/", byId.get("view").src);
+    sandbox.fetch = keepF;
+  } else {
+    check("the panel has a back() to restore where she was", false);
+  }
 
   const src = readFileSync(new URL("./app.js", import.meta.url), "utf8");
   check("and a drag reloads nothing, because the icon has already moved",

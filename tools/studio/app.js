@@ -254,8 +254,39 @@ function paintInto() {
   sayWillBe();
 }
 
+/* WHERE SHE WAS, kept across a reload of the panel itself.
+ *
+ * Reloading the page in the browser — which is the obvious thing to do
+ * to see the site as it really is now — threw the whole place away: the
+ * panel booted onto the first desk and the frame onto `/site/`, so
+ * every reload from inside pellicules came back to the main desktop.
+ *
+ * localStorage, because this is HER machine and one browser: it is not
+ * worth a verb, a file or a round trip. The frame's own url is kept as
+ * well as the selection, since going INTO a desk sets the frame without
+ * changing what is selected — restoring only the selection would put
+ * her back outside the folder she was in.
+ *
+ * Wrapped, because a browser with storage turned off must not take the
+ * panel down with it, and the test harness has no localStorage at all. */
+const WHERE = "mybureau.where";
+
+function remember() {
+  if (!chosen) return;
+  try {
+    localStorage.setItem(WHERE, JSON.stringify(
+      { chosen: chosen, mode: mode, src: view.src }));
+  } catch (e) { /* no storage: she lands on the first desk, as before */ }
+}
+
+function recall() {
+  try { return JSON.parse(localStorage.getItem(WHERE) || "null"); }
+  catch (e) { return null; }
+}
+
 function paint() {
   if (!model) return;
+  remember();
   paintInto();
   tree.innerHTML = "";
   for (const { o, depth } of all()) {
@@ -1659,6 +1690,26 @@ el("verify").addEventListener("click", async () => {
 ask("/api/tree").then((out) => {
   if (out && typeof out.n === "number") seen = out.n;
   hook();                      // now that there IS a model to hook with
-  if (model && model.desks.length) select(model.desks[0]);
-  tell("prêt");
+  back().then(() => tell("prêt"));
 });
+
+/* Back where she was, or the first desk if there is nowhere to go back
+ * to. The stored url is CHECKED before it is used: a thing she threw
+ * away between two visits would otherwise reload the panel into the
+ * site's 404, which looks like the panel is broken. */
+async function back() {
+  const was = recall();
+  const o = was && find(was.chosen);
+  if (!o) {
+    if (model && model.desks.length) select(model.desks[0]);
+    return;
+  }
+  mode = was.mode === "page" ? "page" : "desk";
+  setPressed();
+  select(o);
+  if (!was.src) return;
+  try {
+    const r = await fetch(was.src, { cache: "no-store" });
+    if (r.ok) view.src = was.src;
+  } catch (e) { /* leave the frame where select() put it */ }
+}
