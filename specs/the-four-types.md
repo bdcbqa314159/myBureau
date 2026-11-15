@@ -203,6 +203,26 @@ verb would refuse a second — and says so instead: *"une photo seule
 n'en tient qu'une. Jette celle-ci pour en mettre une autre, ou fais-en
 une page."*
 
+## A photo has no page to look at
+
+zola builds one for every thing in `content/`, but **nothing on the
+site links to a photograph's**. Its icon carries `data-window`, so a
+click opens the picture big, in place, over the desk — which is what
+the double-click in the panel already did.
+
+`regarder` went to the page behind it anyway: a white sheet with the
+photograph in the middle and a paragraph nobody wrote. That is the
+mistake this file names twice already — *she was being shown something
+the site does not do*. A photo is framed where it sits now, and the
+button is turned off while one is chosen, saying why.
+
+| type | sur le bureau | regarder |
+|---|---|---|
+| **photo** | ✓ | — its picture opens on the desk, in place |
+| **video** | ✓ | ✓ its page, the film playing |
+| **page** | ✓ | ✓ its page |
+| **folder** | ✓ | ✓ the desk inside it |
+
 ## What would change this
 
 - **A fifth type.** Then `TYPES`, `ACCEPTS` and `TYPE_IS` gain a row

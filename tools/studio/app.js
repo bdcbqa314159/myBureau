@@ -526,13 +526,34 @@ function deskOf(o) {
   return o.path.split("/").slice(0, -1).join("/");
 }
 
+/* A PHOTO HAS NO PAGE TO LOOK AT.
+ *
+ * zola builds one for it — every thing in content/ gets a page — but
+ * NOTHING ON THE SITE LINKS TO IT. A photograph's icon carries
+ * `data-window`, so clicking it opens the picture big, in place, over
+ * the desk. The page behind it is a white sheet with the photograph in
+ * the middle and a paragraph nobody wrote, and a visitor can never
+ * reach it.
+ *
+ * "regarder" took her there anyway, which is the same mistake the
+ * double-click handler names further down: she was being shown
+ * something the site does not do. So a photo is always framed where it
+ * sits, and the button that asks for its page is turned off while one
+ * is chosen — see setPressed. Double-clicking it opens the picture,
+ * which is what the site does and what she asked for. */
 function frameFor(o) {
-  if (mode === "page") return urlOf(o);
+  if (mode === "page" && !isPhoto(o)) return urlOf(o);
   return urlOf({ path: deskOf(o) });
 }
 
 function select(o) {
   chosen = keyOf(o);
+  // WHICH VIEWS THIS THING HAS. A photo has no page to look at, and
+  // the button that asks for one is turned off while it is chosen —
+  // so the buttons have to be told when the SELECTION changes, not
+  // only when the mode does. They were told only by setMode, so the
+  // button stayed live on a photograph until she pressed something.
+  setPressed();
   sayWillBe();
   const show = frameFor(o);
   if (!view.src.endsWith(show)) view.src = show;
@@ -1790,6 +1811,16 @@ el("pickdir").addEventListener("change", async () => {
 function setPressed() {
   el("asdesk").setAttribute("aria-pressed", String(mode === "desk"));
   el("aspage").setAttribute("aria-pressed", String(mode === "page"));
+  // OFF FOR A PHOTO, because there is nothing for it to show — see
+  // frameFor. Disabled rather than hidden: a control that vanishes and
+  // comes back as the selection changes is harder to trust than one
+  // that stays put and says why it cannot be used.
+  const one = find(chosen);
+  const flat = !!one && isPhoto(one);
+  el("aspage").disabled = flat;
+  el("aspage").title = flat
+    ? "Une photo s'ouvre sur le bureau, en grand — elle n'a pas de page."
+    : "";
 }
 
 const setMode = (m) => {
