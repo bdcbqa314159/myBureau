@@ -223,10 +223,13 @@ def main() -> int:
     unreadable = []
     for md in sorted(CONTENT.rglob("*.md")):
         text = md.read_text(encoding="utf-8", errors="replace")
-        why = ("le fichier est vide" if not text.strip()
-               else "ne commence pas par +++" if not text.startswith("+++")
-               else "pas de second +++ pour fermer l'en-tête"
-               if text.count("+++") < 2 else "")
+        # THE SAME TEST THE PANEL'S GATE USES. This was a weaker copy —
+        # starts with +++, holds two of them — and `+++title = "x"`
+        # passes it. That is the file that broke the site twice, and
+        # this tool, whose whole job is to say what will not work, said
+        # "nothing to report" while zola refused the build. Proven by
+        # audit 2; see specs/the-audit.md.
+        why = frontmatter.why_zola_refuses(text)
         if why:
             unreadable.append((str(md.relative_to(ROOT)), [
                 "no front matter — " + why,

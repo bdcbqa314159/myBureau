@@ -32,6 +32,8 @@ moves the knowledge; it does not get to redefine it.
 """
 from __future__ import annotations   # macOS ships 3.9
 
+import re
+
 FENCE = "+++"
 
 
@@ -62,6 +64,84 @@ def header(text: str) -> str:
 
 
 def body(text: str) -> str:
-    """Her words, after the closing fence. Empty when there is none."""
-    pieces = parts(text)
+    """Her words, after the closing fence. Empty when there is none.
+
+    SPLIT TWICE AND NO MORE. This returned `parts(text)[2]`, which is
+    the text between the second fence and a THIRD one — so a paragraph
+    containing `+++` came back cut off at it. The panel showed the
+    short version, and saving anything then wrote the short version to
+    disk: her words, silently shortened by a sequence she is perfectly
+    entitled to type. Found by audit 2.
+    """
+    pieces = text.split(FENCE, 2)
     return pieces[2].strip() if len(pieces) >= 3 else ""
+
+
+def why_zola_refuses(text: str) -> str:
+    """Why zola would not read this, in her words, or "" if it would.
+
+    THE ONE READER. There were two: this test, and a weaker one in
+    look.py that asked only whether the text STARTED with `+++` and
+    held two of them. `+++title = "x"` satisfies both — it is the file
+    that broke the site twice — so the tool whose whole job is to say
+    what will not work reported "nothing to report" while zola refused
+    the build. Found by audit 2; see specs/the-audit.md.
+    """
+    if not text.strip():
+        return "le fichier est vide"
+    if not text.startswith(FENCE):
+        return "il ne commence pas par +++"
+    # A FENCE IS A LINE OF ITS OWN. `+++title = "x"` starts with +++
+    # and holds two of them, which is why the weaker test passed it.
+    first = text.split("\n", 1)[0].rstrip("\r")
+    if first != FENCE:
+        return "il y a autre chose que +++ sur la première ligne"
+    if text.count(FENCE) < 2:
+        return "l'en-tête n'est pas fermée par un second +++"
+    rest = text.split("\n", 1)[1] if "\n" in text else ""
+    if not any(l.rstrip("\r") == FENCE for l in rest.split("\n")):
+        return "le second +++ n'est pas seul sur sa ligne"
+    return ""
+
+
+def toml_name(name: str) -> str:
+    """A FILE NAME as a TOML key, with its own quotes escaped.
+
+    Her names are hers, and the Finder lets her put a `"` in one. It
+    went into `[extra.alt]` raw — `"vue "x".jpg" = "…"` — which zola
+    refuses, so describing a photograph could stop the site building.
+
+    HERE RATHER THAN IN verbs.py, because the panel WRITES these keys
+    and the model READS them back: escaping in one place and parsing in
+    the other is how the panel came to show no description at all for a
+    photograph the site described perfectly well. One spelling, one
+    module. See `map_of`.
+    """
+    return name.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def map_of(header: str, table: str) -> dict:
+    """A `[extra.<table>]` block as a plain map, keyed by file name.
+
+    The inverse of `toml_name` for the key, and the values come back as
+    strings — the caller knows whether it wants a number.
+
+    `model.alt_of` and `model.place_of` were two copies of this with
+    their own regexes, and neither understood an escaped name.
+    """
+    block = re.search(r'^\[' + re.escape(table) + r'\]\s*$(.*?)(?=^\[|\Z)',
+                      header, re.M | re.S)
+    if not block:
+        return {}
+    out = {}
+    # `(?:[^"\\]|\\.)*` — anything but a quote or a backslash, or an
+    # escaped pair. A plain `[^"]+` stops at the first escaped quote and
+    # reads half a name.
+    for m in re.finditer(r'^\s*"((?:[^"\\]|\\.)*)"\s*=\s*(.+?)\s*$',
+                         block.group(1), re.M):
+        name = m.group(1).replace('\\"', '"').replace("\\\\", "\\")
+        value = m.group(2).strip()
+        if value.startswith('"') and value.endswith('"'):
+            value = value[1:-1]
+        out[name] = value
+    return out

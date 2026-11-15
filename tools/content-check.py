@@ -2464,6 +2464,36 @@ def case_one_module_knows_what_a_content_file_is(d: pathlib.Path) -> list[tuple[
         # the docstring of the owner is allowed to name it; code is not
         if re.search(r'split\(\s*["\']\+\+\+["\']\s*\)', text):
             rolled.append(str(f.relative_to(ROOT)))
+    # ---- AUDIT 2: AND NOBODY KEEPS A SECOND COPY OF THE ANSWER ----
+    #
+    # Three readers had drifted from the writer, each in its own way,
+    # and each cost something different. See specs/the-audit.md.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("fm_owner", owner)
+    fm = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(fm)
+
+    # A2-F3 — look.py asked only "does it start with +++ and hold two".
+    # `+++title = "x"` passes that, and it is the file that broke the
+    # site twice: the tool whose job is to say what will not work said
+    # nothing while zola refused the build.
+    broken = '+++title = "x"\n+++\n\nUn texte.\n'
+    (d / "content" / "da" / "theodora-01" / "index.md").write_text(
+        broken, encoding="utf-8")
+    looked = subprocess.run([sys.executable, "tools/look.py"], cwd=d,
+                            capture_output=True, text=True)
+    built, _ = build(d)
+
+    # A2-F5 — `body()` returned the text between the second fence and a
+    # THIRD, so a paragraph containing `+++` came back cut off. The
+    # panel showed the short version and saving wrote it to disk.
+    whole = "Avant.\n\n+++ et après +++\n\nAprès."
+    page = '+++\ntitle = "x"\n+++\n\n' + whole + "\n"
+
+    # A2-F1 — the escaped file name the panel writes, read back.
+    header = ('\ntitle = "p"\n\n[extra.alt]\n'
+              '"' + fm.toml_name('vue "x".jpg') + '" = "Une silhouette."\n')
+
     return [
         ("the module that knows what a content file is exists", owner.is_file()),
         ("and nothing else splits on the fence by hand", rolled == []),
@@ -2471,6 +2501,22 @@ def case_one_module_knows_what_a_content_file_is(d: pathlib.Path) -> list[tuple[
          all("import frontmatter" in (ROOT / m).read_text(encoding="utf-8")
              for m in ("tools/look.py", "tools/studio/model.py",
                        "tools/studio/verbs.py", "tools/studio/check.py"))),
+        # A2-F3
+        ("a file zola refuses is refused by look.py too, not cleared",
+         looked.returncode == 1 and not built),
+        ("  and it says which line is wrong",
+         "première ligne" in looked.stdout),
+        # A2-F5
+        ("her words survive a +++ inside them",
+         fm.body(page).strip() == whole.strip()),
+        # A2-F1 — one spelling for a name, written and read by one module
+        ("a file name with a quote is escaped going in",
+         fm.toml_name('vue "x".jpg') == 'vue \\"x\\".jpg'),
+        ("  and comes back out whole",
+         fm.map_of(header, "extra.alt").get('vue "x".jpg') == "Une silhouette."),
+        ("  and an ordinary name still does",
+         fm.map_of('\n[extra.place]\n"01.jpg" = 3\n', "extra.place")
+         == {"01.jpg": "3"}),
     ]
 
 

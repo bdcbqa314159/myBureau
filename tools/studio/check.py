@@ -905,6 +905,39 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("set_alt asks the same question of its name",
           "pas là" in refused(verbs.set_alt, proj, "../../_index.md", "x"))
 
+    # ---- AUDIT 2: A CANVAS HAS NO ORDER TO GIVE --------------------
+    #
+    # travail sélectionné places each picture by a left, a top and a
+    # width; `selection.html` reads no rank at all. So dragging in the
+    # panel's list wrote an order nothing would ever read, and the list
+    # then showed an order the page did not have — the panel lying
+    # about the page, which is the one thing it must not do.
+    import model as the_canvas_model
+    the_canvas_model.ROOT = tmp
+    the_canvas_model.CONTENT = tmp / "content"
+    SEL2 = "content/travail-selectionne"
+    sel_dir = tmp / SEL2
+    mine = verbs.photographs_in(sel_dir)
+    said = refused(verbs.reorder, SEL2, list(reversed(mine)))
+    check("an order written on a canvas is refused, not saved silently",
+          "sur la page" in said, said)
+    # AND THE LIST READS DOWN THE PAGE. `[extra.shot]` carries a top
+    # per picture, so reading down the page is reading down the tops.
+    fm2 = the_canvas_model.front(sel_dir / "_index.md")
+    tops = the_canvas_model.shot_of(fm2)
+    listed = the_canvas_model.photographs(sel_dir, fm2)
+    check("and the panel lists them in the order the canvas shows",
+          listed == sorted(listed, key=lambda n: tops.get(n, {}).get("top", 1e6)),
+          str(listed[:4]))
+    check("  which is not the same as listing them by name",
+          len(tops) > 2)
+    # A GALLERY STILL TAKES ONE, because its page reads exactly that.
+    gal = verbs.photographs_in(tmp / "content/pellicules")
+    check("a gallery still takes an order, because its page reads one",
+          refused(verbs.reorder, "content/pellicules",
+                  list(reversed(gal))) == "")
+    verbs.undo()
+
     # F6 — `sorted()` puts index.en.md first, so the ENGLISH file was
     # answering "what is this thing?".
     en = tmp / proj / "index.en.md"

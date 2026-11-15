@@ -1,6 +1,6 @@
 # The audit
 
-**Status:** audit 1 done and fixed — nine findings, eight proven.
+**Status:** audits 1 and 2 done and fixed — fourteen findings.
 **Date:** 2026-11-15
 
 Seven architectures, ordered by **what a bug in each one costs**. Not by
@@ -353,3 +353,107 @@ sat in: a fix made in the first copy did nothing for the call six
 hundred lines later. One, at module level, and it now reports a Python
 error as text rather than letting it stop the suite — which is what a
 check about "does this refuse in French" is for.
+
+
+---
+
+# Audit 2 — the shape
+
+`content/`, `model.py`, `frontmatter.py`, `filetypes.py`, `look.py`,
+`prune.py` and `i18n.py`, read end to end on 2026-11-15. **Five
+candidates, four proven**, all four fixed. One was disproven by the
+probe, which is recorded below because a candidate that dies is worth
+as much as one that lives.
+
+Every one of the four was the same defect the plan predicted for this
+area: **the same knowledge kept in two places, and the copies drifted.**
+
+### A2-F1 · the panel could not read back what the panel had written
+
+Audit 1 taught `set_map_key` to escape a quote in a file name, so the
+site could show a description for `vue "x".jpg`. `model.alt_of` and
+`model.place_of` each had their own regex, `"([^"]+)"`, which stops at
+the first escaped quote.
+
+| | |
+|---|---|
+| input | describe a photograph whose name holds a `"` |
+| output | the site shows the description; the panel reads back `{}` |
+| costs her | the description looks lost, so she writes it again — into a file that already has it |
+
+A fix of mine, four days old, that drifted the moment it landed.
+
+### A2-F2 · an order written on a page that has none
+
+`travail sélectionné` places each picture by a left, a top and a
+width; `selection.html` reads no rank at all. The panel still offered
+the list drag, and `reorder` still wrote `[extra.place]`.
+
+| | |
+|---|---|
+| input | drag a photograph in the panel's list, on the canvas |
+| output | "ordre enregistré" — and the page is unchanged. The panel's list then shows `08, 01, 02` while the page shows `01, 02, 03` |
+| costs her | the panel lying about the page, which is the one thing it must not do |
+
+### A2-F3 · the tool that says what will not work, saying nothing
+
+`look.py` kept its own front-matter test: does it start with `+++` and
+hold two of them. `+++title = "x"` satisfies both — it is the file that
+broke the site twice.
+
+| | |
+|---|---|
+| input | a content file whose opening fence is not alone on its line |
+| output | `look.py` exits 0, "Nothing to report"; `zola build` exits 1 |
+| costs her | the one tool written to catch this, clearing it |
+
+### A2-F5 · her words, cut off at a `+++`
+
+`frontmatter.body()` returned the text between the second fence and a
+third, so a paragraph containing `+++` came back short — and the panel
+writes back what it shows.
+
+| | |
+|---|---|
+| input | a paragraph containing `+++` |
+| output | 32 characters written, 6 read back |
+| costs her | the rest of the paragraph, the next time she saves anything on that page |
+
+### A2-F4 · a space in a photograph's name — NOT a finding
+
+The guess was that `prune.py` matches urls against file names, so a
+photograph called `vue sur la mer.jpg` would be percent-encoded in the
+HTML, unmatched, and either pruned or reported missing — stopping the
+deploy. Tried: prune exits 0 and the site is whole. The original is
+never requested at all, because every page serves a resized copy, so
+pruning it is correct. **Recorded because the next person to have the
+same idea should not have to run it again.**
+
+## Fixed, and how
+
+One module knows what a content file is, and now it knows all of it:
+
+| `frontmatter.py` gained | who had a copy |
+|---|---|
+| `why_zola_refuses(text)` | `verbs._no_front_matter` and a weaker one in `look.py` |
+| `toml_name(name)` | `verbs.toml_name`, with no reader that understood it |
+| `map_of(header, table)` | `model.alt_of` and `model.place_of`, one regex each |
+| `body()`, fixed | — |
+
+And the canvas: `reorder` refuses an order where none is read,
+`model.photographs` lists a canvas by the tops its page uses, and the
+panel does not offer the drag there at all — a gesture that can only
+be refused is worse than no gesture.
+
+## What was read and found sound
+
+- `filetypes.py` is already the one reader of `config.toml`'s lists,
+  and every module takes them from it.
+- `prune.py`'s safety is the check after the matcher, not the matcher,
+  and that check resolves by suffix so it survives the site moving to
+  her own domain.
+- `i18n.py` adds a language with two edits in `config.toml` and no
+  template change, which is what its docstring promises.
+- `look.py`'s refusals — a file git ignores, a file zola cannot read —
+  stop the run rather than printing advice, which is the right shape
+  for the two things that are not advice.
