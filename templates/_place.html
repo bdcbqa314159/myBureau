@@ -25,10 +25,33 @@
 
     `icon.*`, `poster.*`, `wallpaper.*` and a dossier's `page-NN.*`
     are not her photographs. -#}
+{#- THE ORDER SHE ARRANGED, one turn per rank.
+
+    `[extra.place]` says which photograph is first, second, third; see
+    verbs.reorder, which writes it and explains at length why the order
+    cannot live in the file names. zola hands over `assets`
+    alphabetically and Tera cannot sort a list by a value looked up
+    elsewhere, so the list is walked once per turn and each photograph
+    waits for its own: turn 1 emits rank 1, and the LAST turn emits
+    everything she has never arranged, in the order zola gave them.
+
+    A rank naming a photograph that is gone is never matched, and a
+    photograph with no rank still appears — which is what a file dropped
+    in by hand, outside the panel, is.
+
+    ponytail: quadratic in her photographs, and `continue` costs nothing
+    before the resize. A folder of hundreds would want the ranks read in
+    Python and handed over sorted, which means a build step this site
+    does not otherwise have. -#}
+{%- set turns = pl_assets | length + 1 -%}
+{%- for turn in range(start=1, end=turns + 1) -%}
 {%- for a in pl_assets -%}
   {%- set leaf = a | split(pat="/") | last -%}
   {%- set stem = leaf | split(pat=".") | first -%}
   {%- set ext = leaf | split(pat=".") | last | lower -%}
+  {%- set rank = 0 -%}
+  {%- if pl_extra.place and pl_extra.place[leaf] %}{% set rank = pl_extra.place[leaf] %}{% endif -%}
+  {%- if rank != turn and not (rank == 0 and turn == turns) %}{% continue %}{% endif -%}
   {#- `page-NN` is a dossier's page, not one of her photographs — see
       verbs.pages_of. Without this a dossier inside a folder-page put
       every page of itself on the route. -#}
@@ -63,4 +86,5 @@
            alt="{{ pl_alt[leaf] | default(value="") }}" loading="lazy" decoding="async">
     </figure>
   {%- endif -%}
+{%- endfor -%}
 {%- endfor -%}

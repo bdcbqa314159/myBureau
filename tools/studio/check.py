@@ -138,14 +138,63 @@ def main() -> int:
     except verbs.Refused:
         check("refuses a file the site cannot show", True)
 
-    first = (d / "01.jpg").read_bytes()
-    newest = (d / added).read_bytes()
-    verbs.reorder(proj, [added] + held)
-    check("reordering renumbers without losing one", jpgs() == in_order)
-    check("and the photograph that was last is now first — so it is the icon",
-          (d / "01.jpg").read_bytes() == newest)
+    # ---- arranging them ----------------------------------------------
+    # THE ORDER IS A PROPERTY. This block used to assert that reorder
+    # RENUMBERED the files into 01, 02, 03 … and it passed while the
+    # website did not change at all: zola names a resized image from
+    # the source path, so renaming 03 to 01 asks for a thumbnail that
+    # is already in its cache. See verbs.reorder, and the case
+    # `the order is a property, not a name` in content-check, which
+    # builds twice and is the only thing that can see that.
+    #
+    # `in_order` is no longer the expectation — it is now what must NOT
+    # happen.
+    import model as the_model
+    the_model.ROOT, the_model.CONTENT = tmp, tmp / "content"
+    # A NAME OF HER OWN, put there the way Finder puts one there. The
+    # fixture's photographs are all 01, 02, 03 already, so
+    # `jpgs() == in_order` held whether or not anything was renamed —
+    # the fixture could not tell the two apart, which is how the old
+    # expectation passed for a verb that was overwriting her names.
+    hers = "vue sur la mer.jpg"
+    (d / hers).write_bytes(pixels)
+    # AND A DOSSIER'S PAGES SITTING BESIDE THEM, which is what pdftoppm
+    # leaves when she drops a PDF. They are not her photographs and the
+    # panel never sends them, but `reorder` had its own listing that
+    # kept them — so the order it was given was always short by however
+    # many pages the document had, and every arrangement on a project
+    # holding a PDF came back "ce ne sont pas les mêmes photos".
+    # Nothing in the tree has dossier pages yet, which is the only
+    # reason it was never seen. One listing now: photographs_in.
+    for i in (1, 2):
+        (d / "page-{:02d}.png".format(i)).write_bytes(pixels)
+    was = jpgs()
+    # CAUGHT, not allowed to escape: an uncaught Refused here kills the
+    # suite before a single expectation prints, and a run with no FAIL
+    # line in it reads like a clean one. It has happened.
+    turned_down = ""
+    try:
+        verbs.reorder(proj, [added, hers] + held)
+    except verbs.Refused as exc:
+        turned_down = str(exc)
+    check("arranging them is not refused", turned_down == "", turned_down)
+    check("arranging them renames nothing — her names are hers",
+          jpgs() == was, str(jpgs()))
+    check("and in particular does not renumber them",
+          hers in jpgs() and jpgs() != in_order)
+    check("the rank is written down, keyed by file name",
+          '"{}" = 1'.format(added) in (d / "index.md").read_text(encoding="utf-8"))
+    check("the panel lists them in the order she arranged",
+          the_model.photographs(d, (d / "index.md").read_text(encoding="utf-8"))
+          == [added, hers] + held)
     check("nothing is left holding a temporary name",
           not any("studio-hold" in f.name for f in d.iterdir()))
+    check("a project holding a dossier is arranged without refusing",
+          '"{}" = 1'.format(added)
+          in (d / "index.md").read_text(encoding="utf-8")
+          and (d / "page-01.png").exists())
+    check("and the pages of the dossier are given no rank of their own",
+          "page-01.png" not in (d / "index.md").read_text(encoding="utf-8"))
 
     verbs.remove_image(proj, "02.jpg")
     check("a removed photograph leaves the folder",
@@ -157,7 +206,11 @@ def main() -> int:
     verbs.undo()
     check("undo brings it back out of the bin", (d / "02.jpg").exists())
     verbs.undo()
-    check("undo reverses a reorder", (d / "01.jpg").read_bytes() == first)
+    # the front matter goes back, so the rank goes with it — a reorder
+    # is a text edit now, not a pile of renames
+    check("undo reverses a reorder",
+          '"{}" = 1'.format(added)
+          not in (d / "index.md").read_text(encoding="utf-8"))
     verbs.undo()
     check("undo removes a photograph that was added", not (d / added).exists())
     # the next entry back is the bare project's placement, not theodora's

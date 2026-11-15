@@ -66,7 +66,29 @@ def langs(folder: pathlib.Path, stem: str) -> dict:
     return out
 
 
-def photographs(folder: pathlib.Path) -> list:
+def place_of(fm: str) -> dict:
+    """`[extra.place]` as a plain map — file name to rank, a number.
+
+    The same shape as alt_of above and read for the same reason: the
+    panel has to show what the site shows. See verbs.reorder.
+    """
+    block = re.search(r'^\[extra\.place\]\s*$(.*?)(?=^\[|\Z)', fm, re.M | re.S)
+    if not block:
+        return {}
+    out = {}
+    for m in re.finditer(r'^\s*"([^"]+)"\s*=\s*(\d+)', block.group(1), re.M):
+        out[m.group(1)] = int(m.group(2))
+    return out
+
+
+def photographs(folder: pathlib.Path, fm: str = "") -> list:
+    """Her photographs, IN THE ORDER SHE ARRANGED THEM.
+
+    The panel's list is how she rearranges a page's photographs, so a
+    list in a different order from the site is a list that lies. Rank
+    first, then everything unarranged by name — exactly what the turn
+    loop in the templates does.
+    """
     out = []
     for f in sorted(folder.iterdir()):
         if not f.is_file() or f.suffix.lower() not in IMAGE:
@@ -80,6 +102,8 @@ def photographs(folder: pathlib.Path) -> list:
         if f.stem.lower().split("-")[0] == "page":
             continue
         out.append(f.name)
+    rank = place_of(fm)
+    out.sort(key=lambda n: (rank.get(n, 10 ** 6), n))
     return out
 
 
@@ -191,7 +215,7 @@ def thing(folder: pathlib.Path, stem: str, kind: str) -> dict:
         "about": special(folder, "about"),
         # the affiche — the panel shows it as the proof a film landed
         "poster": special(folder, "poster"),
-        "photographs": photographs(folder),
+        "photographs": photographs(folder, first),
         # what each photograph shows, for a screen reader — the map
         # page.html reads, so the panel can show what is already written
         "alt": alt_of(first),

@@ -189,8 +189,10 @@ shape `[extra.alt]` already uses:
   sequence repeats a column" was tried and is a tautology.
 - **It never interferes with `x`/`y`.** A thing has a position on a
   desk; its photographs have columns on a road.
-- **Order is filename order.** Rearranging is renumbering, which the
-  panel already does.
+- **Order is a rank she arranged**, `[extra.place]`, keyed by file
+  name — not the file names themselves. It WAS filename order, and
+  rearranging was renumbering: see the-order-is-a-property.md for why
+  that could not work even in principle.
 - **Written to every language file.** Wide in French and narrow in
   English is a bug.
 - **Out of range is clamped, not refused.** A number she drags to is

@@ -770,10 +770,10 @@ if (loaded) {
   // ARRANGING THE GALLERY, DRIVEN THE WAY A BROWSER DRIVES IT.
   //
   // A gallery is a CSS column flow with no coordinates, so "arrange"
-  // can only mean the ORDER — `reorder` renames the files 01, 02, 03
-  // and the columns reflow.
+  // can only mean the ORDER — `reorder` writes down a rank per
+  // photograph and the columns reflow.
   //
-  // THE FIRST TWO VERSIONS BOTH PASSED AND BOTH DID NOTHING.
+  // THE FIRST THREE VERSIONS ALL PASSED AND ALL DID NOTHING.
   //
   //   one  the call sat after `hook()`'s early return, and a gallery
   //        has no `.desk`, so it was dead code
@@ -781,6 +781,11 @@ if (loaded) {
   //        behaved; a browser did not — a `.shot` is an <a> round an
   //        <img>, two things with native drags of their own, and the
   //        ghost appeared while the photographs stayed put
+  //   three the gesture worked and the verb RENAMED the files to put
+  //        them in order, which zola serves from a cache keyed on the
+  //        source path — so the page came back identical and the
+  //        photographs sprang back. Nothing on this side could see
+  //        that: it took a build. See specs/the-order-is-a-property.md
   //
   // So this fires POINTER events, the mechanism the desk's icon drag
   // has used all along, and the stub answers `elementFromPoint` —
