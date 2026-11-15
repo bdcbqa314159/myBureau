@@ -958,8 +958,18 @@ function wire(o) {
   }
   const list = look.querySelector(".shots");
   if (!list) return;
+  /* ARRANGING IN THE LIST, except where the page has no order.
+   *
+   * A canvas places every picture by a left, a top and a width, and
+   * `selection.html` reads no rank at all — so dragging in this list
+   * wrote an order nothing would ever read, and the list then showed
+   * an order the page did not have. The verb refuses it now; offering
+   * a gesture that can only be refused is worse than not offering it.
+   * The list still adds, removes and describes. See the-audit.md. */
+  const ordered = !o.canvas;
   let lifted = null;
   list.querySelectorAll(".shot").forEach((li) => {
+    if (!ordered) { li.draggable = false; return wireBin(li); }
     li.addEventListener("dragstart", () => { lifted = li; li.classList.add("lift"); });
     li.addEventListener("dragend", () => { li.classList.remove("lift"); lifted = null; });
     li.addEventListener("dragover", (e) => {
@@ -973,11 +983,16 @@ function wire(o) {
       const names = [...list.querySelectorAll(".shot")].map((n) => n.dataset.name);
       if (await act({ verb: "reorder", item: o.path, names })) tell("ordre enregistré");
     });
+    wireBin(li);
+  });
+
+  /* The one control every list row has, ordered or not. */
+  function wireBin(li) {
     li.querySelector(".bin").addEventListener("click", async () => {
       if (await act({ verb: "remove_image", item: o.path, name: li.dataset.name }))
         tell(li.dataset.name + " jetée — Annuler la ramène");
     });
-  });
+  }
 }
 
 /* ARRANGING THE GALLERY, IN THE GALLERY.

@@ -69,25 +69,58 @@ def langs(folder: pathlib.Path, stem: str) -> dict:
 def place_of(fm: str) -> dict:
     """`[extra.place]` as a plain map — file name to rank, a number.
 
-    The same shape as alt_of above and read for the same reason: the
-    panel has to show what the site shows. See verbs.reorder.
+    THROUGH frontmatter.map_of, which is the same reader the escaping
+    was written for. This had its own regex, `"([^"]+)"`, which stops
+    at the first escaped quote — so a photograph named `vue "x".jpg`
+    came back as no entry at all and the panel showed none of what the
+    site showed. Found by audit 2.
     """
-    block = re.search(r'^\[extra\.place\]\s*$(.*?)(?=^\[|\Z)', fm, re.M | re.S)
-    if not block:
-        return {}
     out = {}
-    for m in re.finditer(r'^\s*"([^"]+)"\s*=\s*(\d+)', block.group(1), re.M):
-        out[m.group(1)] = int(m.group(2))
+    for name, value in frontmatter.map_of(fm, "extra.place").items():
+        try:
+            out[name] = int(value)
+        except ValueError:
+            continue                 # a rank that is not a number is no rank
+    return out
+
+
+def shot_of(fm: str) -> dict:
+    """`[extra.shot]` as a map — file name to its left, top and width.
+
+    An inline table, so the values come back as one string and the
+    three numbers are picked out of it. Only `top` is read today, to
+    put the panel's list in the order the canvas shows; the other two
+    are there because a reader that returns half a fact invites a
+    second reader for the other half.
+    """
+    out = {}
+    for name, value in frontmatter.map_of(fm, "extra.shot").items():
+        got = {}
+        for part in ("left", "top", "width"):
+            m = re.search(part + r"\s*=\s*(-?[\d.]+)", value)
+            if m:
+                try:
+                    got[part] = float(m.group(1))
+                except ValueError:
+                    pass
+        if got:
+            out[name] = got
     return out
 
 
 def photographs(folder: pathlib.Path, fm: str = "") -> list:
-    """Her photographs, IN THE ORDER SHE ARRANGED THEM.
+    """Her photographs, IN THE ORDER THE PAGE SHOWS THEM.
 
     The panel's list is how she rearranges a page's photographs, so a
-    list in a different order from the site is a list that lies. Rank
-    first, then everything unarranged by name — exactly what the turn
-    loop in the templates does.
+    list in a different order from the site is a list that lies.
+
+    TWO ORDERS, because there are two kinds of page. A gallery and a
+    project page read a RANK — `[extra.place]`, rank first and then
+    everything unarranged by name, exactly what the turn loop in the
+    templates does. A CANVAS reads no rank at all: it places each
+    picture by a top, so reading down the page is reading down the
+    tops. The panel listed a canvas by rank, which is an order its
+    page does not have. Found by audit 2.
     """
     out = []
     for f in sorted(folder.iterdir()):
@@ -102,6 +135,10 @@ def photographs(folder: pathlib.Path, fm: str = "") -> list:
         if f.stem.lower().split("-")[0] == "page":
             continue
         out.append(f.name)
+    placed = shot_of(fm)
+    if placed:
+        out.sort(key=lambda n: (placed.get(n, {}).get("top", 10 ** 6), n))
+        return out
     rank = place_of(fm)
     out.sort(key=lambda n: (rank.get(n, 10 ** 6), n))
     return out
@@ -138,12 +175,8 @@ def special(folder: pathlib.Path, kind: str) -> "str | None":
 
 
 def alt_of(fm: str) -> dict:
-    """`[extra.alt]` as a plain map, keyed by file name."""
-    block = re.search(r'^\[extra\.alt\]\s*$(.*?)(?=^\[|\Z)', fm, re.M | re.S)
-    if not block:
-        return {}
-    return {m.group(1): m.group(2) for m in
-            re.finditer(r'^\s*"([^"]+)"\s*=\s*"([^"]*)"', block.group(1), re.M)}
+    """`[extra.alt]` as a plain map, keyed by file name. See place_of."""
+    return frontmatter.map_of(fm, "extra.alt")
 
 
 def video(folder: pathlib.Path) -> "str | None":

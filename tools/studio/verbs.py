@@ -227,16 +227,11 @@ def one_line(value: str, what: str) -> str:
     return value
 
 
-def toml_name(name: str) -> str:
-    """A FILE NAME as a TOML key, with its own quotes escaped.
-
-    Her names are hers, and the Finder lets her put a `"` in one. It
-    went into `[extra.alt]` raw — `"vue "x".jpg" = "…"` — which zola
-    refuses, so describing a photograph could stop the site building.
-    Escaped rather than refused: refusing would be the panel telling
-    her what she may call her own files.
-    """
-    return name.replace("\\", "\\\\").replace('"', '\\"')
+# A FILE NAME as a TOML key. It lived here and the model parsed these
+# keys with a regex of its own that knew nothing about the escaping —
+# so the panel read back NO description for a photograph the site
+# described correctly. One module owns the spelling now.
+toml_name = frontmatter.toml_name
 
 
 # ---------------------------------------------------------------------
@@ -351,29 +346,12 @@ def _under_content(p: pathlib.Path) -> bool:
         return False
 
 
-def _no_front_matter(text: str) -> str:
-    """Why zola would refuse this text, or "" if it would not.
-
-    The same three things zola checks, in her words rather than its.
-    """
-    if not text.strip():
-        return "le fichier serait vide"
-    if not text.startswith("+++"):
-        return "il ne commencerait pas par +++"
-    # A FENCE IS A LINE OF ITS OWN. `+++title = "x"` starts with +++
-    # and holds two of them, so the two tests above let it through —
-    # and that is exactly the file that broke the site, twice, with
-    # nothing in the journal to explain it. zola wants the delimiter
-    # alone on its line; so do we, now.
-    first = text.split("\n", 1)[0].rstrip("\r")
-    if first != "+++":
-        return "il y aurait autre chose que +++ sur la première ligne"
-    if text.count("+++") < 2:
-        return "l'en-tête ne serait pas fermée par un second +++"
-    rest = text.split("\n", 1)[1] if "\n" in text else ""
-    if not any(l.rstrip("\r") == "+++" for l in rest.split("\n")):
-        return "le second +++ ne serait pas seul sur sa ligne"
-    return ""
+# WHY ZOLA WOULD REFUSE a text, in her words. It lived here and
+# look.py had a weaker copy — started with +++, held two of them —
+# which is satisfied by `+++title = "x"`, the file that broke the site
+# twice. So the tool whose job is to say what will not work reported
+# "nothing to report". One reader, in frontmatter.py.
+_no_front_matter = frontmatter.why_zola_refuses
 
 
 def nudge(folder: pathlib.Path) -> None:
@@ -1955,6 +1933,15 @@ def reorder(item: str, names: list) -> dict:
     # arrangement came back "ce ne sont pas les mêmes photos". Nothing
     # in the tree has dossier pages yet, which is the only reason this
     # was never seen.
+    # A CANVAS HAS NO ORDER TO GIVE. travail sélectionné places each
+    # picture by a left, a top and a width — `selection.html` reads no
+    # rank at all — so writing one there was a gesture that saved
+    # something nothing would ever read, and the panel's list then
+    # showed an order the page did not have. The mirror of place_shot
+    # refusing a gallery. Found by audit 2.
+    if is_canvas(d):
+        raise Refused("ici chaque photo a sa place sur la page :"
+                      " déplace-la sur la page plutôt que dans la liste.")
     have = photographs_in(d)
     if sorted(names) != sorted(have):
         raise Refused("ce ne sont pas les mêmes photos.")
