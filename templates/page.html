@@ -104,7 +104,7 @@
       `colocated_path` is the folder each of them actually sits in, and
       it means the same thing for both. -#}
   {% set here = w.colocated_path %}
-  {#- THE ORDER SHE ARRANGED — see the long note in _place.html, and
+  {#- THE ORDER SHE ARRANGED — see specs/the-order-is-a-property.md, and
       verbs.reorder for why `[extra.place]` exists at all rather than
       living in the file names. One turn per rank; the last turn takes
       every photograph she has never arranged.
@@ -204,42 +204,22 @@
     </figure>
   {% endif %}
 
-  {#- WHAT IS INSIDE, when this page is a folder.
+  {#- WHAT WAS HERE: THE ROAD, and it has gone with travail
+      sélectionné.
 
-      A folder can hold projects of its own, and every photograph in
-      them belongs on this page: it is one body of work, not a menu of
-      folders. It was a row of words, then a grid of cropped
-      thumbnails with the names underneath — both said where things
-      were and little about what they are.
+      A folder-page could hold projects of its own, and every
+      photograph in them was laid out here — three columns, a picture
+      in one, a 1,3,2,1,3 rhythm. `travail sélectionné` was the only
+      page in the tree with children, so the road served it alone,
+      and it is a canvas now: it holds photographs itself and she puts
+      each one where she wants it. See specs/the-canvas.md.
 
-      So: a ROUTE, and it runs DOWN. Every photograph inside this
-      folder, each at its own width, centred on one line. Nothing is
-      cropped, no name sits under anything, nothing can be clicked,
-      and the page scrolls the way a page scrolls. It leant left and
-      right at varying angles until she said it should not — see
-      specs/pages-and-the-road.md.
-
-      THE COST, which is deliberate: a child holding no photograph is
-      now linked from nowhere. Nothing in the content is in that
-      position; content-check names it so it is noticed if one is.
-
-      A project has no children and never reaches this. -#}
-  {% if section is defined and (section.pages | length > 0 or section.subsections | length > 0) %}
-    {#- A <div>, not a <nav>: there is nothing to navigate to. -#}
-    <div class="proj-route">
-      {% for sub in section.pages %}
-        {% set_global pl_here = sub.colocated_path %}{% set_global pl_assets = sub.assets %}
-        {% set_global pl_extra = sub.extra %}{% set_global pl_alt = sub.extra.alt | default(value={}) %}
-        {% include "_place.html" %}
-      {% endfor %}
-      {% for q in section.subsections %}
-        {% set one = get_section(path=q) %}
-        {% set_global pl_here = one.colocated_path %}{% set_global pl_assets = one.assets %}
-        {% set_global pl_extra = one.extra %}{% set_global pl_alt = one.extra.alt | default(value={}) %}
-        {% include "_place.html" %}
-      {% endfor %}
-    </div>
-  {% endif %}
+      NOTHING ELSE CAN REACH THIS. A folder holds a desktop only on
+      the main desk; made anywhere else it is a page, and a page has
+      no children — so there is no second folder-page to lay out, and
+      `_place.html`, `.proj-route`, `.stop` and `[extra.column]` went
+      with the road rather than waiting for a caller that the object
+      model does not allow. -#}
 
   {#- THE POP-FRONT, where the dossier scrolls.
       --------------------------------------------------------------

@@ -432,16 +432,20 @@ def main() -> int:
     check("what the panel offers as a target is what the server accepts",
           disagreed == [], str(disagreed))
 
-    # nothing may be filed into a gallery: it renders photographs only
-    for fn, args in ((verbs.new_project, ("content/pellicules", "Essai")),
-                     (verbs.new_bureau, ("content/pellicules", "Essai")),
-                     (verbs.move, ("content/da/theodora-01", "content/pellicules"))):
-        try:
-            fn(*args)
-            check("a gallery refuses to be filed into (%s)" % fn.__name__, False)
-        except verbs.Refused as exc:
-            check("a gallery refuses to be filed into (%s)" % fn.__name__,
-                  "galerie" in str(exc), str(exc))
+    # NOTHING MAY BE FILED INTO A FOLDER THAT HOLDS PHOTOGRAPHS: it
+    # renders its own and nothing else, so a project put inside one
+    # would be built and shown nowhere. BOTH of them — travail
+    # sélectionné joined pellicules on 2026-11-15 and the refusal is
+    # one sentence for the pair, which is why it no longer says
+    # "galerie". See specs/the-canvas.md.
+    for where in ("content/pellicules", "content/travail-selectionne"):
+        for fn, args in ((verbs.new_project, (where, "Essai")),
+                         (verbs.new_bureau, (where, "Essai")),
+                         (verbs.move, ("content/da/theodora-01", where))):
+            say = refused(fn, *args)
+            check("%s refuses to be filed into (%s)"
+                  % (where.split("/")[-1], fn.__name__),
+                  "que ses photos" in say, say)
 
     # ---- moving and throwing away, the two Finder trips -------------
     verbs.move("content/da/theodora-01", "content/graphic-design")
@@ -717,6 +721,82 @@ def honesty_cases(tmp: pathlib.Path) -> None:
                                "w.jpg", pixels))
     check("and a real bureau still takes one",
           refused(verbs.set_wallpaper, "content/da", "w.jpg", pixels) == "")
+
+    # ---- travail sélectionné: a folder that holds photographs -------
+    #
+    # It held five projects, so selecting it showed her NO photographs
+    # at all and the only place to drop a picture was the icon slot —
+    # she dropped one meaning to add it to the page and set the
+    # folder's face instead. It holds them itself now, like pellicules,
+    # and its page places each one. See specs/the-canvas.md.
+    print()
+    SEL = "content/travail-selectionne"
+    # CRITERION 3: the panel is TOLD it holds photographs, so it opens
+    # the same pane pellicules gets. It used to be told it held five
+    # projects, which is why selecting it showed her no photographs at
+    # all and the only drop was the icon slot.
+    import model as the_model2
+    the_model2.ROOT, the_model2.CONTENT = tmp, tmp / "content"
+    seen_tree = the_model2.tree()
+    sel_desk = next((x for x in seen_tree["desks"]
+                     if x["path"] == "content/travail-selectionne"), None)
+    check("the panel is told the canvas holds photographs, like the gallery",
+          bool(sel_desk) and sel_desk["holds_photographs"]
+          and sel_desk["canvas"] and not sel_desk["gallery"])
+    check("  and it is handed the photographs themselves",
+          bool(sel_desk) and len(sel_desk["photographs"]) == 8)
+    check("  and offered as no destination, because nothing would show",
+          bool(sel_desk) and sel_desk["can_receive"] is False)
+
+    check("the canvas takes a photograph, where it used to refuse one",
+          refused(verbs.add_image, SEL, "neuve.jpg", pixels) == "")
+    check("  and a dropped picture is a photograph, not the folder's face",
+          len(verbs.photographs_in(tmp / "content/travail-selectionne")) == 9
+          and "icon" not in (tmp / SEL / "_index.md").read_text(encoding="utf-8"))
+    check("it still refuses what a folder of photographs cannot hold",
+          "PDF" in refused(verbs.add_doc, SEL, "x.pdf", pdf))
+    check("and nothing may be filed inside it, because nothing would show",
+          refused(verbs.new_project, SEL, "dedans", "photos") != "")
+    check("a wallpaper is refused too: it is a page, not a bureau",
+          refused(verbs.set_wallpaper, SEL, "w.jpg", pixels) != "")
+
+    # ---- and she says where each picture goes -----------------------
+    out = verbs.place_shot(SEL, "01.jpg", 12.5, 7, 40)
+    check("a picture is placed: a left, a top and a width",
+          (out["left"], out["top"], out["width"]) == (12.5, 7.0, 40.0), str(out))
+    check("  written to every language, so one composition not two",
+          out["files"] == 2 and '"01.jpg" = { left = 12.5'
+          in (tmp / SEL / "_index.en.md").read_text(encoding="utf-8"))
+    check("  and 7.0 is written as 7, because a person reads this file",
+          "top = 7," in (tmp / SEL / "_index.md").read_text(encoding="utf-8"))
+    verbs.place_shot(SEL, "01.jpg", 20, 9, 30)
+    got = (tmp / SEL / "_index.md").read_text(encoding="utf-8")
+    check("placing it again replaces the line rather than adding a second",
+          got.count('"01.jpg" = {') == 1 and "left = 20" in got)
+    # CLAMPED, NOT REFUSED. She is dragging; a drag that ends past the
+    # edge should land on the edge rather than throw the gesture away.
+    edge = verbs.place_shot(SEL, "02.jpg", 90, 10, 40)
+    check("nothing hangs off the right edge — clamped, not refused",
+          edge["left"] + edge["width"] == 100, str(edge))
+    small = verbs.place_shot(SEL, "03.jpg", 10, 10, 0.2)
+    check("and nothing shrinks to a speck she could never grab again",
+          small["width"] == 5, str(small))
+    tall = verbs.place_shot(SEL, "04.jpg", 10, 4000, 20)
+    check("but down has no ceiling: the canvas grows as she drags",
+          tall["top"] == 4000, str(tall))
+    for bad in ("x", None, float("nan"), float("inf")):
+        check("  {!r} is refused rather than written into TOML".format(bad),
+              refused(verbs.place_shot, SEL, "05.jpg", bad, 1, 10) != "")
+    check("a photograph that is not there cannot be placed",
+          refused(verbs.place_shot, SEL, "99.jpg", 1, 1, 10) != "")
+    # THE GALLERY IS THE OTHER HALF OF THE PAIR and has no coordinates
+    # at all: a column flow decides where a photograph lands, and the
+    # only thing she chooses is the order.
+    check("a gallery has no positions, and says so",
+          refused(verbs.place_shot, "content/pellicules", "01.jpg", 1, 1, 10) != "")
+    verbs.undo()
+    check("undo takes a placement back",
+          "top = 4000" not in (tmp / SEL / "_index.md").read_text(encoding="utf-8"))
 
     # ---- the bin is bounded -----------------------------------------
     for i in range(verbs.REMEMBERED + 25):
@@ -1030,9 +1110,15 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     # gallery is made of.
     check("the gallery takes the photographs it is made of",
           refused(verbs.add_image, "content/pellicules", "neuve.jpg", pix) == "")
-    check("while the selection holds things, not loose files",
-          "choses" in refused(verbs.add_image,
-                              "content/travail-selectionne", "x.jpg", pix))
+    # AND SO DOES THE SELECTION, as of 2026-11-15. This asserted the
+    # opposite — that travail sélectionné held THINGS and refused a
+    # loose photograph — which was the bug she hit: selecting it
+    # offered her no photographs and the only drop on it was the icon
+    # slot. It is a canvas now, the same object as pellicules with a
+    # different page. See specs/the-canvas.md.
+    check("and so does the selection, which is the same object",
+          refused(verbs.add_image,
+                  "content/travail-selectionne", "x.jpg", pix) == "")
 
     check("a drawing nobody drew is refused",
           refused(verbs.set_face, face_at, "folder", "folder-chartreuse") != "")
@@ -1152,11 +1238,13 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     # root page. `set_icon` would have written `content/icon.png` and
     # no page would ever have read it.
     print()
-    road = "content/travail-selectionne/nocturne-01"
-    # NOT theodora-01: that is `proj`, and the undo tally further down
-    # compares its index.md against what it held before. Writing it here
-    # and undoing left the journal a different depth and the tally
-    # reached past what it meant to.
+    # A THING DRAWN AS NO ICON ANYWHERE. There were two sorts: the
+    # home desk, which is the root page, and a child of travail
+    # sélectionné, which arrived on a road carrying no name and no
+    # link. THE ROAD IS GONE — travail sélectionné holds photographs
+    # itself now and places each one, so it has no children and
+    # nothing else in the tree can have any. The home desk is the
+    # whole category today. See specs/the-canvas.md.
     # THROUGH `refused`, even though this one is meant to SUCCEED. A
     # bare call raises when the guard is wrong, and an uncaught Refused
     # stops the whole suite at this line — so the failure was loud but
@@ -1165,17 +1253,15 @@ def honesty_cases(tmp: pathlib.Path) -> None:
     check("a thing on a desk can still be placed", said == "", said)
     if said == "":
         verbs.undo()
-    check("a stop on a route cannot, having no position",
-          "ordre" in refused(verbs.place, road, 30, 40))
-    check("and the road itself cannot, being a page on a desk's child",
+    check("the home desk cannot, being drawn nowhere at all",
+          refused(verbs.place, "content", 30, 40) != "")
+    check("and the canvas itself can, being a folder on the main desktop",
           refused(verbs.place, "content/travail-selectionne", 30, 40) == "")
     said = refused(verbs.set_icon, "content/da", "visage.png", pix)
     check("a bureau can still be given a face", said == "", said)
     if said == "":
         verbs.undo()
-    check("a stop on a route cannot, no icon being drawn for it",
-          "icône" in refused(verbs.set_icon, road, "visage.png", pix))
-    check("and neither can the home desk, drawn nowhere at all",
+    check("and the home desk cannot be given one either",
           refused(verbs.set_icon, "content", "visage.png", pix) != "")
     # THE READER BEHIND ALL FOUR, which would make every refusal above
     # hold if it answered False to everything.
@@ -1183,8 +1269,7 @@ def honesty_cases(tmp: pathlib.Path) -> None:
           verbs.drawn_as_an_icon(tmp / "content" / "da" / "theodora-01")
           and verbs.drawn_as_an_icon(tmp / "content" / "da")
           and not verbs.drawn_as_an_icon(tmp / "content")
-          and not verbs.drawn_as_an_icon(
-              tmp / "content" / "travail-selectionne" / "nocturne-01"))
+          and verbs.drawn_as_an_icon(tmp / "content" / "travail-selectionne"))
 
 
 

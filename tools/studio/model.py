@@ -230,6 +230,13 @@ def thing(folder: pathlib.Path, stem: str, kind: str) -> dict:
 def desk(folder: pathlib.Path) -> dict:
     d = thing(folder, "_index", "desk")
     d["gallery"] = d["template"] == "gallery.html"
+    # THE CANVAS: travail sélectionné. The same object as a gallery —
+    # a folder that holds photographs itself — with a different page:
+    # there she places each picture rather than ordering them. The
+    # panel offers the photographs pane for both and the placing
+    # gesture only here. See specs/the-canvas.md.
+    d["canvas"] = d["template"] == "selection.html"
+    d["holds_photographs"] = d["gallery"] or d["canvas"]
     d["on"] = []
     for child in sorted(folder.iterdir()):
         if not child.is_dir():
@@ -264,11 +271,14 @@ def tree() -> dict:
         d["depth"] = 0 if rel == "." else len(rel.split("/"))
         d["empty"] = not d["on"]
         d["holds"] = len(d["on"])
-        # Whether anything may be filed into it. A gallery renders its own
-        # photographs and nothing else, so a thing put there would be
-        # built and shown nowhere — verbs.move refuses it, and the panel
-        # reads this rather than restating the rule and drifting from it.
-        d["can_receive"] = not d["gallery"]
+        # Whether anything may be filed into it. A folder that holds
+        # PHOTOGRAPHS renders its own and nothing else, so a thing put
+        # there would be built and shown nowhere — verbs.move refuses
+        # it, and the panel reads this rather than restating the rule
+        # and drifting from it. BOTH of them: travail sélectionné
+        # joined pellicules on 2026-11-15, and the panel went on
+        # offering it as a destination the server would refuse.
+        d["can_receive"] = not d["holds_photographs"]
         desks.append(d)
 
     # ONE FOLDER, ONE SET OF FACTS.
@@ -291,7 +301,8 @@ def tree() -> dict:
             k = known.get(child["path"])
             if k is None:
                 continue                      # a project: not a desk anywhere
-            for field in ("gallery", "depth", "empty", "holds",
+            for field in ("gallery", "canvas", "holds_photographs",
+                          "depth", "empty", "holds",
                           "can_receive", "template", "type"):
                 child[field] = k[field]
 

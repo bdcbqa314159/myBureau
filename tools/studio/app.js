@@ -1094,6 +1094,112 @@ function arrangeGallery(doc) {
 /* Which gallery this page is. Its own `<main class="grid">` carries no
  * path, so it comes from the desk list: a gallery is the only desk
  * whose page has a `.grid`, and there is at most one. */
+/* PLACING A PICTURE ON THE CANVAS, ON THE CANVAS.
+ * --------------------------------------------------------------------
+ * Her ask, in two halves: select `travail sélectionné` to put
+ * photographs in or take them out — which is pellicules exactly, and
+ * already works now that it holds photographs itself — and click
+ * inside it to say WHERE each one goes.
+ *
+ * WHAT "PLACE" MEANS HERE, and it is not what it means in the gallery.
+ * A gallery is a column flow with no coordinates, so arranging it can
+ * only be an order. A canvas is coordinates and nothing else: a left,
+ * a top and a width per picture, all three in percentages of the PAGE
+ * WIDTH so the composition scales and keeps its proportions. Her own
+ * selected-work page was measured before this was built — eight
+ * pictures, eight widths, two sharing a vertical band.
+ *
+ * DRAG THE PICTURE to move it. DRAG ITS BOTTOM-RIGHT CORNER to size
+ * it: within 18px of that corner the same gesture resizes instead of
+ * moving. No handle is injected into the page — the middle pane is the
+ * real site, and the less the panel writes into it the fewer things
+ * can be wrong with what she is looking at.
+ *
+ * SHE SEES IT MOVE while she drags, because the figure's own custom
+ * properties are what the stylesheet reads: setting them is the same
+ * thing the build does. The verb is called once, on release.
+ *
+ * `top` IS DIVIDED BY THE WIDTH, not the height. The number stored is
+ * in width-percent — see verbs.place_shot — so a vertical drag of
+ * `dy` pixels is `dy / width * 100`, and using the canvas height here
+ * would put the picture somewhere other than under her finger on any
+ * page that is not square. */
+function arrangeCanvas(doc) {
+  const canvas = doc.querySelector(".canvas");
+  if (!canvas || canvas.__studioPlaceable) return;
+  const shots = [...canvas.querySelectorAll("[data-shot]")];
+  if (!shots.length) return;
+  canvas.__studioPlaceable = true;
+  const here = (canvas.dataset.desk || "").replace(/\/$/, "");
+  if (!here) return;
+
+  const CORNER = 18;
+  const num = (el, k, fallback) => {
+    const v = parseFloat(el.style.getPropertyValue(k));
+    return Number.isFinite(v) ? v : fallback;
+  };
+
+  for (const fig of shots) {
+    const img = fig.querySelector && fig.querySelector("img");
+    if (img) img.draggable = false;
+    fig.style.cursor = "grab";
+
+    let from = null;
+
+    fig.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0 || narrowView) return;
+      const box = fig.getBoundingClientRect();
+      const wide = canvas.getBoundingClientRect().width;
+      if (!wide) return;
+      from = {
+        x: e.clientX, y: e.clientY, wide: wide,
+        left: num(fig, "--x", 0), top: num(fig, "--y", 0),
+        width: num(fig, "--w", 100),
+        // THE CORNER DECIDES WHICH GESTURE THIS IS, and it is decided
+        // once, at the start. Deciding per move would turn a move into
+        // a resize halfway through whenever the pointer passed the
+        // corner of something.
+        sizing: (box.right - e.clientX) < CORNER
+                && (box.bottom - e.clientY) < CORNER,
+        moved: false,
+      };
+      if (fig.setPointerCapture) fig.setPointerCapture(e.pointerId);
+    });
+
+    fig.addEventListener("pointermove", (e) => {
+      if (!from) return;
+      const dx = e.clientX - from.x, dy = e.clientY - from.y;
+      if (!from.moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      from.moved = true;
+      const px = (n) => n / from.wide * 100;
+      if (from.sizing) {
+        // AT LEAST 5, AND NEVER OFF THE RIGHT EDGE — the same bounds
+        // the verb clamps to, applied here so what she sees while
+        // dragging is what gets written.
+        let w = Math.max(5, Math.min(100 - from.left, from.width + px(dx)));
+        fig.style.setProperty("--w", String(Math.round(w * 10) / 10));
+      } else {
+        let x = Math.max(0, Math.min(100 - from.width, from.left + px(dx)));
+        let y = Math.max(0, from.top + px(dy));
+        fig.style.setProperty("--x", String(Math.round(x * 10) / 10));
+        fig.style.setProperty("--y", String(Math.round(y * 10) / 10));
+      }
+    });
+
+    fig.addEventListener("pointerup", async (e) => {
+      if (!from) return;
+      const was = from.moved;
+      from = null;
+      if (!was) return;
+      await act({
+        verb: "place_shot", item: here, name: fig.dataset.shot,
+        left: num(fig, "--x", 0), top: num(fig, "--y", 0),
+        width: num(fig, "--w", 100),
+      });
+    });
+  }
+}
+
 function galleryPath(doc) {
   if (!model) return "";
   const said = doc.querySelector("[data-desk]");
@@ -1430,17 +1536,28 @@ function hook() {
   if (!doc) return;
   const desk = doc.querySelector(".desk");
   const grid = doc.querySelector(".grid");
+  const canvas = doc.querySelector(".canvas");
   tip.textContent = desk
     ? "Clique pour modifier · double-clique pour entrer · attrape pour poser,"
       + " ou lâche sur un dossier pour l'y ranger"
     : grid
       ? "Attrape une photo et pose-la ailleurs : la galerie se réarrange."
-      : "Cette page n'est pas un bureau — rien à déplacer ici.";
+      : canvas
+        ? "Attrape une photo pour la déplacer, ou son coin en bas à droite"
+          + " pour la redimensionner."
+        : "Cette page n'est pas un bureau — rien à déplacer ici.";
   // A GALLERY HAS NO DESK, so everything below returns early for it —
   // which is why arranging it has to be handled BEFORE that return and
   // not after. It was written after, and never ran once.
   if (grid) {
     arrangeGallery(doc);
+    return;
+  }
+  // AND A CANVAS HAS NO DESK EITHER, for the same reason — see the
+  // note above. travail sélectionné is a folder that holds
+  // photographs, like pellicules, and its page places each one.
+  if (canvas) {
+    arrangeCanvas(doc);
     return;
   }
   if (!desk) return;

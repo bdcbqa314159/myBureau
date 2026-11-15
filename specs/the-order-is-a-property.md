@@ -75,7 +75,6 @@ the turn loop does not change.
 |---|---|
 | `gallery.html` | pellicules, the grid |
 | `page.html` | a page's photographs, and so which one is the wide one |
-| `_place.html` | the stops on the road |
 | `model.photographs` | the panel's own list — a list in a different order would be a list that lies |
 
 ## Acceptance criteria
@@ -93,6 +92,11 @@ the turn loop does not change.
 1–7 hold. The oracle for 1 is `content-check`'s
 `the order is a property, not a name`, which **builds twice** — nothing
 short of a build could ever have seen this.
+
+**The road was a third reader** until 2026-11-15, when `travail
+sélectionné` became a canvas and took it with it — there a picture
+carries its own left, top and width, so an order decides nothing. See
+specs/the-canvas.md.
 
 ## Found on the way
 

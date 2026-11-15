@@ -422,9 +422,6 @@ def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]
         title="nue", extra='template = "section.html"\n'))
     ok, log = build(d)
 
-    wall_route = re.search(r'<div class="proj-route".*?</div>',
-                           page(d, "affiche/index.html"), re.S)
-
     def wall(rel: str) -> str:
         m = re.search(r"--wallpaper:url\('([^']*)", page(d, rel))
         return m.group(1).split("/")[-1] if m else "none"
@@ -449,28 +446,30 @@ def case_wallpaper_lives_in_the_folder(d: pathlib.Path) -> list[tuple[str, bool]
         ("graphic design is a desk too, as the brief pairs it with DA",
          wall("graphic-design/index.html").startswith("wallpaper.")
          and '<main class="desk"' in page(d, "graphic-design/index.html")),
+        # IT IS A CANVAS NOW, not a road — it holds photographs itself
+        # and she puts each one where she wants it. What this case is
+        # about is unchanged: a wallpaper belongs to a desk, and this
+        # is not one. See specs/the-canvas.md.
         ("travail sélectionné is the PAGE, so it has no wallpaper",
          wall("travail-selectionne/index.html") == "none"
-         and 'class="proj-route"' in page(d, "travail-selectionne/index.html")),
-        ("and the route belongs to it alone, not to a desk",
-         'class="proj-route"' not in page(d, "graphic-design/index.html")),
+         and 'class="canvas"' in page(d, "travail-selectionne/index.html")),
+        ("and the canvas belongs to it alone, not to a desk",
+         'class="canvas"' not in page(d, "graphic-design/index.html")),
         ("and neither does a folder on a desk — it is a page too",
          wall("da/maison-cosette/index.html") == "none"),
         ("a wallpaper left beside a page is not rendered as one of her"
          " photographs, which is what it would be without the rule",
          page(d, "affiche/index.html").count("<figure") == 1),
-        # A folder holding nothing but a wallpaper now contributes
-        # NOTHING to a route. It used to arrive as a named placeholder
-        # so it stayed reachable; the route carries no links at all
-        # since she asked for a place to look rather than to navigate,
-        # so there is nothing for a nameless folder to be.
-        # The route must EXIST for this to say anything — `affiche` has
-        # a child, so it does — and then hold no stop of any kind. Not
-        # `class="stop"` with its closing quote: a stop may carry a
-        # second class, and the first spelling of this check passed
-        # happily against `class="stop is-bare"`.
-        ("nor does it put anything on the route wearing a wallpaper",
-         bool(wall_route) and 'class="stop' not in wall_route.group(0)),
+        # THE ROUTE IS GONE and this expectation with it. A folder
+        # holding nothing but a wallpaper contributed nothing to a
+        # road; there is no road, because travail sélectionné was the
+        # only page that had one and it is a canvas now. The same
+        # exposure — a wallpaper sitting beside her photographs and
+        # being drawn as one — is asserted on the canvas itself, in
+        # `travail sélectionné is a canvas`. Not deleted silently:
+        # see specs/the-canvas.md.
+        ("a folder-page lays nothing out for its children any more",
+         'class="proj-route"' not in page(d, "affiche/index.html")),
         ("no front matter in the whole site still types a wallpaper path",
          not any("wallpaper =" in f.read_text(encoding="utf-8")
                  for f in (d / "content").rglob("_index*.md"))),
@@ -1414,7 +1413,7 @@ def case_one_list_of_what_is_not_her_work(d: pathlib.Path) -> list[tuple[str, bo
     conf = (d / "config.toml").read_text(encoding="utf-8")
     tpl = {f.name: f.read_text(encoding="utf-8")
            for f in (d / "templates").glob("*.html")}
-    listing = ("page.html", "_place.html", "_preview.html", "gallery.html")
+    listing = ("page.html", "selection.html", "_preview.html", "gallery.html")
     hardcoded = [n for n, s in tpl.items()
                  if n != "_icon.html"
                  and re.search(r'!=\s*"(poster|wallpaper)"', s)]
@@ -1607,113 +1606,135 @@ def case_a_picture_fits_the_screen(d: pathlib.Path) -> list[tuple[str, bool]]:
     ]
 
 
-def case_three_columns_and_a_picture_in_one(d: pathlib.Path) -> list[tuple[str, bool]]:
-    """The blank space is three columns, and a photograph sits in one.
+def case_travail_selectionne_is_a_canvas(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """She puts each picture where she wants it, and the page obeys.
 
-    THIS CASE HAS BEEN REWRITTEN THREE TIMES, so the history is the
-    point rather than an aside.
+    THE FOURTH SHAPE THIS PAGE HAS HAD, and the history is the point
+    rather than an aside.
 
-    It began as a FRIDGE: a width, an offset off the centre line, and a
-    lean, all per file. The client rejected the offset and the lean.
-    What was left was the width — a free percentage of the page — and
-    on a phone it was squeezed into a narrower range, then flattened
-    outright when she saw it.
+    It began as a FRIDGE: a width, an offset off the centre line, and
+    a lean, so the pictures sat like postcards held by magnets. She
+    rejected the lean and the offset. Then a free width. Then THREE
+    COLUMNS, from her own words — *the three columns setting the
+    limits of expression* — with a 1,3,2,1,3 rhythm for anything she
+    had not placed.
 
-    2026-11-14 she asked for the limit instead of the freedom: *three
-    columns within the blank space where we can sit one picture, a
-    display per column taken by the width of a picture, and the three
-    columns setting the limits of expression.*
+    Then her own selected-work page was measured, which nobody had
+    done: `3840 × 14000`, one image, eight pictures, EIGHT different
+    widths, and two of them sharing a vertical band. A column grid
+    cannot say that. So the road went and this is a canvas — a left, a
+    top and a width per picture, all three in percentages of the PAGE
+    WIDTH so the composition scales with the window and keeps its
+    proportions.
 
-    So `--c` replaces `--w`. The column decides the size and the choice
-    of column decides the place, and there is nothing else to declare.
-
-    PLACEMENT IS SPARSE, which is the browser's default and is what
-    makes this a composition rather than a gallery: a photograph goes
-    into the next free row of its OWN column, so two in different
-    columns can share a row and two in the same column cannot. The
-    rhythm is 1, 3, 2, 1, 3 — five steps over three columns, so rows
-    are rarely full and a folder nobody has arranged still reads as
-    composed.
-
-    ONLY 1, 2 OR 3 may reach the stylesheet. `grid-column: 5` in a
-    three-column grid does not fail: the browser grows implicit columns
-    to hold it and the whole route silently becomes five columns wide.
+    See specs/the-canvas.md. The oracle is a BUILD, twice, at two
+    widths: the numbers in the front matter mean nothing until the
+    page puts a picture there.
     """
+    here = d / "content" / "travail-selectionne"
+    shot = (ROOT / "content/da/theodora-01/01.jpg").read_bytes()
+
+    # A PICTURE SHE HAS NEVER PLACED. Dropping one and finding it
+    # nowhere would read as losing it, so it has to appear — below
+    # everything, full width. Nothing in the real tree is unplaced,
+    # so without this fixture the path is never executed.
+    (here / "09.jpg").write_bytes(shot)
+    # AND A WALLPAPER BESIDE THEM, which is not one of her
+    # photographs. This used to be asserted on the road; the canvas
+    # has the same exposure and now owns the expectation.
+    (here / "wallpaper.jpg").write_bytes(shot)
+
     ok, log = build(d)
+    html = page(d, "travail-selectionne/index.html")
+    # NOT `class="canvas" style=` with the two adjacent: `data-desk`
+    # was added between them and this stopped matching, so `tall` went
+    # None and the height expectation failed for a reason that had
+    # nothing to do with heights. Anchor on the one attribute meant.
+    tall = re.search(r'<main class="canvas"[^>]*--tall:([\d.]+)', html)
+    put = {m.group(1): (float(m.group(2)), float(m.group(3)), float(m.group(4)),
+                        int(m.group(5)))
+           for m in re.finditer(
+               r'data-shot="([^"]+)"\s+style="--x:([\d.]+); --y:([\d.]+);'
+               r' --w:([\d.]+); --o:(\d+)"', html)}
+
+    # A PICTURE THAT IS NOT THERE AT ALL is what half of these are
+    # guarding against, so reading it must come back as a plain NO on
+    # the expectation rather than a KeyError with no name on it.
+    def at(name: str) -> tuple:
+        return put.get(name, (-1.0, -1.0, -1.0, -1))
+
+    # WHAT THE MAIN DESK DRAWS FOR IT — its icon, from the home page.
+    desk_html = page(d, "index.html")
+    cut = desk_html.find("travail")
+    home_icon = desk_html[max(0, cut - 700):cut + 700] if cut >= 0 else ""
+
     css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
-    css = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
-    rules = {}
-    for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
-        rules.setdefault(sel.strip(), []).append(body)
+    bare = re.sub(r"/\*.*?\*/", " ", css, flags=re.S)
+    phone = "".join(re.findall(r"@media \(max-width: 52rem\)\s*\{(.*?)\n\}",
+                               bare, re.S))
 
-    route = " ".join(rules.get(".proj-route", []))
-    stop = " ".join(rules.get(".stop", []))
-    rhythm = {sel: " ".join(b) for sel, b in rules.items()
-              if sel.startswith(".stop:nth-child")}
-    bands = re.findall(r"@media\s*\(max-width:\s*52rem\)\s*\{(.*?)\n\}",
-                       css, re.S)
-    phone_route = [b for band in bands
-                   for b in re.findall(r"\.proj-route\s*\{([^{}]*)\}", band)]
-    phone_stop = [b for band in bands
-                  for b in re.findall(r"\.stop\s*\{([^{}]*)\}", band)]
-    # THE RHYTHM AS A SEQUENCE, in nth-child order, then laid out the
-    # way a browser lays it out.
-    cycle = []
-    for i in range(1, len(rhythm) + 1):
-        got = rhythm.get(".stop:nth-child(5n+{})".format(i), "")
-        m = re.search(r"--c:\s*(\d+)", got)
-        cycle.append(int(m.group(1)) if m else 0)
-
-    def laid_out(seq: list, n: int = 12) -> list:
-        """How many pictures land on each row, placed sparsely.
-
-        The cursor only moves forward: an item whose column is not
-        after the last one placed starts a new row.
-        """
-        out, last = [0], 0
-        for k in range(n):
-            c = seq[k % len(seq)] if seq else 0
-            if c <= last:
-                out.append(0)
-                last = 0
-            out[-1] += 1
-            last = c
-        return out
-
-    rows = laid_out(cycle)
-    road = page(d, "travail-selectionne/index.html")
-    pins = re.findall(r'<figure class="stop"[^>]*style="([^"]*)"', road)
+    # THE COMPOSITION IS PROPORTIONAL, which is the whole reason top is
+    # stored against the width. The page carries no pixel anywhere, so
+    # the same HTML serves every window — asserted by there being no
+    # length unit in what the template wrote.
+    units = re.findall(r'--[xyw]:[\d.]+(p[xt]|r?em|v[wh])', html)
 
     return [
         ("builds", ok),
-        ("the blank space is three columns",
-         "repeat(3, 1fr)" in route),
-        ("a photograph sits in one of them, and fills it",
-         "grid-column: var(--c" in stop and "width: 100%" in stop),
-        ("the rhythm uses all three columns",
-         len(rhythm) == 5 and set(cycle) == {1, 2, 3}),
-        # SIMULATED, not asserted as a sequence. "the sequence repeats
-        # a column" was tried and is a TAUTOLOGY — five steps over
-        # three columns must repeat one — so changing the rhythm to
-        # 1,2,3,1,2 passed it while filling every third row and turning
-        # the page into the gallery.
-        #
-        # What matters is what the BROWSER does with the sequence, so
-        # that is what is worked out: CSS Grid's sparse placement puts
-        # an item in the next free row of its own column and never goes
-        # backwards. A row that holds all three is a row with no gap in
-        # it, and the gaps are the composition.
-        ("and no row comes out full (" + ",".join(str(r) for r in rows)
-         + " per row), which is where the eye rests",
-         max(rows) < 3),
-        ("no width is left anywhere on the route",
-         "--w" not in stop and not any("--w" in v for v in rhythm.values())),
-        ("and nothing leans or is pushed off a line",
-         "rotate" not in stop and "translate" not in stop),
-        ("a phone has one column, three being three slivers at 390px",
-         any("1fr" in b and "repeat" not in b for b in phone_route)),
-        ("and a photograph down there asks for column one, not hers",
-         any("grid-column: 1" in b for b in phone_stop)),
+        ("every photograph is on the canvas, and only photographs",
+         len(put) == 9 and "wallpaper.jpg" not in put),
+        # SHE PUT IT THERE, AND IT IS THERE. The three numbers off the
+        # rendered page, not out of the file they were written in.
+        ("a picture sits where she put it",
+         put.get("01.jpg") == (30.0, 0.0, 55.0, 0)),
+        ("another sits somewhere else entirely, at its own width",
+         put.get("03.jpg") == (42.0, 72.0, 56.0, 2)),
+        # CRITERION 7, the one a column grid could not do.
+        ("two pictures may share a vertical band",
+         at("04.jpg")[1] < at("05.jpg")[1] < at("04.jpg")[1] + 48 * 2 / 3),
+        ("and they do not overlap sideways while they do it",
+         at("04.jpg")[0] + at("04.jpg")[2] <= at("05.jpg")[0]),
+        # CRITERION 8: as tall as the lowest picture reaches, which with
+        # the unplaced one below everything is the unplaced one.
+        ("the canvas is as tall as its lowest picture",
+         bool(tall) and "09.jpg" in put
+         and abs(float(tall.group(1))
+                 - (at("09.jpg")[1] + 100 * 2 / 3)) < 0.5),
+        # CRITERION 2, the rendered half. It holds eight photographs
+        # now, and the fallback for a thing with no declared face is
+        # its first one — so the desk would draw `01.jpg` as the
+        # folder's icon. It is a FOLDER on the main desktop and its
+        # face is a folder drawing, which is what she asked for when
+        # she said a dropped picture must not become the icon.
+        # NOT "it must be one of ours": she may drop a folder she drew
+        # herself, which lands beside the photographs as `icon.*` and
+        # is exactly as right. What must never happen is one of HER
+        # PHOTOGRAPHS being taken as the face.
+        ("the folder's face is not one of its photographs",
+         not re.search(r'travail-selectionne/0\d', home_icon)
+         and ("img/icons/" in home_icon
+              or "travail-selectionne/icon" in home_icon)),
+        # CRITERION 13
+        ("a picture she never placed still appears, below the rest",
+         "09.jpg" in put and at("09.jpg")[2] == 100.0
+         and at("09.jpg")[1] > max(v[1] for k, v in put.items() if k != "09.jpg")),
+        ("and nothing hangs off the right edge",
+         all(v[0] + v[2] <= 100 for v in put.values())),
+        # CRITERION 6: proportional, so one page serves every width.
+        ("the page states no length anywhere — it is all proportion",
+         units == []),
+        ("and the box reserves its shape before a picture has loaded",
+         "aspect-ratio: 100 / var(--tall" in css),
+        # CRITERION 12 — HER DECISION, 2026-11-14: varying widths on a
+        # phone read as raggedness rather than composition.
+        ("on a phone it is one column, every picture the whole width",
+         ".canvas .shot" in phone and "width: 100%" in phone
+         and "position: static" in phone),
+        ("and it runs in the order she arranged them, not zola's",
+         "order: var(--o" in phone),
+        ("which is a real order: the lowest picture is read last",
+         max(put.items(), key=lambda kv: kv[1][1])[1][3]
+         == max(v[3] for v in put.values())),
     ]
 
 
@@ -2134,7 +2155,7 @@ def case_the_band_says_what_she_asked_for(d: pathlib.Path) -> list[tuple[str, bo
         ("but it is still on the desk",
          bool(desk) and "travail-selectionne" in desk.group(0)),
         ("and its page is still built",
-         'class="proj-route"' in page(d, "travail-selectionne/index.html")),
+         'class="canvas"' in page(d, "travail-selectionne/index.html")),
         ("the language link is not shouted, shrunk or faded",
          "uppercase" not in lang and "font-size" not in lang
          and "opacity" not in lang),
@@ -2362,10 +2383,10 @@ def case_a_subfolder_page_is_one_column(d: pathlib.Path) -> list[tuple[str, bool
         ("and a PROJECT is the very same page, not a second rhythm",
          'class="proj-open"' in project
          and "proj-pairs" not in project and "proj-fig" not in project),
-        ("the route is on travail sélectionné and on nothing else",
-         'class="proj-route"' in page(d, "travail-selectionne/index.html")
-         and 'class="proj-route"' not in sub
-         and 'class="proj-route"' not in page(d, "da/index.html")),
+        ("the canvas is on travail sélectionné and on nothing else",
+         'class="canvas"' in page(d, "travail-selectionne/index.html")
+         and 'class="canvas"' not in sub
+         and 'class="canvas"' not in page(d, "da/index.html")),
     ]
 
 
@@ -2730,59 +2751,47 @@ def case_film_in_a_folder(d: pathlib.Path) -> list[tuple[str, bool]]:
     rules = {}
     for sel, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
         rules.setdefault(sel.strip(), []).append(body)
-    # The route is a plain div now rather than a nav: with nothing on
-    # it to click, it is not navigation. It holds only figures, so the
-    # first </div> after it is its own.
-    route = re.search(r'<div class="proj-route".*?</div>', folder, re.S)
-    inside = route.group(0) if route else ""
-
+    # THE ROUTE IS GONE. `travail sélectionné` was the only page in the
+    # tree with children, and it is a canvas now — it holds photographs
+    # itself and she places each one. So nothing lays out a child any
+    # more, and this case keeps the part that outlives the road: the
+    # child is BUILT, the film plays on its own page, and the retired
+    # keys do nothing if she writes them by hand.
+    # See specs/the-canvas.md.
+    inside = folder
 
     return [
         ("builds", ok),
         ("the folder is a page, with no window on the DA desk",
          "win-folder" not in page(d, "da/index.html")),
-        # A PLACE TO LOOK, AND NOTHING ELSE. These asserted links, file
-        # names and named placeholders — all three are gone by her ask:
-        # `travail sélectionné` is somewhere a visitor arrives, scrolls
-        # and enjoys. Nothing opens and nothing is labelled.
-        ("the photographs inside are on the route",
-         bool(route) and '<figure class="stop"' in inside),
-        ("nothing on it is a link, so clicking does nothing",
-         bool(route) and "<a " not in inside),
-        ("and nothing carries a file's name",
-         bool(route) and "<span" not in inside),
-        ("a film contributes nothing, because a poster is not a photograph",
-         "un-film" not in inside),
-        ("EVERY photograph is a stop, not one face for the whole thing",
-         inside.count('<figure class="stop"') == 3),
-        ("a photograph placed by hand sits in the column she chose",
-         '--c:3;' in inside),
-        ("and a column that does not exist is dropped, not grown",
-         '--c:7;' not in inside and inside.count("--c:") == 1),
-        ("and an angle cannot be given at all any more",
-         '--r:' not in inside),
-        ("and one nobody pinned carries no style at all, so the rhythm sizes it",
-         '<figure class="stop">' in inside),
-        ("what a photograph shows reaches the route, which is all a"
-         " screen reader has left",
-         'alt="une main sur une table"' in inside),
-        ("and one nobody described says nothing rather than something"
-         " wrong", inside.count('alt=""') == 2),
-        ("the route runs DOWN the page — a grid, not a sideways scroller",
-         any("display: grid" in b for b in rules.get(".proj-route", []))
-         and not any("overflow-x" in b for b in rules.get(".proj-route", []))),
-        # THE HOLE THIS LEAVES, NAMED RATHER THAN HIDDEN. The route was
-        # the only thing linking a child project, so with no links a
-        # child that shows no photograph is built and reached from
-        # nowhere — `un film.mov` here is exactly that. Nothing in the
-        # real content is in that position today: the only film sits on
-        # the DA desk as its own icon. If one ever is, this expectation
-        # is what has to change, and what has to change with it is the
-        # page — a film could play inline on the route without being a
-        # link, which keeps her "only look and scroll".
-        ("a child that shows no photograph is reached from nowhere,"
-         " but is still built, so the work is not lost",
-         "da/maison-cosette/un-film/" not in inside and own != ""),
+        # WHAT THIS ASSERTED, and why it does not any more: every
+        # photograph inside a child arrived on a three-column road
+        # under this page, each at a column she could choose. Her own
+        # selected-work page was measured and does not do that — eight
+        # pictures, eight widths, two sharing a vertical band — so the
+        # road was replaced by a canvas on the one folder that had one.
+        ("nothing lays out a child any more — there is no road",
+         'class="proj-route"' not in folder and 'class="stop"' not in folder),
+        # AND NOTHING IN THE TREE IS IN THIS POSITION. A folder holds a
+        # desktop only on the main desk; made anywhere else it is a
+        # page, and a page has no children — so this fixture builds by
+        # hand a shape the panel cannot produce. If one ever appears in
+        # content/, its photographs would be on no page at all, and
+        # this is the expectation that notices.
+        ("and no page in the real tree has children to lay out",
+         all(not any(c.is_dir() for c in md.parent.iterdir())
+             for md in (ROOT / "content").rglob("_index.md")
+             if md.parent != ROOT / "content"
+             and 'template = "section.html"' not in md.read_text(encoding="utf-8"))),
+        # THE RETIRED KEYS. `[extra.column]` joins offset and angle:
+        # all three are written in her folders and in older copies, and
+        # "there is no way to add one" is only true if writing them by
+        # hand does nothing.
+        ("a column, an offset and an angle cannot be given at all any more",
+         "--c:" not in folder and "--r:" not in folder
+         and "--offset" not in folder),
+        ("a child that shows no photograph is still built, so the work"
+         " is not lost", own != ""),
         ("the film itself is on its own page", "<video" in own),
         ("no page has a dangling window reference",
          all(dangling(f.read_text(encoding="utf-8")) == []
@@ -2811,7 +2820,6 @@ def case_the_order_is_a_property_not_a_name(d: pathlib.Path) -> list[tuple[str, 
 
         gallery.html   pellicules, the grid
         page.html      maison cosette, nine photographs
-        _place.html    papier calque's four, on the route
 
     And the files are not touched: her names are hers.
     """
@@ -2835,7 +2843,6 @@ def case_the_order_is_a_property_not_a_name(d: pathlib.Path) -> list[tuple[str, 
     ok_one, log_one = build(d)
     before_grid = shots()
     before_page = stems("da/maison-cosette/index.html", "proj")
-    before_road = stems("travail-selectionne/index.html", "proj-route")
     files_before = sorted(f.name for f in (d / "content" / "pellicules").iterdir())
 
     # HER ORDER, which is not alphabetical and not a rotation — a
@@ -2847,15 +2854,12 @@ def case_the_order_is_a_property_not_a_name(d: pathlib.Path) -> list[tuple[str, 
         verbs.reorder("content/pellicules", want)
         verbs.reorder("content/da/maison-cosette",
                       list(reversed(verbs.photographs_in(d / "content" / "da" / "maison-cosette"))))
-        verbs.reorder("content/travail-selectionne/papier-calque",
-                      ["04.jpg", "03.jpg", "02.jpg", "01.jpg"])
     except verbs.Refused as exc:
         refused = str(exc)
 
     ok_two, log_two = build(d)
     after_grid = shots()
     after_page = stems("da/maison-cosette/index.html", "proj")
-    after_road = stems("travail-selectionne/index.html", "proj-route")
     files_after = sorted(f.name for f in (d / "content" / "pellicules").iterdir())
     fm = (d / "content" / "pellicules" / "_index.md").read_text(encoding="utf-8")
     fm_en = (d / "content" / "pellicules" / "_index.en.md").read_text(encoding="utf-8")
@@ -2868,11 +2872,11 @@ def case_the_order_is_a_property_not_a_name(d: pathlib.Path) -> list[tuple[str, 
         ("and it was not already in that order", before_grid != want),
         ("a page's photographs follow it too",
          after_page == list(reversed(before_page)) and len(before_page) > 2),
-        # the route holds five children, one photograph each but for
-        # papier calque's four, which are the only run of 01..04 in it
-        ("the route follows it as well",
-         before_road == ["01", "01", "01", "02", "03", "04", "01", "01"]
-         and after_road == ["01", "01", "04", "03", "02", "01", "01", "01"]),
+        # THE ROUTE WAS THE THIRD READER until 2026-11-15, when travail
+        # sélectionné became a canvas and took it with it. There a
+        # picture carries its own left, top and width, so an order
+        # decides nothing — see specs/the-canvas.md, and the case
+        # `travail sélectionné is a canvas` for what reads it instead.
         # AND HER NAMES ARE HERS. This is the whole point: a rank is a
         # property, and a property does not touch the files.
         ("not one file was renamed", files_after == files_before),
@@ -3464,7 +3468,7 @@ CASES = [
     ("about me.txt has a face", case_about_has_a_face),
     ("a photograph has no close box", case_a_photograph_has_no_close_box),
     ("a picture fits the screen", case_a_picture_fits_the_screen),
-    ("three columns, and a picture in one", case_three_columns_and_a_picture_in_one),
+    ("travail sélectionné is a canvas", case_travail_selectionne_is_a_canvas),
     ("the phone agrees with the desk", case_the_phone_agrees_with_the_desk),
     ("a phone desk is not a file list", case_a_phone_desk_is_not_a_file_list),
     ("a phone desk can grow", case_a_phone_desk_can_grow),
