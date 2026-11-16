@@ -34,7 +34,11 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 import filetypes  # noqa: E402
 import gif  # noqa: E402
-COPY = ["content", "templates", "static", "tools", "config.toml", "sass"]
+# `src` is here so a case that asks about the TypeScript reads the
+# scratch copy like every other source check, rather than reaching back
+# into the repository it is supposed to be testing a copy of. Added by
+# audit 6, for the breakpoint the script and the stylesheet both hold.
+COPY = ["content", "templates", "static", "tools", "config.toml", "sass", "src"]
 
 FRONT = '+++\ntitle = "{title}"\n{extra}+++\n\nUn texte.\n'
 
@@ -2134,9 +2138,26 @@ def case_one_set_of_breakpoints(d: pathlib.Path) -> list[tuple[str, bool]]:
     # pixels are the other way to smuggle one in
     pixels = re.findall(r"@media[^{]*\b(?:max|min)-(?:width|height):\s*[0-9.]+px", css)
 
+    # AND THE ONE THE SCRIPT HOLDS. `desk.ts` asks
+    # `matchMedia("(max-width: 40rem)")` to know whether the desk is a
+    # grid, which is a FOURTH copy of a number the stylesheet also
+    # keeps — and nothing compared them. They agree today; move the
+    # CSS band and the two disagree inside a window a couple of rem
+    # wide, where the script pins widths for a grid that is not there.
+    # That is the "the icons fill the screen" failure the code comments
+    # already describe. Audit 6.
+    in_script = set(re.findall(r'max-width:\s*([0-9.]+rem)',
+                               (d / "src" / "desk.ts").read_text(encoding="utf-8")))
+
     return [
         ("every width band is one of the named ones", widths <= named),
         ("and every height band is too", heights <= tall),
+        ("the band the script asks about is one the stylesheet has",
+         in_script <= widths),
+        ("and it is the one that makes the desk a grid",
+         "40rem" in in_script
+         and bool(re.search(r"@media\s*\(\s*max-width:\s*40rem\s*\)[^{]*\{"
+                            r"(?:[^{}]|\{[^{}]*\})*?\.desk\s*\{[^}]*grid", css))),
         ("each one is explained where they are listed",
          explained == named | tall),
         ("nothing smuggles a band in as pixels", pixels == []),
@@ -3510,6 +3531,60 @@ def case_a_photograph_opens_at_full_resolution(d: pathlib.Path) -> list[tuple[st
     ]
 
 
+def case_nothing_is_fetched_from_anywhere_else(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """No runtime dependency on the frontend. It is law, and it had no guard.
+
+    From the repository's own CLAUDE.md: *stdlib and native platform
+    features before dependencies. No runtime dependencies on the
+    frontend — that is a constraint, not a preference.*
+
+    Audit 6 added a `<script src="https://cdn.example.com/x.js">` to
+    base.html and every suite stayed green. The policy below would
+    have blocked it in a browser, silently — the feature would simply
+    not work, which is the hardest failure to report.
+
+    And the POLICY itself had no guard either: removing the whole
+    Content-Security-Policy meta was noticed by nothing.
+
+    Checked on the BUILT pages rather than the templates, because what
+    matters is what reaches her visitors, and a url can arrive through
+    config.toml or a content file as easily as through markup.
+    """
+    ok, log = build(d)
+    mine = (d / "config.toml").read_text(encoding="utf-8")
+    base = re.search(r'base_url\s*=\s*"([^"]+)"', mine)
+    endpoint = re.search(r'endpoint\s*=\s*"([^"]+)"', mine)
+    allowed = {u for u in (base and base.group(1), endpoint and endpoint.group(1)) if u}
+
+    off_site, without_policy = [], []
+    for p in sorted((d / "public").rglob("*.html")):
+        h = p.read_text(encoding="utf-8", errors="replace")
+        if "Content-Security-Policy" not in h:
+            without_policy.append(str(p.relative_to(d / "public")))
+        # WHAT THE BROWSER GOES AND FETCHES, which is not the same as
+        # what it can navigate to. Her footer links to Instagram and
+        # YouTube; those are hyperlinks, and a hyperlink is not a
+        # dependency. A `<script src>` or a `<link href>` is. The first
+        # spelling of this counted both and failed on her own social
+        # links, which would have taught me to loosen the rule rather
+        # than aim it.
+        for m in re.finditer(
+                r'<(?:script|link|img|iframe|video|audio|source|track|embed)\b[^>]*?'
+                r'\b(?:src|href)="(https?://[^"]+)"', h):
+            u = m.group(1)
+            if not any(u.startswith(a) for a in allowed):
+                off_site.append("%s: %s" % (p.relative_to(d / "public"), u[:48]))
+    return [
+        ("builds", ok),
+        ("every page carries the content security policy",
+         without_policy == []),
+        ("the policy allows only this site and the contact endpoint",
+         "default-src 'self'" in page(d, "index.html")),
+        ("nothing on any page is fetched from somewhere else",
+         off_site == []),
+    ]
+
+
 def case_every_cursor_is_one_we_drew(d: pathlib.Path) -> list[tuple[str, bool]]:
     """No page quietly wears the system's own pointer.
 
@@ -3759,6 +3834,8 @@ CASES = [
     ("what the panel writes, zola reads", case_what_the_panel_writes_zola_reads),
     ("a body is shown, or not offered", case_a_body_is_shown_or_not_offered),
     ("a photograph opens at full resolution", case_a_photograph_opens_at_full_resolution),
+    ("nothing is fetched from anywhere else",
+     case_nothing_is_fetched_from_anywhere_else),
     ("every cursor is one we drew", case_every_cursor_is_one_we_drew),
     ("a desk says which desk it is", case_a_desk_says_which_desk_it_is),
     ("a dead click", case_a_dead_click),
@@ -3806,5 +3883,26 @@ def main() -> int:
     return 1 if failed else 0
 
 
+def run() -> int:
+    """main(), with a crash reported as a failure rather than only raised.
+
+    A suite that dies partway prints a traceback and NO "FAIL" line, so
+    every habit built on reading failures reports a clean run. The
+    panel's suite learnt this in audit 1; this one had not, and it
+    caught me out again within the hour — a three-element expectation
+    tuple, which this harness does not take, ended the run with
+    `ValueError: too many values to unpack` and nothing named.
+    """
+    try:
+        return main()
+    except BaseException as exc:                    # noqa: BLE001
+        import traceback
+        traceback.print_exc()
+        print("\n  FAIL  the suite stopped before the end: {}: {}"
+              .format(type(exc).__name__, exc))
+        print("  1 FAILED\n")
+        return 1
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(run())

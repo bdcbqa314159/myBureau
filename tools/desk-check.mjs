@@ -45,6 +45,15 @@ const sandbox = {
     getComputedStyle: () => ({ backgroundImage: "none" }),
   },
   location: { pathname: "/da/" },
+  // ON THE GLOBAL TOO, because that is where a browser has it and that
+  // is how desk.js calls it: `getComputedStyle(desk)`, bare, when it
+  // looks for the wallpaper. It was on `window` alone, so the phone
+  // context below — the one with a real `.desk` — threw inside
+  // `whenPainted()`, asynchronously, and the process exited before the
+  // rejection surfaced. Every check in that block passed on a script
+  // that had already fallen over. Found in audit 6, by adding an
+  // `await` further down and watching the old failure appear.
+  getComputedStyle: () => ({ backgroundImage: "none" }),
   sessionStorage: { getItem: () => null, setItem() {}, removeItem() {} },
   Promise, JSON, Math, Object, Number, Date, WeakMap, WeakSet, Map, Set,
   console, URL,
@@ -467,6 +476,152 @@ check("  and does not navigate either — the link is suppressed",
 const tapped = dragThenClick({ move: 0 });
 check("while a tap — a press that never moved — still opens it",
       tapped.opened === true, `opened=${tapped.opened}`);
+
+// ---------------------------------------------------------------------
+// THE PROMISES THE SITE MAKES IN THE BROWSER
+//
+// AUDIT 6 broke each of these on purpose and no suite anywhere
+// noticed. They are not clever edge cases — they are the page showing
+// at all, a window closing, a link opening one, and a film going quiet.
+// Every one is a thing a visitor does in the first ten seconds.
+// See specs/the-audit.md.
+// ---------------------------------------------------------------------
+
+/** Run the REAL desk.js against a document of our making, and hand back
+ *  what it did. One helper, because four checks want the same thing and
+ *  a fifth copy of this sandbox is how the next one drifts. */
+function runDesk({ body = {}, finders = {}, root = null } = {}) {
+  const classes = new Set(["booting", "js"]);
+  const html = root ?? {
+    classList: {
+      add: (c) => classes.add(c), remove: (c) => classes.delete(c),
+      contains: (c) => classes.has(c),
+    },
+    style: fakeStyle(),
+  };
+  const ctx = {
+    ...sandbox,
+    HTMLDialogElement: FakeDialog,
+    MouseEvent: class MouseEvent {},
+    Element: function Element() {},
+    Image: function Image() { setTimeout(() => this.onload && this.onload(), 0); },
+    // A browser has this on the global, and desk.js calls it bare when
+    // it looks for the wallpaper. The base sandbox had it on `window`
+    // only, so the first thing that reached it threw.
+    getComputedStyle: () => ({ backgroundImage: "none" }),
+    document: {
+      ...sandbox.document,
+      documentElement: html,
+      body: { dataset: { i18n: "{}" } },
+      querySelector: (s) => (finders.one ? finders.one(s) : null),
+      querySelectorAll: (s) => (finders.all ? (finders.all(s) ?? nothing) : nothing),
+      getElementById: (id) => (finders.byId ? finders.byId(id) : null),
+      fonts: { ready: Promise.resolve() },
+      addEventListener() {},
+    },
+    ...body,
+  };
+  ctx.globalThis = ctx;
+  vm.runInContext(readFileSync("static/js/desk.js", "utf8"), vm.createContext(ctx));
+  return { classes, ctx };
+}
+
+// 1. THE PAGE IS SHOWN AT ALL. `html.booting` hides everything until
+//    the images are in; `reveal()` takes it off. Delete that one line
+//    and the site is a blank screen — and every suite stayed green.
+{
+  const { classes } = runDesk();
+  await new Promise((r) => setTimeout(r, 40));   // whenPainted() is async
+  console.log("\n  the page is actually shown:");
+  check("the booting class comes off, so the site is not a blank screen",
+    !classes.has("booting"), [...classes].join(" "));
+}
+
+// 2. A FRAMELESS PREVIEW CLOSES ON A CLICK OFF THE PICTURE. There is no
+//    ✕ to press — that was her ask — so Escape and this are the only two
+//    ways out, and someone on a trackpad has only this one.
+{
+  let closed = 0;
+  const win = {
+    classList: { add() {}, remove() {}, contains: () => false },
+    style: fakeStyle(), dataset: {}, on: {},
+    addEventListener(k, fn) { (this.on[k] ||= []).push(fn); },
+    removeEventListener() {},
+    close() { closed += 1; },
+    querySelector: () => null, querySelectorAll: () => nothing,
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 300 }),
+  };
+  runDesk({ finders: { all: (s) => (String(s).includes("win-preview") ? [win] : nothing) } });
+  const fire = (t) => (win.on["click"] || []).forEach((fn) => fn({ target: t }));
+  console.log("\n  a window with no close box:");
+  check("the handler is attached", Boolean(win.on["click"]));
+  fire(win);
+  check("a click on the dark closes it", closed === 1, String(closed));
+  // AND THE PICTURE DOES NOT. Clicking the photograph itself must not
+  // close the thing you opened to look at it.
+  const picture = { closest: (sel) => (sel.includes("img") ? picture : null) };
+  Object.setPrototypeOf(picture, (class Element {}).prototype);
+  fire(picture);
+  check("  while a click on the picture does not", closed === 1, String(closed));
+}
+
+// 3. A LINK TO A WINDOW OPENS IT. The bandeau's `contact` link is an
+//    <a href="#contact"> pointing at a <dialog>, which is display:none
+//    until opened — so the browser's own anchor jump lands on nothing.
+//    desk.js says this in a comment and nothing checked it.
+{
+  const dial = new FakeDialog();
+  dial.open = false;
+  const link = {
+    on: {}, getAttribute: () => "#contact",
+    addEventListener(k, fn) { (this.on[k] ||= []).push(fn); },
+  };
+  runDesk({
+    finders: {
+      all: (s) => (String(s).includes('href^="#"') ? [link] : nothing),
+      byId: (id) => (id === "contact" ? dial : null),
+    },
+  });
+  console.log("\n  a link that names a window:");
+  check("the link is wired", Boolean(link.on["click"]));
+  let stopped = false;
+  (link.on["click"] || []).forEach((fn) =>
+    fn({ preventDefault() { stopped = true; } }));
+  check("clicking it opens the window rather than jumping to nothing",
+    dial.opened === true && stopped === true,
+    `opened=${dial.opened} prevented=${stopped}`);
+}
+
+// 4. A FILM GOES QUIET WHEN ITS WINDOW IS CLOSED. Minimising calls
+//    close() on its way to show(), so the handler has to tell the two
+//    apart — and if it stops pausing, the sound carries on over a desk
+//    with no window on it.
+{
+  let paused = 0;
+  const video = { pause() { paused += 1; } };
+  const film = {
+    open: false, on: {},
+    classList: { add() {}, remove() {}, contains: () => false, toggle: () => false },
+    style: fakeStyle(), dataset: {},
+    addEventListener(k, fn) { (this.on[k] ||= []).push(fn); },
+    removeEventListener() {},
+    close() {}, show() {}, showModal() {},
+    querySelector: (s) => (s === "video" ? video : null),
+    querySelectorAll: () => nothing,
+    getBoundingClientRect: () => ({ left: 0, top: 0, width: 400, height: 300 }),
+  };
+  runDesk({ finders: { all: (s) => (String(s).includes("win-film") ? [film] : nothing) } });
+  console.log("\n  a film that is closed:");
+  check("the close handler is attached", Boolean(film.on["close"]));
+  (film.on["close"] || []).forEach((fn) => fn({}));
+  check("closing the window stops the sound", paused === 1, String(paused));
+  // AND MINIMISING DOES NOT. close() is called on the way to show(),
+  // and the film must keep playing — that is the whole point of the
+  // minimise.
+  film.open = true;
+  (film.on["close"] || []).forEach((fn) => fn({}));
+  check("  while minimising leaves it playing", paused === 1, String(paused));
+}
 
 console.log(failed === 0 ? "\n  everything holds\n" : `\n  ${failed} FAILED\n`);
 process.exit(failed === 0 ? 0 : 1);

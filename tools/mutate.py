@@ -35,6 +35,25 @@ SUITES = [
 
 # (name, file, old, new) — each a regression a person could plausibly make
 M = [
+ # ---- audit 6: the browser ----------------------------------------
+ ("the page never stops booting", "static/js/desk.js",
+  'document.documentElement.classList.remove("booting");',
+  '/* booting left on */'),
+ ("a window she opened cannot be closed by clicking the dark",
+  "static/js/desk.js", "if (t === win)\n            return win.close();",
+  "if (false)\n            return win.close();"),
+ ("a link to a window stops opening it", "static/js/desk.js",
+  "if (!target.open)\n            target.showModal();", "if (false) target.showModal();"),
+ ("the bar's height is no longer published", "static/js/desk.js",
+  'document.documentElement.style.setProperty("--bar-h", `${ceiling}px`);', ""),
+ ("a film keeps playing after its window is closed", "static/js/desk.js",
+  'win.querySelector("video")?.pause();', ""),
+ ("the desk stops becoming a grid on a phone", "static/css/site.css",
+  "@media (max-width: 40rem) {\n  .desk {", "@media (max-width: 1rem) {\n  .desk {"),
+ ("an off-site script is added to every page", "templates/base.html",
+  "<body class=", '<script src="https://cdn.example.com/x.js"></script>\n<body class='),
+ ("the content security policy is removed", "templates/base.html",
+  '<meta http-equiv="Content-Security-Policy"', '<meta name="was-the-policy"'),
  ("the panel stops sending its token", "tools/studio/app.js",
   'const q = (p) => p + (p.includes("?") ? "&" : "?") + "t=" + encodeURIComponent(TOKEN);',
   'const q = (p) => p;'),
