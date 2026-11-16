@@ -1943,6 +1943,45 @@ if (loaded) {
     check("the panel listens to the live stream at all", false);
   }
 
+  // ---- the frame waits for the page to CARRY the change -----------
+  //
+  // zola answers 200 with the OLD page the instant it is asked, and
+  // the rebuilt one arrives about a second later — measured at 1.15s
+  // for both the gallery and the canvas. A reload that waits only for
+  // "not 404" therefore lands on the page as it was: the photograph
+  // springs back to where it started, and a refresh a moment later
+  // shows it where she put it. Her words: *the in-between effect,
+  // which is not great.*
+  //
+  // Driven here by answering the poll with the stale page first and
+  // the rebuilt one after, and asking how many times it looked.
+  if (typeof sandbox.reframe === "function") {
+    const stale = '<figure data-shot="01.jpg" style="--x:30; --y:0;">';
+    const fresh = '<figure data-shot="01.jpg" style="--x:7; --y:3;">';
+    let looks = 0;
+    const keep = sandbox.fetch;
+    const view = byId.get("view");
+    view.src = "/site/travail-selectionne/";
+    sandbox.fetch = async () => {
+      looks += 1;
+      return { ok: true, text: async () => (looks < 3 ? stale : fresh),
+               json: async () => ({}) };
+    };
+    // the shape arrangeCanvas passes: a function of the answer that
+    // returns a function of the page
+    const expecting = (answer) => (text) =>
+      new RegExp('data-shot="01.jpg"[^>]*?--x:' + answer.did.left + ";").test(text);
+    sandbox.reframe(expecting({ did: { left: 7 } }));
+    await new Promise((r) => setTimeout(r, 900));
+    check("the frame does not reload into the page as it was",
+      looks >= 3, `it looked ${looks} time(s)`);
+    check("  and it stops looking once the change is there",
+      looks < 12, `it looked ${looks} time(s)`);
+    sandbox.fetch = keep;
+  } else {
+    check("the panel exposes reframe, so the wait can be driven", false);
+  }
+
   const src = readFileSync(new URL("./app.js", import.meta.url), "utf8");
   check("and a drag reloads nothing, because the icon has already moved",
     /NOTHING_TO_SEE\s*=\s*new Set\(\["place"\]\)/.test(src));
