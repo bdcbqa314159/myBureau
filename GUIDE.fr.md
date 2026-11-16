@@ -563,6 +563,33 @@ tu veux la version anglaise à part, change-la à la main dans
 > à cet endroit. Dans un portfolio, les photos **sont** le contenu — donc
 > ça vaut le quart d'heure.
 
+### Changer la police de tout le site
+
+Choisis la page d'accueil dans le panneau : sous les deux mots du
+bandeau, il y a **la police**. Un clic sur un nom et tout le site
+change — les titres et tes textes. Les petits caractères de
+l'interface, eux, ne bougent pas : ils font partie du décor.
+
+**Et si tu en as trouvé une ailleurs ?** Télécharge-la et dépose le
+fichier dans la case. Le panneau accepte les trois formats qu'on
+trouve : **.woff2**, **.ttf** (c'est ce que donne Google Fonts) et
+**.otf** (c'est ce que donnent les fonderies). Il regarde l'intérieur
+du fichier, pas son nom — un `.zip` renommé est refusé tout de suite
+plutôt que de casser la page.
+
+Une seule à la fois : la précédente part à la corbeille, et
+**Annuler** la ramène.
+
+> **Attention aux droits.** Une police se vend et s'achète comme une
+> photo. Le site est public, donc une police déposée ici est publiée
+> avec lui — et la plupart des licences de bureau ne le permettent
+> pas. Celles que nous fournissons sont libres de ce point de vue.
+> Pour une autre, vérifie avant.
+
+> Une police téléchargée n'a souvent qu'une seule graisse. Le
+> navigateur fabrique alors le gras lui-même : c'est lisible, un peu
+> moins beau qu'un vrai gras dessiné.
+
 ### Changer les textes du site lui-même
 
 Les mots qui ne sont pas les tiens — *contact*, *retour à*, les messages

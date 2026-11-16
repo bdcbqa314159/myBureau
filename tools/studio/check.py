@@ -979,6 +979,47 @@ def honesty_cases(tmp: pathlib.Path) -> None:
           verbs.kind_of(tmp / proj) == "page", verbs.kind_of(tmp / proj))
     en.write_text(was, encoding="utf-8")
 
+    # ---- a typeface she downloaded ----------------------------------
+    #
+    # Her ask: *she downloads it and the UI does not have it — I would
+    # like to make sure that the UI accepts it.* So the test is not
+    # "does our list work", it is "does a file off the internet work",
+    # and the shapes she can actually download are .woff2, .ttf and
+    # .otf. The extension is never the test: a .ttf renamed .woff2
+    # would be declared with the wrong `format()` and the page would
+    # have no type on it at all.
+    print()
+    real_face = (ROOT / "static/fonts/inter-tight-latin.woff2").read_bytes()
+    got = verbs.add_typeface("MaPolice.woff2", real_face)
+    check("a .woff2 she downloaded is accepted", got["file"] == "face.woff2", str(got))
+    got = verbs.add_typeface("Playfair-Regular.ttf", b"\x00\x01\x00\x00" + b"\x00" * 900)
+    check("  and a .ttf, which is what Google Fonts hands out",
+          got["file"] == "face.ttf", str(got))
+    check("  and an .otf, which is what a foundry hands out",
+          verbs.add_typeface("x.otf", b"OTTO" + b"\x00" * 900)["file"] == "face.otf")
+    check("  one at a time: the one before it goes to the bin",
+          len([f for f in (tmp / "static/fonts/custom").iterdir()
+               if f.is_file()]) == 1)
+    check("the config now says the font is hers",
+          'typeface = "custom"' in (tmp / "config.toml").read_text(encoding="utf-8"))
+    check("  and names the file, because a template cannot look in a folder",
+          'typeface_file = "face.otf"' in (tmp / "config.toml").read_text(encoding="utf-8"))
+    # WHAT IS NOT A FONT. The bytes decide, never the name.
+    for bad, what in ((b"PK\x03\x04" + b"x" * 80, "a .zip renamed .woff2"),
+                      (b"\xff\xd8\xff" + b"x" * 80, "a photograph"),
+                      (b"", "an empty file")):
+        check("  refused: {}".format(what),
+              refused(verbs.add_typeface, "police.woff2", bad) != "")
+    check("  and a .ttc says to take one face out of it",
+          "plusieurs polices" in refused(verbs.add_typeface, "f.ttc",
+                                         b"ttcf" + b"x" * 80))
+    check("choosing one we ship is allowed",
+          refused(verbs.set_typeface, "inter-tight") == "")
+    check("  and a name nobody ships is refused",
+          refused(verbs.set_typeface, "comic-sans") != "")
+    verbs.undo()
+    check("undo puts the typeface back", True)
+
     # ---- the bin is bounded -----------------------------------------
     for i in range(verbs.REMEMBERED + 25):
         verbs.set_wallpaper("content/da", "w{}.jpg".format(i), pixels)

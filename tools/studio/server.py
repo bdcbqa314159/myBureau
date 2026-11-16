@@ -413,6 +413,11 @@ class Studio(http.server.BaseHTTPRequestHandler):
                 elif how.startswith("icon"):
                     out = verbs.set_icon(into, name, raw,
                                          how[5:] if "-" in how else "")
+                # A TYPEFACE SHE DOWNLOADED. Not her work and not
+                # content — it is how the site is set — so it lands
+                # beside the ones we ship. See verbs.add_typeface.
+                elif how == "typeface":
+                    out = verbs.add_typeface(name, raw)
                 elif how == "video":
                     out = verbs.add_video(into, name, raw)
                 elif how == "poster":
@@ -460,6 +465,8 @@ class Studio(http.server.BaseHTTPRequestHandler):
             return verbs.throw_away(ask["item"])
         if name == "set_identity":
             return verbs.set_identity(ask["owner"], ask["studio"])
+        if name == "set_typeface":
+            return verbs.set_typeface(ask["which"])
         if name == "set_face":
             return verbs.set_face(ask["item"], ask["how"],
                                   ask.get("which", "folder"))

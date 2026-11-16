@@ -3580,6 +3580,68 @@ def case_the_guide_describes_the_site_that_exists(d: pathlib.Path) -> list[tuple
     ]
 
 
+def case_the_site_is_set_in_one_typeface(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """One value sets the whole site, and a font she downloaded works.
+
+    Her ask was not "give me a list" — it was *she downloads it and
+    the UI does not have it; I would like to make sure that the UI
+    accepts it.* So what matters is that an arbitrary file off the
+    internet reaches the page with the right `format()` word, which
+    is the one thing a browser cannot be wrong about: given
+    `format("woff2")` for a `.ttf` it discards the face and the page
+    has no type on it at all.
+
+    The second half is the reason this is cheap: every rule in the
+    stylesheet points at `--font-display`, `--font-body` or
+    `--font-ui`, and nothing below the TYPE SYSTEM block names a
+    typeface. So "choose the font" is one value in one place, and
+    this asserts that it stays that way.
+    """
+    css = (d / "static" / "css" / "site.css").read_text(encoding="utf-8")
+    head = css[:css.index("/* ---- FACES ---- */")] + css[
+        css.index("/* ---- FACES ---- */"):css.index(":root {")]
+    below = css[css.index(":root {"):]
+    bare = re.sub(r"/\*.*?\*/", " ", below, flags=re.S)
+    # a typeface named anywhere but in the roles themselves
+    roles = re.search(r"--font-display:[^;]*;\s*--font-body:[^;]*;\s*"
+                      r"--font-ui:[^;]*;", bare, re.S)
+    rest = bare.replace(roles.group(0), "") if roles else bare
+    # FILTERED IN PYTHON, not by a lookahead. `font-family:\s*(?!var\()`
+    # backtracks: when the lookahead fails after `\s*` has eaten the
+    # space, the engine retries with zero spaces and the lookahead then
+    # sees " var(" and passes. Every role in the file came back as a
+    # violation of itself.
+    named = [v.strip() for v in re.findall(r'font-family:([^;]+);', rest)
+             if not v.strip().startswith("var(")]
+
+    # and now her own, dropped in and built
+    face = d / "static" / "fonts" / "custom"
+    face.mkdir(parents=True, exist_ok=True)
+    (face / "face.ttf").write_bytes(b"\x00\x01\x00\x00" + b"\x00" * 900)
+    conf = d / "config.toml"
+    conf.write_text(conf.read_text(encoding="utf-8")
+                    .replace('typeface = "inter-tight"',
+                             'typeface = "custom"\ntypeface_file = "face.ttf"'),
+                    encoding="utf-8")
+    ok, log = build(d)
+    home = page(d, "index.html")
+    project = page(d, "da/maison-cosette/index.html")
+    return [
+        ("builds with a typeface she dropped in", ok),
+        ("the page declares it", "@font-face" in home and "la sienne" in home),
+        # THE FORMAT WORD, which is the one thing a browser cannot be
+        # wrong about: told `woff2` for a `.ttf` it discards the face.
+        ("with the format word her file actually needs",
+         'format("truetype")' in home),
+        ("and it is set on every page, not only the home desk",
+         "la sienne" in project),
+        ("the roles are what the stylesheet points at",
+         bool(roles)),
+        ("and nothing below them names a typeface of its own",
+         named == [], str(named[:2])),
+    ]
+
+
 def case_nothing_is_fetched_from_anywhere_else(d: pathlib.Path) -> list[tuple[str, bool]]:
     """No runtime dependency on the frontend. It is law, and it had no guard.
 
@@ -3883,6 +3945,7 @@ CASES = [
     ("what the panel writes, zola reads", case_what_the_panel_writes_zola_reads),
     ("a body is shown, or not offered", case_a_body_is_shown_or_not_offered),
     ("a photograph opens at full resolution", case_a_photograph_opens_at_full_resolution),
+    ("the site is set in one typeface", case_the_site_is_set_in_one_typeface),
     ("the guide describes the site that exists",
      case_the_guide_describes_the_site_that_exists),
     ("nothing is fetched from anywhere else",

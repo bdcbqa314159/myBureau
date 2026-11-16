@@ -401,6 +401,14 @@ function isPage(o) {
  * else, so this list being wrong is a refusal rather than a surprise. */
 const DRAWN_FOLDERS = ["folder", "folder-olive", "folder-rust", "folder-slate"];
 
+/* The typefaces she can choose between. The first are shipped in
+ * static/fonts; "custom" is whatever she last dropped, and it only
+ * appears once there is one — offering it empty would be a button
+ * that can only refuse. The server keeps the same list and refuses
+ * anything else, so this being wrong is a refusal rather than a
+ * broken page. */
+const TYPEFACES_WE_SHIP = [["inter-tight", "Inter Tight"]];
+
 /* Where photographs go, in the words the thing deserves. */
 function dropPhotos(o) {
   // WHAT EACH PAGE ACTUALLY DOES WITH THEM.
@@ -758,6 +766,9 @@ function inspect(o) {
   // "texte" was the about text, and there was no way to give it a face
   // at all.
   const me = (model && model.identity) || { owner: "", studio: "", live: false };
+  const TYPEFACES = me.typeface === "custom"
+    ? [...TYPEFACES_WE_SHIP, ["custom", "la tienne"]]
+    : TYPEFACES_WE_SHIP;
   const bandeau = o.path === "content" ? `
     <fieldset class="about">
       <legend>le bandeau, en haut de chaque page</legend>
@@ -771,6 +782,24 @@ function inspect(o) {
         ? "Le site est en ligne : c'est ce nom que voient les visiteurs."
         : "Le site est encore en démonstration — ce nom-ci est celui de la"
           + " démo, et le vrai prend sa place le jour de la mise en ligne."}</p>
+    </fieldset>
+    <fieldset class="about">
+      <legend>la police de tout le site</legend>
+      <ul class="slots one">
+        ${TYPEFACES.map(([k, label]) => `
+          <li class="slot${me.typeface === k ? " is-chosen" : ""}">
+            <button type="button" class="drawn" data-face-of="${k}"
+              style="font-family:${k === "custom" ? "inherit" : "'Inter Tight'"}"
+              >${label}</button>
+            ${me.typeface === k ? `<b class="slot-yes">en place</b>` : ""}
+          </li>`).join("")}
+      </ul>
+      <p class="drop" data-drop="typeface">Ou dépose ici une police que tu as
+         téléchargée — un fichier <b>.woff2</b>, <b>.ttf</b> ou <b>.otf</b>.</p>
+      <p class="hintline">Elle s'applique aux titres et aux textes.
+         ${me.typeface === "custom"
+           ? "C'est ta police qui est en place."
+           : "Les petits caractères de l'interface ne changent pas."}</p>
     </fieldset>` : "";
   // about me.txt has its own row and its own pane now — see
   // inspectAbout. Here, it put a photograph and a text box underneath the
@@ -953,6 +982,12 @@ function wire(o) {
     el("who").addEventListener("change", send);
     el("studio").addEventListener("change", send);
   }
+  look.querySelectorAll("[data-face-of]").forEach((b) => {
+    b.addEventListener("click", async () => {
+      const out = await act({ verb: "set_typeface", which: b.dataset.faceOf });
+      if (out) tell("police : " + b.textContent.trim());
+    });
+  });
   look.querySelectorAll("[data-drawn]").forEach((b) => {
     b.addEventListener("click", async () => {
       const out = await act({ verb: "set_face", item: o.path,
