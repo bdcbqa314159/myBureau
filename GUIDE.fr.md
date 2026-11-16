@@ -210,9 +210,21 @@ les refuser en t'expliquant pourquoi. C'est normal, et c'est fait pour.
 
 ### Ajouter un projet
 
-Le plus simple, et celui qui ne se trompe pas : **duplique un projet qui
-existe déjà.** Dans le Finder, va dans `content/da/`, clic droit sur un
-dossier de projet → **Dupliquer** (⌘-D), puis :
+**Dans le panneau : clic droit sur le bureau, à l'endroit où tu veux
+que la chose se pose.** Un petit menu s'ouvre et ne propose que ce qui
+a le droit d'exister là — une photo, un film, une page dans un bureau ;
+un dossier sur la page d'accueil. Choisis, et la chose arrive sous ton
+curseur, avec son nom à remplir.
+
+C'est tout. Pas de fichier à créer, pas de `x` et `y` à recopier, pas
+de langue à oublier : les deux versions sont écrites ensemble.
+
+#### À la main, si tu préfères le Finder
+
+Ça marche toujours, et c'est utile à savoir le jour où le panneau ne
+démarre pas. **Duplique un projet qui existe déjà** : dans le Finder,
+va dans `content/da/`, clic droit sur un dossier de projet →
+**Dupliquer** (⌘-D), puis :
 
 1. renomme le dossier (`mon-projet`, sans accent ni espace)
 2. jette les images qui étaient dedans, dépose les tiennes
@@ -222,13 +234,17 @@ dossier de projet → **Dupliquer** (⌘-D), puis :
    dupliqué a gardé ceux de l'original, et sans ça la nouvelle icône se
    pose exactement sur celle que tu as dupliquée
 
-C'est tout. Le projet apparaît sur le bureau et a sa page. Les images
-s'affichent dans l'ordre de leur nom — `01.jpg`, `02.jpg`, `03.jpg`.
+Le projet apparaît sur le bureau et a sa page.
 
-> **L'ordre fait la mise en page.** La première image ouvre la page en
-> grand, toute la largeur. Les suivantes se rangent deux par deux, avec
-> de l'air autour. Pour changer laquelle ouvre la page, renomme-la :
-> celle qui vient en premier dans l'ordre des noms gagne.
+> **L'ordre fait la mise en page, et c'est toi qui le décides.** La
+> première image ouvre la page en grand, toute la largeur. Les
+> suivantes se rangent deux par deux, avec de l'air autour.
+>
+> Pour changer l'ordre : choisis le projet dans le panneau et **fais
+> glisser les photos dans la liste**. Rien n'est renommé — tes noms de
+> fichiers restent les tiens, et l'ordre est noté à côté. Avant, il
+> fallait renommer `03.jpg` en `01.jpg`, ce qui écrasait le nom que tu
+> avais donné et, pire, ne changeait pas toujours la page.
 >
 > Une image verticale n'est jamais coupée — elle est simplement limitée
 > en hauteur pour qu'on voie la suite de la page sans faire défiler
@@ -252,9 +268,25 @@ Tu n'as rien à faire : **l'icône d'un projet est sa première image.** Le
 calendrier montre le calendrier, la brochure montre sa couverture. Le
 bureau se remplit de ton travail et pas de petits dessins gris.
 
-C'est `01.jpg` qui sert d'icône — celle qui est la première dans l'ordre
-des noms. Pour en choisir une autre, mets dans le dossier un fichier
-appelé **`icon`** :
+Tant que tu n'as rien choisi, c'est la première photo qui sert
+d'icône. **Pour en choisir une autre, le panneau propose trois cases**,
+et une seule peut être remplie à la fois :
+
+| la case | ce qu'elle prend |
+|---|---|
+| **un dossier** | un de nos quatre dessins, ou un dessin à toi |
+| **une photo** | une image que tu déposes |
+| **un GIF** | une image qui bouge |
+
+Choisir l'une efface les deux autres — il n'y a jamais deux réponses à
+« à quoi ça ressemble ».
+
+**Un dossier de la page d'accueil n'a que la première case.** Un
+dossier est un dossier : lui donner la tête d'une photo, ce serait
+mentir sur ce que c'est. Mais le dessin peut être le tien.
+
+À la main, ça marche aussi : mets dans le dossier un fichier appelé
+**`icon`** :
 
 ```
 mon-projet/
@@ -400,6 +432,30 @@ côté de son `_index.md` et elles apparaissent, en cinq colonnes. Pas de
 `index.md` à écrire, pas de dossier par photo.
 
 Un clic sur une photo l'ouvre en grand dans une fenêtre. Échap la ferme.
+
+### La page « travail sélectionné »
+
+Elle tient des photos, comme pellicules — choisis-la dans le panneau et
+tu les vois toutes : tu peux en déposer, en jeter, en décrire. Rien
+d'autre ne se range dedans.
+
+**Ce qu'elle a de différent, c'est sa page.** Pellicules range ses
+photos en colonnes et tu choisis seulement l'ordre. Ici tu choisis
+l'endroit : entre dans la page, et chaque photo se déplace à la main.
+
+- **attrape une photo** pour la poser ailleurs
+- **attrape son coin en bas à droite** pour la rendre plus grande ou
+  plus petite
+- deux photos peuvent se trouver à la même hauteur, côte à côte
+
+Tout est en pourcentages de la largeur de la page, ce qui veut dire que
+ta composition garde ses proportions quelle que soit la taille de la
+fenêtre. Sur un téléphone elle ne rétrécit pas jusqu'à l'illisible :
+les photos passent en une colonne, chacune garde le côté où tu l'avais
+posée et les silences que tu as laissés entre elles.
+
+Rien n'y est cliquable. C'est une page où l'on arrive, où l'on fait
+défiler, et c'est tout.
 
 ### Ajouter un dossier (un nouveau bureau)
 
@@ -610,6 +666,21 @@ sans en-tête, et il te dit de quel fichier il parle.
 Le plus simple pour réparer : dans GitHub Desktop, fais un clic droit sur
 le fichier et **Discard changes**. Tu reviens à la dernière version qui
 marchait.
+
+### Le panneau dit qu'il n'écrit plus
+
+> *Le panneau a changé pendant qu'il tournait : il tient encore
+> l'ancien code, alors il n'écrit plus rien.*
+
+C'est ce qui arrive quand le site a été mis à jour pendant que le
+panneau était ouvert — un **Pull** dans GitHub Desktop, par exemple.
+Le panneau a chargé son code en démarrant et il tient toujours
+l'ancien ; plutôt que d'écrire tes fichiers avec des règles qui
+n'existent plus, il s'arrête.
+
+Rien n'est perdu, et tu peux continuer à regarder ton site. Pour
+repartir : ferme la fenêtre noire, double-clique `preview.command`, et
+ouvre **la nouvelle adresse** — elle change à chaque fois.
 
 ### Un seul panneau à la fois
 

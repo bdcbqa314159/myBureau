@@ -241,7 +241,9 @@ def main() -> int:
     # writes, from the day the engine learned to show PDFs.
     # This one is not advice. Everything else look.py reports is a thing
     # that looks wrong; this is a thing that WILL be wrong the moment it
-    # is deployed, and the deploy runs this. So it stops the run.
+    # is deployed. So it stops the run — and the deploy runs this, which
+    # was written here before it was true: audit 7 found look.py missing
+    # from .github/workflows/deploy.yml and added it.
     # ---- a file zola will not read -----------------------------------
     # Not advice either: the site does not build at all. It happened —
     # a content file turned up with its front matter gone and the only
