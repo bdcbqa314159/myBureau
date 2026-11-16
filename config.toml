@@ -1,5 +1,29 @@
 default_language = "fr"
 base_url = "https://bdcbqa314159.github.io/myBureau"
+
+# WHAT macOS LEAVES BEHIND, and what it costs when the engine reads it.
+#
+# Copy a folder of photographs to a USB stick, a non-Mac disk or some
+# network shares and macOS writes `._01.jpg` beside `01.jpg` — an
+# AppleDouble header carrying the file's metadata. It is NOT an image,
+# and it has an image's name.
+#
+# Every template that lists her photographs then hands it to
+# `get_image_metadata`, which stops the build:
+#
+#     ERROR Failed to build the site
+#      53 | {% set shape = get_image_metadata(path=asset) %}
+#
+# And `tools/look.py`, whose whole job is to say what will not work,
+# reports "Nothing to report" — it skips hidden files on purpose,
+# because they are Finder's droppings and not hers. Both halves are
+# right on their own; together they are a site that will not build and
+# a tool that cannot say why. Found and proven by audit 5.
+#
+# ONE LINE, HERE, rather than a test in each of the seven loops that
+# list photographs: zola never offers these as assets at all, so no
+# template can read one and no list can forget the rule.
+ignored_content = ["**/._*", "**/.DS_Store"]
 title = "myBureau"
 compile_sass = false
 build_search_index = false

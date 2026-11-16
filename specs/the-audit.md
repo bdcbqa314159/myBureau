@@ -1,6 +1,6 @@
 # The audit
 
-**Status:** audits 1–4 done and fixed — twenty-seven findings.
+**Status:** audits 1–5 done and fixed — twenty-eight findings.
 **Date:** 2026-11-15
 
 Seven architectures, ordered by **what a bug in each one costs**. Not by
@@ -672,3 +672,68 @@ The same check was **vacuous** in its first spelling: it dragged
 moved to the front, and `elementFromPoint` found that same
 photograph — so the handler returned without moving anything and the
 check passed against a drag that never happened.
+
+
+---
+
+# Audit 5 — the engine
+
+Eleven templates, 1,691 lines, read on 2026-11-16. **One finding, and
+it stops the site building.** The rest of what this audit asked came
+back sound, which is written down below because a list of only faults
+reads as though everything unmentioned was condemned.
+
+### A5-F1 · what macOS leaves beside her photographs
+
+Copy a folder to a USB stick, a non-Mac disk or some network shares
+and macOS writes `._01.jpg` next to `01.jpg` — an AppleDouble header
+carrying the file's metadata. **It is not an image and it has an
+image's name.**
+
+| | |
+|---|---|
+| input | one `._01.jpg` anywhere her photographs live |
+| output | `ERROR Failed to build the site` at `get_image_metadata`, and `look.py` reporting *"Nothing to report — everything in content/ will do what it says"* |
+| costs her | the preview stops, with a Tera error she cannot read, and the one tool written to explain it is silent |
+
+Both halves were right on their own. The engine lists every image
+beside a content file, which is how her work gets on the page.
+`look.py` skips hidden files, because they are Finder's droppings and
+not hers — its own comment says so, and that judgement is correct for
+`.DS_Store`. Together they are a site that will not build and a tool
+that cannot say why.
+
+**Fixed in one line, in `config.toml`:**
+
+```toml
+ignored_content = ["**/._*", "**/.DS_Store"]
+```
+
+Rather than a test in each of the seven loops that list photographs:
+zola never offers these as assets at all, so no template can read one
+and no future list can forget the rule. `look.py` now mentions them
+once, with a count, as clutter rather than damage.
+
+## What was read and found sound
+
+- **The partials agree.** `_icon.html` decides there is a window and
+  `_preview.html` decides there is a dialog, and every built page was
+  checked both ways: no icon points at a dialog that is not there, and
+  no preview dialog is unreachable. The three that looked unreferenced
+  — `contact`, the gallery's `shot-*`, the `dossier-*` pop-fronts —
+  are opened by `href`, not `data-window`.
+- `_preview.html` is included for `section.pages` only, never for a
+  subsection, so the one asymmetry between the two conditions
+  (`ic_kind == "file"`) cannot produce an orphan.
+- **Awkward content.** A desk with nothing on it, a project with no
+  files, a folder holding only our own files, a title made of
+  punctuation, a content file with Windows line endings: all build,
+  all render sensibly.
+- **Awkward names.** `Vue — été 2024.jpg`, `photo (1).jpg`, `ÉTÉ.JPG`,
+  `a#b.jpg`, `a&b.jpg`, `a'b.jpg` are all shown. A name beginning with
+  `#` is not — zola drops it — but `add_image` numbers every drop, so
+  one can only arrive through the Finder, and nothing breaks when it
+  does.
+- **Slug collisions stop the build loudly.** Two folders whose paths
+  slugify alike give zola's own `Found path collisions`, and
+  `_free_folder` prevents it at creation anyway.
