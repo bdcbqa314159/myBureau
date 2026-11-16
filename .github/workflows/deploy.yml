@@ -30,6 +30,14 @@ jobs:
         with:
           tool: zola@0.23.6
       - run: zola build
+      # look.py REFUSES — exit 1 — on the two things that are not
+      # advice: a content file zola cannot read, and a file under
+      # content/ that .gitignore swallows. Its own comment said "the
+      # deploy runs this", and the deploy did not. A photograph git
+      # never saw builds here and 404s on the live site; zola catches
+      # it by failing on a missing path, which is true and unreadable.
+      # This fails first, with her sentence. Audit 7.
+      - run: python3 tools/look.py           # content that builds and does nothing
       - run: python3 tools/content-check.py  # the contract holds against real mistakes
       - run: python3 tools/studio/check.py   # the panel keeps its hands in content/
       - run: node tools/studio/app-check.mjs # the panel wakes up and its buttons are wired

@@ -3531,6 +3531,55 @@ def case_a_photograph_opens_at_full_resolution(d: pathlib.Path) -> list[tuple[st
     ]
 
 
+def case_the_guide_describes_the_site_that_exists(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """GUIDE.fr.md is her path. It had fallen a month behind the panel.
+
+    Audit 7 found it describing a workflow the panel had replaced:
+    duplicate a folder in the Finder, rename `03.jpg` to `01.jpg` to
+    change which photograph opens the page, put an `icon.png` beside
+    the content file. All three were true once. The first is now the
+    long way round, and the other two are simply false — the order is
+    a property she drags, and the face is one of three slots.
+
+    And it never mentioned `travail sélectionné` AT ALL: a whole page
+    she composes by hand, four pull requests of work, absent from the
+    one document written for her.
+
+    THE RULE THIS KEEPS. Every folder on the main desktop is something
+    she can open and edit, so every one of them has to be named in the
+    guide. That is mechanical, and it is exactly the kind of rot that
+    is invisible from inside the code: nothing breaks, the site builds,
+    and the document quietly stops matching the tool.
+
+    It does not check that the WORDS are right — nothing can. It checks
+    that a thing she can touch is not missing from the page that tells
+    her how.
+    """
+    guide = (ROOT / "GUIDE.fr.md").read_text(encoding="utf-8")
+    missing, named = [], []
+    for md in sorted((d / "content").glob("*/_index.md")):
+        title = re.search(r'^\s*title\s*=\s*"([^"]+)"',
+                          md.read_text(encoding="utf-8"), re.M)
+        if title is None:
+            continue
+        name = title.group(1)
+        (named if name.lower() in guide.lower() else missing).append(name)
+    # the claims that went stale, kept out by name
+    stale = [s for s in ("ordre de leur nom", "ordre des noms")
+             if s in guide]
+    return [
+        ("every folder on the main desktop is named in the guide",
+         missing == [], "missing: " + ", ".join(missing)),
+        ("and there are some to find, so this is not vacuous",
+         len(named) >= 3),
+        ("the guide no longer promises an order by file name", stale == []),
+        ("it tells her how to arrange photographs by dragging",
+         "glisser les photos" in guide),
+        ("and what to do when the panel stops writing after a pull",
+         "n'écrit plus" in guide),
+    ]
+
+
 def case_nothing_is_fetched_from_anywhere_else(d: pathlib.Path) -> list[tuple[str, bool]]:
     """No runtime dependency on the frontend. It is law, and it had no guard.
 
@@ -3834,6 +3883,8 @@ CASES = [
     ("what the panel writes, zola reads", case_what_the_panel_writes_zola_reads),
     ("a body is shown, or not offered", case_a_body_is_shown_or_not_offered),
     ("a photograph opens at full resolution", case_a_photograph_opens_at_full_resolution),
+    ("the guide describes the site that exists",
+     case_the_guide_describes_the_site_that_exists),
     ("nothing is fetched from anywhere else",
      case_nothing_is_fetched_from_anywhere_else),
     ("every cursor is one we drew", case_every_cursor_is_one_we_drew),
@@ -3868,14 +3919,24 @@ def main() -> int:
             else:
                 shutil.rmtree(tmp, ignore_errors=True)
 
-        bad = [w for w, held in results if not held]
+        # A THIRD ELEMENT IS A DETAIL, shown only when the expectation
+        # fails — the same shape tools/studio/check.py has always had.
+        #
+        # It took two tuples, and writing a three-element one ended the
+        # whole run with `ValueError: too many values to unpack` and no
+        # expectation named. That happened to me three times in two
+        # days, which is three times too many for a harness to be
+        # strict about something it can simply accept.
+        rows = [(r[0], r[1], r[2] if len(r) > 2 else "") for r in results]
+        bad = [w for w, held, _ in rows if not held]
         if bad:
             failed += 1
             print(f"  FAIL  {name}")
-            for w, held in results:
-                print(f"          {'ok ' if held else 'NO '} {w}")
+            for w, held, why in rows:
+                print(f"          {'ok ' if held else 'NO '} {w}"
+                      + (f"   {why}" if why and not held else ""))
         else:
-            print(f"  ok    {name}  ({len(results)} expectations)")
+            print(f"  ok    {name}  ({len(rows)} expectations)")
 
     total = sum(1 for _ in CASES)
     print(f"\n  {total - failed}/{total} cases hold\n" if failed

@@ -103,6 +103,18 @@ if [ -f tools/studio/server.py ]; then
   trap 'kill "$PANEL_PID" 2>/dev/null' EXIT INT TERM
 fi
 
+# WHY IT DID NOT START, in the words it already wrote.
+#
+# The panel explains itself when it refuses — "Un panneau tourne déjà
+# pour ce dossier", with what to do about it — and that sentence went
+# into a temp file nobody ever read. She got "The panel did not start"
+# and nothing else, on the one failure most likely to happen: running
+# preview twice.
+if [ -z "$PANEL_URL" ] && [ -f "${PANEL_OUT:-}" ] && [ -s "${PANEL_OUT:-}" ]; then
+  printf '\n'
+  sed 's/^/  /' "$PANEL_OUT"
+fi
+
 say "Opening http://127.0.0.1:$PORT"
 if [ -n "$PANEL_URL" ]; then
   step "And the panel, where you can move things about by hand."

@@ -1,6 +1,6 @@
 # The audit
 
-**Status:** audits 1–6 done and fixed — thirty-six findings.
+**Status:** all seven audits done and fixed — forty findings.
 **Date:** 2026-11-15
 
 Seven architectures, ordered by **what a bug in each one costs**. Not by
@@ -839,3 +839,85 @@ content teaches you to loosen it rather than aim it.
 - **One set of cursors**, all drawn, already asserted; one ground per
   body class; `--bar-h` published so the stylesheet and the script
   cannot disagree about the bandeau's height.
+
+
+---
+
+# Audit 7 — her path
+
+`preview.sh`, `preview.command`, `GUIDE.fr.md` (668 lines),
+`tools/kit.py`, `.github/workflows/deploy.yml`, read on 2026-11-16.
+**Four findings.** The largest is not code at all.
+
+### A7-F1 · the guide describes a site that no longer exists
+
+`GUIDE.fr.md` is her path — the one document written for her — and it
+had fallen about a month behind the panel.
+
+| what it said | what is true |
+|---|---|
+| to add a project, duplicate a folder in the Finder and edit four fields in two files | right-click the desk in the panel and the thing arrives under the pointer, both languages written together |
+| *"les images s'affichent dans l'ordre de leur nom"*, and to change which one opens the page, **rename it** | the order is a property she drags; renaming overwrites the name she chose and did not always change the page |
+| to choose an icon, put an `icon.png` beside the content file | three slots, one face, and a folder on the main desktop gets a drawing — hers or ours |
+| — | **`travail sélectionné` is not mentioned once.** A whole page she composes by hand, four pull requests of work, absent from the document that tells her how |
+| — | nothing about what to do when the panel stops writing after a pull, which is a message she will see |
+
+Nothing broke. The site built, every suite was green, and the document
+quietly stopped matching the tool — which is exactly the rot that is
+invisible from inside the code.
+
+**Fixed**, and a check added so it cannot happen silently again: every
+folder on the main desktop must be named in the guide, the retired
+promise about file-name order must not come back, and the two things
+she will need — dragging to arrange, and the panel refusing to write —
+must be there. It cannot check that the WORDS are right; nothing can.
+It checks that a thing she can touch is not missing from the page that
+tells her how.
+
+### A7-F2 · "the deploy runs this", and it did not
+
+`look.py` refuses — exit 1 — on the two things that are not advice: a
+content file zola cannot read, and a file under `content/` that
+`.gitignore` swallows. Its own comment said *"and the deploy runs
+this"*. It was not in `.github/workflows/deploy.yml`.
+
+A photograph git never saw builds on her machine and is missing from
+CI's checkout, where zola fails on a path that is not there — true,
+and unreadable. look.py runs first now and says it in a sentence.
+
+A comment that states something about the system which is not so is a
+bug by this project's own standard, and this one had been read and
+believed for weeks.
+
+### A7-F3 · the panel's explanation, written and thrown away
+
+Run `preview.command` twice and the second panel refuses, correctly,
+with *"Un panneau tourne déjà pour ce dossier. Ferme-le (Ctrl-C dans sa
+fenêtre) avant d'en ouvrir un autre"*. That sentence went into a temp
+file nobody read; she got `The panel did not start — the site below
+works exactly as before` and nothing else.
+
+The most likely failure in the whole chain, answered with the least
+useful of the two sentences available. `preview.sh` prints what the
+panel wrote.
+
+### A7-F4 · a harness strict about something it could simply accept
+
+`content-check` took two-element expectations and ended the entire run
+on a three-element one — `ValueError: too many values to unpack`, no
+expectation named. **I did that three times in two days.** The panel's
+suite has taken an optional detail all along. This one does now.
+
+## What was read and found sound
+
+- **The three steps hold.** `preview.sh` checks for zola, offers to
+  install it through Homebrew, and prints the Homebrew line to paste
+  when there is no Homebrew either. It never asks her to type a
+  command otherwise.
+- The panel and zola do not know about each other, so killing one
+  leaves the other standing, and the trap takes the panel down with
+  the shell however the shell ends.
+- The free-port scan means a second preview does not collide, and the
+  panel's own `flock` is what stops two of them writing.
+- `deploy.yml` runs the suites before it builds, prunes between the
+  build and the upload, and never uploads from a pull request.
