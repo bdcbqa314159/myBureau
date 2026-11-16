@@ -88,17 +88,29 @@ async function ask(path, opts) {
     clearTimeout(giveUp);
   }
 }
-async function act(body) {
+/* `expecting` says how to recognise the rebuilt page, and it matters
+ * more than it looks: zola answers 200 with the OLD page the instant
+ * it is asked, and the new one arrives about a SECOND later — measured
+ * at 1.15s on this machine, for both the gallery and the canvas.
+ *
+ * So a reload that waits only for "not 404" lands on the page as it
+ * was. On the canvas that is the photograph springing back to where it
+ * started, which is exactly what she reported: *I move a photo, the
+ * screen blinks, it goes back — and when I refresh it is where I put
+ * it.* The write was always right; the reload was a second early.
+ *
+ * It takes a function because an ORDER cannot be a substring. */
+async function act(body, expecting) {
   const out = await ask("/api/do", {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (out) {
     if (typeof out.n === "number") seen = out.n;      // we know about this one
-    // the bandeau is the one change that needs the page checked rather
-    // than merely reached — see reframe()
-    if (!NOTHING_TO_SEE.has(body.verb))
-      reframe(body.verb === "set_identity" ? body.studio : null);
+    if (!NOTHING_TO_SEE.has(body.verb)) {
+      reframe(body.verb === "set_identity" ? body.studio
+              : expecting ? expecting(out) : null);
+    }
   }
   return out;
 }
@@ -124,12 +136,18 @@ function reframe(expect) {
     } catch (e) { /* nothing to remember */ }
     // wait for zola rather than race it: while it rebuilds it answers
     // 404, and reloading into that is the blank flash
+    // `expect` is a string the page must contain, or a function that
+    // is handed the page and says whether it is the new one. Neither
+    // is a deadline: the loop gives up after fifteen seconds and
+    // reloads anyway, because a stale view is better than none.
+    const arrived = (text) =>
+      typeof expect === "function" ? expect(text) : text.includes(expect);
     const until = Date.now() + 15000;
     while (Date.now() < until) {
       try {
         const r = await fetch(url, { cache: "no-store" });
         if (r.ok && !expect) break;
-        if (r.ok && (await r.text()).includes(expect)) break;
+        if (r.ok && arrived(await r.text())) break;
       } catch (e) { /* still coming up */ }
       await new Promise((r) => setTimeout(r, 80));
     }
@@ -1140,7 +1158,17 @@ function arrangeGallery(doc) {
       onto.parentNode.insertBefore(a, after ? onto.nextSibling : onto);
       const names = [...doc.querySelectorAll(".grid [data-shot]")]
         .map((n) => n.dataset.shot);
-      if (await act({ verb: "reorder", item: deskPath, names })) {
+      // THE SAME WAIT AS THE CANVAS. The gallery raced too — measured
+      // at the same 1.15s — it simply looked less wrong, because an
+      // order springing back reads as "the drag missed" rather than
+      // as the page undoing itself.
+      const waitFor = (answer) => (text) => {
+        const shown = [...text.matchAll(/data-shot="([^"]+)"/g)].map((m) => m[1]);
+        const want = (answer.did || {}).order || [];
+        return want.length > 0 && shown.length >= want.length
+          && want.every((n, i) => shown[i] === n);
+      };
+      if (await act({ verb: "reorder", item: deskPath, names }, waitFor)) {
         tell("ordre enregistré — la galerie se réarrange");
       } else if (inside) {
         // A REFUSAL PUTS IT BACK. The grid was reordered before the
@@ -1267,6 +1295,15 @@ function arrangeCanvas(doc) {
         verb: "place_shot", item: here, name: fig.dataset.shot,
         left: num(fig, "--x", 0), top: num(fig, "--y", 0),
         width: num(fig, "--w", 100),
+      // THE REBUILT PAGE, not merely a page. The numbers come back
+      // from the server because it CLAMPS them — asking for the ones
+      // we sent would wait fifteen seconds whenever a drag ended past
+      // an edge, and then reload into the stale page anyway.
+      }, (answer) => (text) => {
+        const did = answer.did || {};
+        const re = new RegExp('data-shot="' + fig.dataset.shot.replace(
+          /[.*+?^${}()|[\]\\]/g, "\\$&") + '"[^>]*?--x:' + did.left + ";");
+        return re.test(text);
       });
       // A REFUSAL PUTS IT BACK. She sees the picture move under her
       // hand, which is right — but if the server says no, leaving it
