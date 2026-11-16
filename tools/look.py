@@ -117,6 +117,33 @@ def main() -> int:
         if lines:
             notes.append((where, lines))
 
+    # 3c. what macOS leaves beside her photographs
+    #
+    # `._01.jpg` is an AppleDouble header, written whenever her folder
+    # is copied to a USB stick or a non-Mac disk. It is not an image
+    # and it carries an image's name, and it used to stop the build:
+    # every template that lists her photographs handed it to
+    # `get_image_metadata`.
+    #
+    # `ignored_content` in config.toml keeps the engine away from them
+    # now, so this is no longer a broken site — it is clutter she
+    # cannot see in the Finder, sitting in the folder she works in.
+    # Said once, with a count, rather than one line per file.
+    #
+    # This tool used to skip every hidden file as Finder's droppings,
+    # which was right about `.DS_Store` and wrong about these: they
+    # are droppings with her photographs' names on them.
+    apple = sorted(f for f in CONTENT.rglob("._*") if f.is_file())
+    if apple:
+        notes.append((str(apple[0].parent.relative_to(ROOT)), [
+            f"{len(apple)} file(s) beginning with ._ , left by macOS when"
+            " this folder was copied somewhere",
+            "   they are not shown and they do not break anything — the"
+            " engine is told to ignore them",
+            "   fix: delete them if you like. In the Terminal, from this"
+            " folder:  find content -name '._*' -delete",
+        ]))
+
     # 4. a picture in a format the site does not show
     for f in sorted(CONTENT.rglob("*")):
         if not f.is_file():

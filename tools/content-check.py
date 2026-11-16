@@ -2792,6 +2792,56 @@ def case_a_closed_dialog_stays_closed(d: pathlib.Path) -> list[tuple[str, bool]]
     ]
 
 
+def case_what_macos_leaves_behind(d: pathlib.Path) -> list[tuple[str, bool]]:
+    """An AppleDouble file beside her photographs, which stops the build.
+
+    Copy a folder to a USB stick or a non-Mac disk and macOS writes
+    `._01.jpg` next to `01.jpg`: an AppleDouble header carrying the
+    file's metadata. It is not an image and it has an image's name, so
+    every template that lists her photographs hands it to
+    `get_image_metadata` and the build stops.
+
+    AND look.py SAYS NOTHING, because it skips hidden files on
+    purpose — they are Finder's droppings, not hers. Both halves are
+    right alone; together they are a site that will not build and the
+    one tool meant to explain it reporting "Nothing to report".
+
+    `ignored_content` in config.toml, so zola never offers them as
+    assets and no template can read one. Found by audit 5; see
+    specs/the-audit.md.
+    """
+    g = d / "content" / "pellicules"
+    (g / "._01.jpg").write_bytes(b"\x00\x05\x16\x07" + b"\x00" * 60)
+    (g / ".DS_Store").write_bytes(b"\x00\x00\x00\x01Bud1")
+    # and one in a project, which is the other place photographs live
+    proj = d / "content" / "da" / "theodora-01"
+    (proj / "._01.jpg").write_bytes(b"\x00\x05\x16\x07" + b"\x00" * 60)
+    ok, log = build(d)
+    gal = page(d, "pellicules/index.html")
+    shots = re.findall(r'data-shot="([^"]+)"', gal)
+    conf = (d / "config.toml").read_text(encoding="utf-8")
+    return [
+        ("the site still builds with what macOS left behind", ok,),
+        ("the rule is one line in config.toml, not one per template",
+         "ignored_content" in conf),
+        ("no AppleDouble file is shown as a photograph",
+         not any(s.startswith("._") for s in shots)),
+        ("her own photographs are all still there", len(shots) >= 12),
+        # WHAT THE RULE ACTUALLY PROMISES. `ignored_content` governs
+        # content/, not static/ — and a `.DS_Store` in static/ is
+        # copied out on HER machine and never in CI, which builds from
+        # a checkout where gitignore has kept it out. So this asks
+        # about the folders her work lives in, which is the whole of
+        # what the option can answer for. The first spelling asked
+        # about the entire output and failed on a file from static/
+        # that has nothing to do with it.
+        ("and none of it is copied out beside her work",
+         not list((d / "public" / "pellicules").rglob("._*"))
+         and not list((d / "public" / "da").rglob("._*"))
+         and not list((d / "public" / "pellicules").rglob(".DS_Store"))),
+    ]
+
+
 def case_finder_droppings(d: pathlib.Path) -> list[tuple[str, bool]]:
     """A .DS_Store under content/ must not stop the preview.
 
@@ -3702,6 +3752,7 @@ CASES = [
     ("the sheet has buttons that cannot edit", case_the_sheet_has_buttons),
     ("about me.txt is read as a text file", case_about_is_read_as_a_text_file),
     ("a closed window stays closed", case_a_closed_dialog_stays_closed),
+    ("what macOS leaves behind", case_what_macos_leaves_behind),
     ("a .DS_Store does not stop the preview", case_finder_droppings),
     ("a picture opens plain, a film keeps its frame", case_a_picture_opens_plain),
     ("a project inside a folder that is a page", case_film_in_a_folder),
