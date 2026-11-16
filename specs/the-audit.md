@@ -1,6 +1,6 @@
 # The audit
 
-**Status:** audits 1–5 done and fixed — twenty-eight findings.
+**Status:** audits 1–6 done and fixed — thirty-six findings.
 **Date:** 2026-11-15
 
 Seven architectures, ordered by **what a bug in each one costs**. Not by
@@ -737,3 +737,105 @@ once, with a count, as clutter rather than damage.
 - **Slug collisions stop the build loudly.** Two folders whose paths
   slugify alike give zola's own `Found path collisions`, and
   `_free_folder` prevents it at creation anyway.
+
+
+---
+
+# Audit 6 — the browser
+
+`src/desk.ts` (922), `src/contact.ts` (201), `static/css/site.css`
+(1,383), read on 2026-11-16, then measured with the sweep from audit 3.
+
+**Eight browser mutations. Six went unnoticed by every suite.** None of
+them is a clever edge case: they are the page showing at all, a window
+closing, a link opening one, a film going quiet, and the one law this
+repository writes down about the front end.
+
+| broken on purpose | noticed by, before |
+|---|---|
+| the page never stops booting | **nobody** |
+| a window cannot be closed by clicking the dark | **nobody** |
+| a link to a window stops opening it | **nobody** |
+| a film keeps playing after its window is closed | **nobody** |
+| an off-site script is added to every page | **nobody** |
+| the content security policy is removed | **nobody** |
+| the bar's height is no longer published | desk |
+| the desk stops becoming a grid on a phone | content |
+
+### A6-F1 · the page never stops booting
+
+`html.booting` hides everything until the images are in, and
+`reveal()` takes it off. Delete that one line and the site is a blank
+screen, for everyone, on every page. Nothing saw it.
+
+### A6-F2 · the two ways out of a frameless window
+
+A preview has no ✕ — her ask — so Escape and a click on the dark are
+the only ways out, and someone on a trackpad has one of them.
+
+### A6-F3 · a link that names a window
+
+The bandeau's `contact` is `<a href="#contact">` pointing at a
+`<dialog>`, which is `display:none` until opened — so the browser's own
+anchor jump lands on nothing. `desk.ts` carries a comment saying the
+handler exists *because that link once did nothing at all*, and
+nothing checked it still does something.
+
+### A6-F4 · a film that keeps playing
+
+Minimising calls `close()` on its way to `show()`, so the close handler
+has to tell a swap from a real close. If it stops pausing, the sound
+carries on over a desk with no window on it.
+
+### A6-F5 · the one law, with no guard
+
+`CLAUDE.md`: *no runtime dependencies on the frontend — that is a
+constraint, not a preference.* A `<script src="https://cdn…">` added
+to `base.html` passed every suite. The Content-Security-Policy would
+have blocked it in a browser, silently — the feature simply would not
+work, which is the hardest failure to report — and **the policy itself
+had no guard either**: removing the whole meta tag was noticed by
+nothing.
+
+### A6-F6 · a fourth copy of a breakpoint
+
+`desk.ts` asks `matchMedia("(max-width: 40rem)")` to know whether the
+desk is a grid. The stylesheet keeps the same number. They agree today;
+move the CSS band and they disagree inside a window a couple of rem
+wide, where the script pins widths for a grid that is not there — the
+"icons fill the screen" failure the code comments already describe.
+The breakpoint case now reads `src/desk.ts` too.
+
+## Found while writing the checks, and worth more than them
+
+**An existing context in `desk-check` had been throwing all along.**
+`desk.ts` calls `getComputedStyle(desk)` bare, as a browser allows; the
+sandbox had it on `window` only. The phone-desk block — the one with a
+real `.desk` — threw inside `whenPainted()`, asynchronously, and the
+process exited before the rejection surfaced. **Every check in that
+block was passing against a script that had already fallen over.** It
+only appeared because a later check added an `await` and let the event
+loop turn.
+
+**`content-check` crashed with no FAIL line**, which is the fault
+audit 1 fixed in the panel's suite and nobody carried across. It caught
+me within the hour, on a three-element expectation tuple.
+
+**And the first spelling of the no-dependency guard counted her social
+links.** Instagram and YouTube in the footer are hyperlinks, and a
+hyperlink is not a dependency. Aimed at `<script src>`, `<link href>`
+and the other fetching elements now — a rule that fails on correct
+content teaches you to loosen it rather than aim it.
+
+## What was read and found sound
+
+- **The keyboard.** An icon is an `<a href>`, so Enter activates it and
+  the handler tells a keyboard click from a pointer one by `detail`.
+  Escape closes every modal. The film's minimise takes focus back,
+  because `close()` would otherwise hand it to the icon out on the desk.
+- **`contact.ts`** refuses newlines and header-shaped text in every
+  field that becomes a mail header, and says plainly in its own first
+  lines that it is the sign on the door rather than the lock. 33 checks.
+- **One set of cursors**, all drawn, already asserted; one ground per
+  body class; `--bar-h` published so the stylesheet and the script
+  cannot disagree about the bandeau's height.
