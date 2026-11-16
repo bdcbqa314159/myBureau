@@ -51,6 +51,20 @@ training, datasets or derivative works without written permission.
 Publication on a public web page does not place them in the public
 domain.
 
+TYPEFACES
+---------
+static/fonts/inter-tight-*.woff2 is Inter Tight, by Rasmus Andersson,
+under the SIL Open Font License 1.1. The OFL permits this use and
+requires that the licence travel with the files; it is at
+https://openfontlicense.org and the family at
+https://github.com/rsms/inter.
+
+A typeface dropped in through the panel lands in static/fonts/custom/
+and is NOT covered by anything here. This repository is public, so a
+font added that way is redistributed with it — which most desktop
+licences do not permit. Whoever adds one is the person who has to be
+sure of its licence.
+
 The Author retains the right to display this work as a portfolio
 reference of the engineering engagement.
 

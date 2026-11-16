@@ -32,6 +32,51 @@
    problem on the real site or under ./preview.sh, both of which serve
    over a real origin — but if a local page ever renders as naked HTML,
    this is why, and the answer is to serve it rather than open it. #}
+{#- HER OWN TYPEFACE, when she has dropped one.
+
+    Everything in the stylesheet points at `--font-display` and
+    `--font-body`, so setting those two here is the whole of it — see
+    the TYPE SYSTEM block at the top of site.css, which says in its own
+    words that nothing below it names a font.
+
+    DECLARED HERE RATHER THAN IN site.css because the file she drops
+    keeps its own extension: a `.ttf` from Google Fonts and a `.woff2`
+    from a foundry need different `format()` words, and a stylesheet
+    cannot ask what is in a folder. The panel writes the name down and
+    this reads it.
+
+    `font-weight: normal`, deliberately. A face she downloaded is
+    usually ONE weight, and declaring a range would tell the browser
+    the file covers 300 to 700 — so bold text would come out the same
+    as light. Left normal, the browser bolds it itself, which is less
+    beautiful and legible rather than wrong.
+
+    ponytail: a VARIABLE font she drops loses its axis to that choice.
+    Telling the two apart means reading the `fvar` table out of the
+    file, which is a font parser in the panel. Worth it the day she
+    says the bold looks clumsy; not before. -#}
+{%- if config.extra.typeface == "custom" and config.extra.typeface_file -%}
+  {%- set ext = config.extra.typeface_file | split(pat=".") | last | lower -%}
+  {%- set_global face_fmt = "woff2" -%}
+  {%- if ext == "ttf" -%}{%- set_global face_fmt = "truetype" -%}
+  {%- elif ext == "otf" -%}{%- set_global face_fmt = "opentype" -%}
+  {%- elif ext == "woff" -%}{%- set_global face_fmt = "woff" -%}
+  {%- endif -%}
+<style>
+@font-face {
+  font-family: "la sienne";
+  src: url("{{ get_url(path='fonts/custom/' ~ config.extra.typeface_file) }}")
+       format("{{ face_fmt }}");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --font-display: "la sienne", system-ui, -apple-system, sans-serif;
+  --font-body: var(--font-display);
+}
+</style>
+{%- endif -%}
 <meta http-equiv="Content-Security-Policy" content="
   default-src 'self';
   img-src 'self' data:;

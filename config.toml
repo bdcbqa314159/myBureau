@@ -29,6 +29,18 @@ compile_sass = false
 build_search_index = false
 
 [extra]
+
+# HOW THE SITE IS SET. One value, because every rule in the stylesheet
+# points at a ROLE — --font-display, --font-body, --font-ui — and
+# nothing below the TYPE SYSTEM block in site.css names a typeface.
+#
+#   "inter-tight"   the one shipped in static/fonts/
+#   "custom"        a font she downloaded and dropped in the panel,
+#                   which lands in static/fonts/custom/
+#
+# The panel writes this. An unknown value is refused there rather than
+# rendered, the way the four drawn folder icons are.
+typeface = "inter-tight"
 # ---------------------------------------------------------------
 # NOT LIVE YET.
 #

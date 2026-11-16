@@ -287,7 +287,13 @@ def identity() -> dict:
     which = "real" if re.search(r'^\s*live\s*=\s*true', text, re.M) else "demo"
     block = re.search(r'^\[extra\.' + which + r'\]\s*$(.*?)(?=^\[|\Z)',
                       text, re.M | re.S)
-    out = {"block": which, "owner": "", "studio": "", "live": which == "real"}
+    # WHICH TYPEFACE, so the panel can show the one in place rather
+    # than guessing from a default. It sits under [extra] beside the
+    # two blocks rather than inside either: the font is the same
+    # whether the site is live or a demo.
+    face = re.search(r'^\s*typeface\s*=\s*"([^"]*)"', text, re.M)
+    out = {"block": which, "owner": "", "studio": "", "live": which == "real",
+           "typeface": face.group(1) if face else "inter-tight"}
     if block:
         for key in ("owner", "studio"):
             got = re.search(r'^\s*' + key + r'\s*=\s*"(.*)"', block.group(1), re.M)

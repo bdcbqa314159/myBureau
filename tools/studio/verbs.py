@@ -1699,6 +1699,161 @@ def set_face(item: str, how: str, which: str = "folder") -> dict:
     return {"face": "folder", "which": which}
 
 
+# ---------------------------------------------------------------------
+# THE TYPEFACE
+# ---------------------------------------------------------------------
+# A font she found somewhere and downloaded, and the ones we ship.
+#
+# WHAT A BROWSER WILL ACTUALLY USE. These are the five signatures a
+# font file can begin with, and between them they cover everything she
+# can download — Google Fonts hands out `.ttf`, a foundry usually
+# `.otf`, and `.woff2` is what a site would normally serve.
+#
+# The extension is not the test. A `.ttf` renamed `.woff2` is refused
+# here rather than quietly declared with the wrong `format()`, which
+# in a browser is a page with no type on it at all.
+FONT_BYTES = {
+    b"wOF2": ("woff2", "woff2"),
+    b"wOFF": ("woff", "woff"),
+    b"\x00\x01\x00\x00": ("ttf", "truetype"),
+    b"true": ("ttf", "truetype"),
+    b"OTTO": ("otf", "opentype"),
+}
+
+# A collection holds several faces in one file and CSS cannot say which
+# one it means, so it is refused with the thing to do instead.
+FONT_COLLECTION = b"ttcf"
+
+# Ours, and they are shipped rather than fetched: the site's policy is
+# `default-src 'self'` and the repository's law is no runtime
+# dependency on the front end. A typeface from a CDN is both.
+OURS = ("inter-tight",)
+
+# Bigger than this is not a webfont, it is a mistake — a whole family
+# in one file, or a .zip she renamed. The largest single face anybody
+# serves is about a megabyte.
+FONT_CEILING = 4 * 1024 * 1024
+
+
+def font_kind(data: bytes) -> tuple:
+    """(extension, the CSS `format()` word) for these bytes, or ()."""
+    if data[:4] == FONT_COLLECTION:
+        raise Refused("ce fichier contient plusieurs polices à la fois"
+                      " (.ttc). Prends un seul fichier .ttf, .otf ou"
+                      " .woff2.")
+    for sig, pair in FONT_BYTES.items():
+        if data[:len(sig)] == sig:
+            return pair
+    return ()
+
+
+def set_typeface(which: str) -> dict:
+    """Which typeface the whole site is set in.
+
+    One value, read by base.html, and every rule in the stylesheet
+    points at a role rather than at a font — see the TYPE SYSTEM block
+    at the top of site.css. So this is the only thing that changes.
+    """
+    if which != "custom" and which not in OURS:
+        raise Refused("je ne connais pas cette police.")
+    if which == "custom" and not _her_font():
+        raise Refused("il n'y a pas encore de police à toi — dépose un"
+                      " fichier .woff2, .ttf ou .otf.")
+    before = CONFIG.read_text(encoding="utf-8")
+    after = _config_key(before, "typeface", which)
+    if after != before:
+        record("set_typeface", [{"path": rel(CONFIG), "before": before}], [])
+        atomic(CONFIG, after)
+    return {"typeface": which}
+
+
+def _her_font() -> str:
+    """The font file she dropped, or "". One at a time, by design."""
+    here = ROOT / "static" / "fonts" / "custom"
+    if not here.is_dir():
+        return ""
+    got = [f.name for f in sorted(here.iterdir())
+           if f.is_file() and not f.name.startswith(".")]
+    return got[0] if got else ""
+
+
+def add_typeface(name: str, data: bytes) -> dict:
+    """A font SHE found and downloaded, taken as it comes.
+
+    THE POINT OF THIS VERB. The list we ship is four names; the web has
+    thousands, and the answer to "the panel does not have the one I
+    want" cannot be "ask Bernardo". She downloads a file and drops it
+    in.
+
+    Taken AS IT COMES rather than converted. A `.ttf` from Google
+    Fonts is two or three times the size of the `.woff2` the same face
+    would make, and converting needs a tool that is not on her machine
+    and would have to be installed — against a path that is three
+    steps and stays three steps. The bytes are the cost of her
+    choosing freely, and a portfolio can afford them.
+    """
+    if not data:
+        raise Refused("ce fichier est vide.")
+    if len(data) > FONT_CEILING:
+        raise Refused("ce fichier est très lourd pour une police"
+                      " — prends la version .woff2 si elle existe.")
+    kind = font_kind(data)
+    if not kind:
+        raise Refused("ce n'est pas une police. Il faut un fichier"
+                      " .woff2, .woff, .ttf ou .otf.")
+    ext, _fmt = kind
+    # OUTSIDE content/, and deliberately. A typeface is not her work —
+    # it is how the site is set — so it belongs beside the ones we
+    # ship. `set_identity` is the other verb that leaves content/, for
+    # the same reason: the two words in the bandeau are not content
+    # either. Everything else in this module is refused by inside().
+    here = ROOT / "static" / "fonts" / "custom"
+    here.mkdir(parents=True, exist_ok=True)
+    moves = []
+    for old in sorted(here.iterdir()):
+        if old.is_file():
+            TRASH.mkdir(parents=True, exist_ok=True)
+            bin_ = TRASH / str(int(time.time() * 1000))
+            bin_.mkdir(exist_ok=True)
+            shutil.move(str(old), str(bin_ / old.name))
+            moves.append({"from": rel(old), "to": rel(bin_ / old.name)})
+    dest = here / ("face." + ext)
+    tmp = dest.with_name(dest.name + ".studio-tmp")
+    tmp.write_bytes(data)
+    os.replace(tmp, dest)
+    moves.append({"from": "", "to": rel(dest)})
+    # THE NAME GOES IN THE CONFIG TOO. Tera cannot look in a folder,
+    # and the `format()` word the browser needs depends on the
+    # extension she happened to download — so base.html reads the name
+    # from here rather than guessing at a file.
+    before = CONFIG.read_text(encoding="utf-8")
+    after = _config_key(_config_key(before, "typeface", "custom"),
+                        "typeface_file", dest.name)
+    texts = []
+    if after != before:
+        texts.append({"path": rel(CONFIG), "before": before})
+        atomic(CONFIG, after)
+    record("add_typeface", texts, moves)
+    return {"typeface": "custom", "file": dest.name}
+
+
+def _config_key(text: str, key: str, value: str) -> str:
+    """One key under [extra] in config.toml, surgically.
+
+    config.toml is four hundred lines of comments explaining itself —
+    see set_identity, which edits it the same way and for the same
+    reason.
+    """
+    block = re.search(r'^\[extra\][ \t]*$', text, re.M)
+    if block is None:
+        raise Refused("config.toml n'a pas de bloc [extra].")
+    line = re.compile(r'^[ \t]*' + re.escape(key) + r'[ \t]*=.*$', re.M)
+    if line.search(text):
+        return line.sub('{} = "{}"'.format(key, value), text, count=1)
+    return (text[:block.end()] + '\n{} = "{}"'.format(key, value)
+            + text[block.end():])
+
+
 def set_identity(owner: str, studio: str) -> dict:
     """The two words in the top bar. The only verb that leaves content/.
 
